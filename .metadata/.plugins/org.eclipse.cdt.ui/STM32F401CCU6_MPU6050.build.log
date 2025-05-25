@@ -1,0 +1,25 @@
+21:10:57 **** Incremental Build of configuration Debug for project STM32F401CCU6_MPU6050 ****
+make -j8 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DUSE_HAL_DRIVER -DSTM32F401xC -DDEBUG -c -I../Drivers/CMSIS/Include -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Core/Inc -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../USB_DEVICE/App -I../USB_DEVICE/Target -I../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:87:8: warning: variable 'msg' set but not used [-Wunused-but-set-variable]
+   87 |   char msg[8];
+      |        ^~~
+../Core/Src/main.c:86:12: warning: unused variable 'ticker1' [-Wunused-variable]
+   86 |   uint32_t ticker1 = 0;
+      |            ^~~~~~~
+arm-none-eabi-gcc -o "STM32F401CCU6_MPU6050.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\Educacion\STM32CubeIDE\workspace_1.18.1\STM32F401CCU6_MPU6050\STM32F401CCUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32F401CCU6_MPU6050.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+C:/ST/STM32CubeIDE_1.18.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.0.202411081344/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/bin/ld.exe: warning: STM32F401CCU6_MPU6050.elf has a LOAD segment with RWX permissions
+Finished building target: STM32F401CCU6_MPU6050.elf
+ 
+arm-none-eabi-size  STM32F401CCU6_MPU6050.elf 
+arm-none-eabi-objdump -h -S STM32F401CCU6_MPU6050.elf  > "STM32F401CCU6_MPU6050.list"
+   text	   data	    bss	    dec	    hex	filename
+  29912	    468	   6204	  36584	   8ee8	STM32F401CCU6_MPU6050.elf
+Finished building: default.size.stdout
+ 
+Finished building: STM32F401CCU6_MPU6050.list
+ 
+
+21:10:59 Build Finished. 0 errors, 3 warnings. (took 2s.355ms)
+

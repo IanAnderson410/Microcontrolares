@@ -1,0 +1,39 @@
+15:11:49 **** Incremental Build of configuration Debug for project first ****
+make -j8 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -I../USB_DEVICE/App -I../USB_DEVICE/Target -I../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'HAL_ADC_ConvCpltCallback':
+../Core/Src/main.c:97:9: warning: implicit declaration of function 'CDC_Transmit_FS' [-Wimplicit-function-declaration]
+   97 |         CDC_Transmit_FS((uint8_t*)usb_buffer, len);
+      |         ^~~~~~~~~~~~~~~
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:162:24: warning: passing argument 1 of 'SSD1306_Putc' makes integer from pointer without a cast [-Wint-conversion]
+  162 |           SSD1306_Putc("Pablo", &Font_7x10 , 1);
+      |                        ^~~~~~~
+      |                        |
+      |                        char *
+In file included from ../Core/Src/main.c:24:
+../Core/Inc/ssd1306.h:134:24: note: expected 'char' but argument is of type 'char *'
+  134 | char SSD1306_Putc(char ch, FontDef_t* Font, SSD1306_COLOR_t color);
+      |                   ~~~~~^~
+arm-none-eabi-gcc -o "first.elf" @"objects.list"   -mcpu=cortex-m3 -T"C:\Users\Educacion\STM32CubeIDE\workspace_1.18.1\first\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="first.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: first.elf
+ 
+arm-none-eabi-size  first.elf 
+arm-none-eabi-objdump -h -S first.elf  > "first.list"
+arm-none-eabi-objcopy  -O ihex first.elf  "first.hex"
+   text	   data	    bss	    dec	    hex	filename
+  41512	    388	   7492	  49392	   c0f0	first.elf
+arm-none-eabi-objcopy  -O binary first.elf  "first.bin"
+Finished building: default.size.stdout
+ 
+Finished building: first.hex
+Finished building: first.bin
+ 
+ 
+Finished building: first.list
+ 
+arm-none-eabi-objcopy -O binary "first.elf" "C:/Users/Educacion/STM32CubeIDE/workspace_1.18.1/first/firmware.bin"
+ 
+
+15:11:56 Build Finished. 0 errors, 2 warnings. (took 6s.986ms)
+

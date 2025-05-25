@@ -1,0 +1,4 @@
+#Wed May 14 17:13:36 ART 2025
+__DEFAULT__=false
+expression=HAL_UART_STATE_READY
+org.eclipse.help.ui.localSearch.master=true

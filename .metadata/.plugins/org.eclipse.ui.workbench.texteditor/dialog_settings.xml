@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<item key="hasShownOverlayPopupBefore" value="true"/>
+	<item key="replaceBarOpen" value="false"/>
+	<list key="searchhistory">
+		<item value="static"/>
+		<item value="accel"/>
+		<item value="MPU6050_Read_All"/>
+		<item value="CALLBACK"/>
+		<item value="COLOR_T"/>
+		<item value="typeDef"/>
+		<item value="UART_HandleTypeDef"/>
+	</list>
+</section>

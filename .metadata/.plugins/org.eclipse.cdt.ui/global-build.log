@@ -1,0 +1,25 @@
+16:57:47 **** Incremental Build of configuration Debug for project black21-5 ****
+make -j8 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F401xC -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../USB_DEVICE/App -I../USB_DEVICE/Target -I../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:113:25: warning: implicit declaration of function 'CDC_Transmit_FS' [-Wimplicit-function-declaration]
+  113 |                         CDC_Transmit_FS(msg, sizeof(msg) - 1);
+      |                         ^~~~~~~~~~~~~~~
+arm-none-eabi-gcc -o "black21-5.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\Educacion\STM32CubeIDE\workspace_1.18.1\black21-5\STM32F401CCUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="black21-5.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: black21-5.elf
+ 
+arm-none-eabi-size  black21-5.elf 
+arm-none-eabi-objdump -h -S black21-5.elf  > "black21-5.list"
+   text	   data	    bss	    dec	    hex	filename
+  46104	    484	   7392	  53980	   d2dc	black21-5.elf
+Finished building: default.size.stdout
+ 
+Finished building: black21-5.list
+ 
+16:57:56 **** Incremental Build of configuration Debug for project black21-5 ****
+make -j8 all 
+arm-none-eabi-size  black21-5.elf 
+   text	   data	    bss	    dec	    hex	filename
+  46104	    484	   7392	  53980	   d2dc	black21-5.elf
+Finished building: default.size.stdout
+ 
