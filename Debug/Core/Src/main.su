@@ -1,0 +1,14 @@
+../Core/Src/main.c:126:6:HAL_UARTEx_RxEventCallback	16	static
+../Core/Src/main.c:134:6:HAL_UART_ErrorCallback	16	static
+../Core/Src/main.c:143:6:MPU6050_Init_IT	40	static
+../Core/Src/main.c:172:6:HAL_GPIO_EXTI_Callback	24	static
+../Core/Src/main.c:183:6:HAL_I2C_MemRxCpltCallback	72	static
+../Core/Src/main.c:230:6:ProtocoloUNER	16	static
+../Core/Src/main.c:248:5:main	16	static
+../Core/Src/main.c:322:6:SystemClock_Config	88	static
+../Core/Src/main.c:368:13:MX_ADC1_Init	24	static
+../Core/Src/main.c:483:13:MX_I2C1_Init	8	static
+../Core/Src/main.c:517:13:MX_USART1_UART_Init	8	static
+../Core/Src/main.c:548:13:MX_DMA_Init	16	static
+../Core/Src/main.c:576:13:MX_GPIO_Init	48	static
+../Core/Src/main.c:612:6:Error_Handler	4	static,ignoring_inline_asm
