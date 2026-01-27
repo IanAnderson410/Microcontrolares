@@ -1,0 +1,9 @@
+# Binarios y temporales de STM32
+Debug
+Release
+.o
+.elf
+.list
+.map
+.settings
+.p6project
