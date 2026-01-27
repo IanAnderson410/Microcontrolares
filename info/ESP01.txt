@@ -1,0 +1,60 @@
+#include <ESP8266WiFi.h>
+
+// --- CONFIGURACIÓN ---
+const char* ssid = "InternetPlus_872f10";      
+const char* password = "wlan78d0ef";   
+const int port = 8888;                    // Puerto TCP para la HMI Qt
+const unsigned long BAUD_RATE = 115200;   // Velocidad Serial (debe coincidir con STM32)
+
+WiFiServer server(port);
+WiFiClient client;
+
+void setup() {
+  // Iniciar Serial para hablar con el STM32
+  Serial.begin(BAUD_RATE);
+  delay(6000);
+  // Configurar modo estación
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  // Esperar conexión (No bloquea al STM32, el STM32 debe esperar el mensaje de IP)
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
+
+  // Iniciar Servidor
+  server.begin();
+
+  // --- CUMPLIMIENTO DE REQUISITO DE PROMOCIÓN  ---
+  // Enviamos la IP al STM32 una sola vez al conectar.
+  // Formato: "IP:192.168.1.XX"
+  Serial.print("IP:");
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // 1. Revisar si hay un cliente (La PC con Qt) intentando conectar
+  if (!client) {
+    client = server.available();
+  }
+
+  // 2. Si hay cliente conectado, hacemos de puente
+  if (client && client.connected()) {
+    
+    // A) De PC (Qt) -> STM32 (Comandos: IDLE, FOLLOW_LINE, etc.)
+    if (client.available()) {
+      while (client.available()) {
+        Serial.write(client.read()); // Pasa el byte crudo al STM32
+      }
+    }
+
+    // B) De STM32 -> PC (Qt) (Telemetría: Posición, Velocidad, PID)
+    // Usamos un buffer pequeño para mejorar la eficiencia del envío WiFi
+    if (Serial.available()) {
+      size_t len = Serial.available();
+      uint8_t sbuf[len];
+      Serial.readBytes(sbuf, len);
+      client.write(sbuf, len); // Envía el paquete de datos a la PC
+    }
+  }
+}

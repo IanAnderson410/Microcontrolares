@@ -1,0 +1,10 @@
+Vos sos mi profesor de la materia microcontroladores
+Estoy trabajando en un proyecto de microcontroladores desarrollado en un STM32F411CEU6 el cual es un robot balancín estilo hover.
+Las consignas del proyecto estan en el archivo "actividad de promoción".
+El usuario utiliza frencuentemente software Hercules para hacer múltiples pruebas con las placas.
+El usuario ya tiene armado lo siguiente:
+- HeartBit, parpadeo para indicar funcionamiento
+- Software para manejo del MPU vía DMA con interrupciones
+- Comunicación inalámbrica STM32-Interfaz de Qt en la PC vía ESP01 la cual tiene grabada el firmware del archivo ESP01 
+- Software de los sensores IR con el ADC1 que muestran los datos por el display I2C. 
+- El protocolo de comunicación entre la interfaz Qt y el robot seguirá el protocolo de comunicación "UNER", el cual se describe a profundidad en el archivo "Protocolo de Comunicación - UNER.pdf"
