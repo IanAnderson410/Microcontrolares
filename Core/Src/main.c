@@ -51,6 +51,8 @@ typedef struct __attribute__((packed)) {
     float pos_y;                  // 4 bytes - Trayectoria Y
     float velocidad;              // 4 bytes - Velocidad lineal
     uint8_t modo;                 // 1 byte  - IDLE, FOLLOW_LINE, etc.
+    uint16_t IR[8];
+    uint8_t infoAdicional;
 } PayloadData_t;
 
 typedef union {
@@ -79,21 +81,21 @@ char rx_buffer[20];
 uint8_t rx_index = 0;
 uint8_t rx_data;
 // Nuevas variables para compensar la diferencia entre motores
-int16_t deadband_L = 500;// Ajustá este valor según tu motor 1
-int16_t deadband_R = 500; // Ajustá este valor según tu motor 2
-// --- Variables de Control PID ---
-float Kp = 80.0, Ki = 0.5, Kd = 2.5;
+int16_t deadband_L = 500;				// Ajustá este valor según tu motor 1
+int16_t deadband_R = 500; 				// Ajustá este valor según tu motor 2
+// =================[ Variables de Control PID ] ================= //
+float Kp = 80.0;		/*!< Término Proporcional*/
+float Ki = 0.5;			/*!< Término Integrativo: */
+float Kd = 2.5;			/*!< Término Derivativo: */
 float integral = 0, last_error = 0;
-float setpoint = 0.0; // El ángulo donde el robot se queda parado (0 grados)
-
-// --- Variables de Filtro (Kalman simplificado o Complementario) ---
+float setpoint = 0.0; 						// El ángulo donde el robot se queda parado (0 grados)
+// =================[ Variables del Filtro del MPU6050 ] =================//
 float angle_y = 0;
 float alpha = 0.95; // Factor del filtro complementario
 uint32_t last_time = 0;
 uint8_t mpu_data[14]; // Los 14 bytes que trae el DMA
-// --- Variables de Calibración ---
+// =================[ Variables de Calibración ] =================//
 float gyro_bias = 0;
-
 volatile float giro=0, giro_z=0, salida=0;
 volatile uint16_t accelx=0, accely=0, accelz=0;
 
@@ -197,7 +199,6 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
 void MPU6050_Calibrate(void) {
     int32_t sum = 0;
     int num_samples = 500;
-
     for (int i = 0; i < num_samples; i++) {
         // Leemos los registros del giroscopio en el eje Y (0x45 y 0x46)
         uint8_t raw_data[2];
@@ -208,7 +209,6 @@ void MPU6050_Calibrate(void) {
 
         HAL_Delay(2); // Pequeña espera entre muestras
     }
-
     // Calculamos el promedio en unidades LSB y lo pasamos a grados/seg
   //  gyro_bias = (float)(sum / num_samples) / 131.0f;
     gyro_bias = (float)(sum / num_samples) / 65.5f;
@@ -359,9 +359,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	if (HAL_GetTick() - lastTime0 > 2000) {
+	if (HAL_GetTick() - lastTime0 > 50) {
+		// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y
+		// no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
-
 	   flagSendUNER=1;
 	   //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 	   //uint8_t msg_buffer[12] = "HOLA MUNDO!!";
@@ -379,35 +380,40 @@ int main(void)
 	}
 	if (flagSendUNER) {
 			flagSendUNER=0;
-	        // 1. Actualizamos los datos de la unión con los valores calculados en el Callback
+	        // Actualizamos los datos de la unión con los valores calculados
 	        telemetria.data.acc_x = accelx;
-	        telemetria.data.acc_y = accely; // Deberás extraerlo en el Callback
+	        telemetria.data.acc_y = accely;
 	        telemetria.data.acc_z = accelz;
-	        telemetria.data.gyro_pitch = (int16_t)giro; // Gyro Y
-	        telemetria.data.gyro_yaw = (int16_t)giro_z;  // Gyro Z
+	        telemetria.data.gyro_pitch = (int16_t)giro;
+	        telemetria.data.gyro_yaw = (int16_t)giro_z;
 	        telemetria.data.pitch_angle = angle_y;
 	        telemetria.data.pos_x = 3;
 	        telemetria.data.pos_y = 2;
 	        telemetria.data.velocidad = 1;
 	        telemetria.data.modo = 0;
-	        // 2. Preparamos el paquete completo UNER
-	        uint8_t frame[35]; // 4(UNER) + 1(LEN) + 1(TOKEN) + 1(CMD) + 27(PAYLOAD) + 1(CHK)
-	        memcpy(&frame[0], "UNER", 4);    // Header
-	        frame[4] = 29;                  // Length (CMD + Payload + CHK)
-	        frame[5] = 0xFD;                // TOKEN (ejemplo de constante de fin cabecera)
-	        frame[6] = 0x01;                // CMD: 0x01 = Telemetría
-	        memcpy(&frame[7], telemetria.buffer, 27); // Payload
+	        telemetria.data.IR[0] = 100;
+	        telemetria.data.IR[1] = 200;
+	        telemetria.data.IR[2] = 300;
+	        telemetria.data.IR[3] = 400;
+	        telemetria.data.IR[4] = 500;
+	        telemetria.data.IR[5] = 600;
+	        telemetria.data.IR[6] = 700;
+	        telemetria.data.IR[7] = 800;
+	        telemetria.data.infoAdicional=0;
+	        uint8_t frame[52]; 							// 4(UNER) + 1(LEN) + 1(TOKEN) + 1(CMD) + 27(PAYLOAD) + 1(CHK)
+	        memcpy(&frame[0], "UNER", 4);    			// Header
+	        frame[4] = 46;                  			// Length (CMD + Payload + CHK)
+	        frame[5] = 0xFD;                			// TOKEN (ejemplo de constante de fin cabecera)
+	        frame[6] = 0x01;                			// CMD: 0x01 = Telemetría
+	        memcpy(&frame[7], telemetria.buffer, 44); 	// Payload
 	        // 3. Cálculo del Checksum XOR
 	        uint8_t checksum = 0;
-	        for (int i = 0; i < 34; i++) {
+	        for (int i = 0; i < 51; i++) { // calculamos el checksu,
 	            checksum ^= frame[i];
 	        }
-	        frame[34] = checksum;           // Checksum al final
-	        // 4. Envío al ESP01 (vía UART con DMA preferentemente)
-	        HAL_UART_Transmit_DMA(&huart1, frame, 35);
+	        frame[51] = checksum;           // agregamos Checksum
+	        HAL_UART_Transmit_DMA(&huart1, frame, 52);// enviamos los datos al ESP01 via UART con DMA
 	    }
-
-
   }
   /* USER CODE END 3 */
 }
@@ -754,55 +760,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-//    if (htim->Instance == TIM4) {
-//        // 1. LEER SENSOR AQUÍ (Bloqueante, 14 bytes son ~0.5ms, sobra tiempo)
-//        if (HAL_I2C_Mem_Read(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14, 10) != HAL_OK) {
-//            return; // Si el sensor no responde, no hacemos nada
-//        }
-//
-//        int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
-//        int16_t az = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
-//        int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]);
-//
-//        // 2. MATEMÁTICA PID
-//        float accel_angle = atan2f((float)ax, (float)az) * 57.2957f;
-//        float gyro_rate = ((float)gy / 131.0f) - gyro_bias;
-//
-//        angle_y = alpha * (angle_y + gyro_rate * 0.01f) + (1.0f - alpha) * accel_angle;
-//
-//        // ¡OJO ACÁ! Invertí el error si ves que el robot se escapa en lugar de frenar
-//        float error = angle_y - setpoint;
-//
-//        float P = Kp * error;
-//        integral += error * 0.01f;
-//        if(integral > 1000) integral = 1000;
-//        else if(integral < -1000) integral = -1000;
-//
-//        float D = Kd * (error - last_error) / 0.01f;
-//        last_error = error;
-//
-//        float output = P + (Ki * integral) + D;
-//
-//        // 3. SALIDA A MOTORES
-//        // Filtro de seguridad de 45 grados [cite: 21]
-//        if (angle_y > 45.0f || angle_y < -45.0f) {
-//            Robot_Drive(0, 0);
-//            integral = 0;
-//        } else {
-//            Robot_Drive((int16_t)output, (int16_t)output);
-//        }
-//
-//        // 4. FLAG PARA EL DISPLAY
-//        counter++;
-//        if(counter > 20){ // Actualizamos el display cada 200ms
-//            counter = 0;
-//            giro = gyro_rate;
-//            salida = output;
-//            flagDisplay = 1;
-//        }
-//    }
-//}
 /* USER CODE END 4 */
 
 /**
