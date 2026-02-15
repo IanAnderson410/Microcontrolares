@@ -42,7 +42,21 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+//Al usar __attribute__((packed)), garantizamos que no haya "padding" (huecos de memoria)
+typedef struct __attribute__((packed)) {
+    int16_t acc_x, acc_y, acc_z; // 6 bytes - Datos crudos para debug en Qt
+    int16_t gyro_pitch, gyro_yaw; // 4 bytes - Pitch (Y) y Yaw (Z)
+    float pitch_angle;            // 4 bytes - El theta filtrado
+    float pos_x;                  // 4 bytes - Trayectoria X
+    float pos_y;                  // 4 bytes - Trayectoria Y
+    float velocidad;              // 4 bytes - Velocidad lineal
+    uint8_t modo;                 // 1 byte  - IDLE, FOLLOW_LINE, etc.
+} PayloadData_t;
 
+typedef union {
+    PayloadData_t data;
+    uint8_t buffer[sizeof(PayloadData_t)]; // 27 bytes totales
+} PayloadUNER_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -52,6 +66,15 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+//FLAGS
+volatile 	uint8_t flagDisplay=0;
+			uint8_t flagSendUNER = 0;
+			uint8_t dma_ready = 0;
+			uint8_t calibration_ready = 0; // Bandera para no activar el PID antes de tiempo
+//CONTADORES
+			uint16_t contador = 0;
+volatile 	uint32_t counter=0;	//volatile por que se usan en interrupciones
+//RECEPCION DE DATOS
 char rx_buffer[20];
 uint8_t rx_index = 0;
 uint8_t rx_data;
@@ -59,7 +82,7 @@ uint8_t rx_data;
 int16_t deadband_L = 500;// Ajustá este valor según tu motor 1
 int16_t deadband_R = 500; // Ajustá este valor según tu motor 2
 // --- Variables de Control PID ---
-float Kp = 50.0, Ki = 0.5, Kd = 0.8;
+float Kp = 80.0, Ki = 0.5, Kd = 2.5;
 float integral = 0, last_error = 0;
 float setpoint = 0.0; // El ángulo donde el robot se queda parado (0 grados)
 
@@ -67,19 +90,17 @@ float setpoint = 0.0; // El ángulo donde el robot se queda parado (0 grados)
 float angle_y = 0;
 float alpha = 0.95; // Factor del filtro complementario
 uint32_t last_time = 0;
-
 uint8_t mpu_data[14]; // Los 14 bytes que trae el DMA
-uint16_t contador = 0;
 // --- Variables de Calibración ---
 float gyro_bias = 0;
-int calibration_ready = 0; // Bandera para no activar el PID antes de tiempo
 
-uint8_t dma_ready = 0;
-//volatile por que se usan en interrupciones
-volatile uint32_t counter=0;
-volatile uint8_t flagDisplay=0;
-volatile float giro=0, salida=0;
+volatile float giro=0, giro_z=0, salida=0;
 volatile uint16_t accelx=0, accely=0, accelz=0;
+
+uint32_t lastTime0 = 0;
+uint8_t rx_buffer_uart[256];
+
+PayloadUNER_t telemetria;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -89,6 +110,10 @@ DMA_HandleTypeDef hdma_i2c1_rx;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
+
+UART_HandleTypeDef huart1;
+DMA_HandleTypeDef hdma_usart1_rx;
+DMA_HandleTypeDef hdma_usart1_tx;
 
 /* USER CODE BEGIN PV */
 /* USER CODE END PV */
@@ -101,6 +126,7 @@ static void MX_TIM3_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void Robot_Drive(int16_t speed_L, int16_t speed_R);
@@ -110,7 +136,6 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 void Robot_Drive(int16_t speed_L, int16_t speed_R) {
     // Motor 1 (PA8, PA9, PB4)
 	// 1. Aplicar Deadband (Zona muerta)
@@ -148,7 +173,6 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
         __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)(-speed_R));
     }
 }
-
 
 void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
     uint8_t check, data;
@@ -191,6 +215,10 @@ void MPU6050_Calibrate(void) {
     calibration_ready = 1; // Ya podemos activar el control
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	// utilizamos esta interrupción del timer para llamar la lectura del I2C vía DMA
+	// en la dirección del MPU y cargamos esos datos en mpu_data.
+	// En esta interrupción tambien actualizamos la bandera para el display y hacemos
+	// el HeartBit con el if del counter
     if (htim->Instance == TIM4 && calibration_ready) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
 			HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14);
@@ -204,15 +232,27 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 }
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	// en esta interrupción provocada por la llegada de los datos de I2C sacamos los
+	// datos en crudo de las aceleraciones y giros para procesarlos y calcular el PID
+	// Al procesar el PID inmediatamente después de que el DMA termina de recibir los
+//	   datos (HAL_I2C_MemRxCpltCallback), garantizás que el cálculo se hace con los datos
+//	   más frescos posibles.
     if (hi2c->Instance == I2C1) {
         // RECIÉN ACÁ los datos en mpu_data son válidos y nuevos
-        int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
-        int16_t az = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
-        int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]);
-        accelx = ax;
-        accelz = az;
+    	int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
+		int16_t ay = (int16_t)(mpu_data[2] << 8 | mpu_data[3]); // Nuevo: Accel Y
+		int16_t az = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
 
-        giro = (float)gy / 65.5f;
+		int16_t gx = (int16_t)(mpu_data[8] << 8 | mpu_data[9]);   // Nuevo: Gyro X (Roll)
+		int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]); // Gyro Y (Pitch)
+		int16_t gz = (int16_t)(mpu_data[12] << 8 | mpu_data[13]); // Nuevo: Gyro Z (Yaw)
+        accelx = ax;
+        accely = ay;
+        accelz = az;
+        giro 	= (float)gy / 65.5f;
+        giro_z 	= (float)gz / 65.5f;
+        angle_y = (float)gx / 65.5f;
+
         float gyro_rate = ((float)gy / 65.5f) - gyro_bias;
 //        giro = (float)gy / 131.0f; // Ejemplo de escala para 250dps
 //        float gyro_rate = ((float)gy / 131.0f) - gyro_bias;
@@ -239,6 +279,23 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	   }
     }
 }
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+    if (huart->Instance == USART1)
+    {
+        CDC_Transmit_FS(rx_buffer_uart, Size);
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+    }
+}
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    // Si hubo ruido o error de trama (común al arrancar el ESP)
+    if (huart->Instance == USART1)
+    {
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+    }
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -276,6 +333,7 @@ int main(void)
   MX_TIM2_Init();
   MX_USB_DEVICE_Init();
   MX_TIM4_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
     uint8_t mpu_wake = 0;
     HAL_I2C_Mem_Write(&hi2c1, (0x68 << 1), 0x6B, 1, &mpu_wake, 1, 100);
@@ -289,7 +347,9 @@ int main(void)
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
     HAL_Delay(2000);
     MPU6050_Calibrate();
-
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+    // Setea el pin en ALTO (3.3V)
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -299,17 +359,53 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	if (HAL_GetTick() - lastTime0 > 2000) {
+	   lastTime0 = HAL_GetTick();
+
+	   flagSendUNER=1;
+	   //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+	   //uint8_t msg_buffer[12] = "HOLA MUNDO!!";
+	   //HAL_UART_Transmit_DMA(&huart1, (uint8_t*)&msg_buffer, sizeof(msg_buffer));
+	   }
 
 	if(flagDisplay){
 		flagDisplay=0;
 		char msg[20];
-		SSD1306_Fill(SSD1306_COLOR_BLACK); // Borra lo anterior [cite: 28]}
-		SSD1306_GotoXY(2, 15); // [cite: 36]
-		sprintf(msg, "OUT:%.2f", salida);
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE); // [cite: 40]
-		SSD1306_UpdateScreen(); // Fundamental para que se vea el cambio [cite: 26]
+//		SSD1306_Fill(SSD1306_COLOR_BLACK); // Borra lo anterior [cite: 28]}
+//		SSD1306_GotoXY(2, 15); // [cite: 36]
+//		sprintf(msg, "OUT:%.2f", salida);
+//		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE); // [cite: 40]
+//		SSD1306_UpdateScreen(); // Fundamental para que se vea el cambio [cite: 26]
 	}
-
+	if (flagSendUNER) {
+			flagSendUNER=0;
+	        // 1. Actualizamos los datos de la unión con los valores calculados en el Callback
+	        telemetria.data.acc_x = accelx;
+	        telemetria.data.acc_y = accely; // Deberás extraerlo en el Callback
+	        telemetria.data.acc_z = accelz;
+	        telemetria.data.gyro_pitch = (int16_t)giro; // Gyro Y
+	        telemetria.data.gyro_yaw = (int16_t)giro_z;  // Gyro Z
+	        telemetria.data.pitch_angle = angle_y;
+	        telemetria.data.pos_x = 3;
+	        telemetria.data.pos_y = 2;
+	        telemetria.data.velocidad = 1;
+	        telemetria.data.modo = 0;
+	        // 2. Preparamos el paquete completo UNER
+	        uint8_t frame[35]; // 4(UNER) + 1(LEN) + 1(TOKEN) + 1(CMD) + 27(PAYLOAD) + 1(CHK)
+	        memcpy(&frame[0], "UNER", 4);    // Header
+	        frame[4] = 29;                  // Length (CMD + Payload + CHK)
+	        frame[5] = 0xFD;                // TOKEN (ejemplo de constante de fin cabecera)
+	        frame[6] = 0x01;                // CMD: 0x01 = Telemetría
+	        memcpy(&frame[7], telemetria.buffer, 27); // Payload
+	        // 3. Cálculo del Checksum XOR
+	        uint8_t checksum = 0;
+	        for (int i = 0; i < 34; i++) {
+	            checksum ^= frame[i];
+	        }
+	        frame[34] = checksum;           // Checksum al final
+	        // 4. Envío al ESP01 (vía UART con DMA preferentemente)
+	        HAL_UART_Transmit_DMA(&huart1, frame, 35);
+	    }
 
 
   }
@@ -549,6 +645,39 @@ static void MX_TIM4_Init(void)
 }
 
 /**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -556,11 +685,18 @@ static void MX_DMA_Init(void)
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
+  __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* DMA interrupt init */
   /* DMA1_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+  /* DMA2_Stream2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+  /* DMA2_Stream7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream7_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream7_IRQn);
 
 }
 
@@ -579,17 +715,17 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9|GPIO_PIN_10|MOTB_IN2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2|MOTB_IN1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(MOTB_IN1_GPIO_Port, MOTB_IN1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9|GPIO_PIN_10|MOTB_IN2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -598,19 +734,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : PB2 MOTB_IN1_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|MOTB_IN1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PA9 PA10 MOTB_IN2_Pin */
   GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10|MOTB_IN2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : MOTB_IN1_Pin */
-  GPIO_InitStruct.Pin = MOTB_IN1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(MOTB_IN1_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
