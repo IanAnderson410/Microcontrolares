@@ -71,11 +71,27 @@ typedef struct {
 } UnerPacket_t;
 
 enum {
-    CMD_ALIVE       = 0x01,
-    CMD_SET_HB      = 0x02,
-    CMD_MOVE_RC     = 0x05,
-    CMD_PID_KP      = 0x06,
-    // ... agrega el resto
+    // Sistema y Heartbeat
+    CMD_ALIVE       = 0x01, // Verificar conexión
+    CMD_SET_HB      = 0x02, // Configurar intervalo de Heartbeat
+
+    // Control de Estado
+    CMD_CALIBRATE   = 0x05, // Calibración de MPU6050
+    CMD_START       = 0x06, // Activar motores / Inicio de balanceo
+    CMD_STOP        = 0x07, // Parada de emergencia / Motores a 0
+
+    // Control Remoto (Manual)
+    CMD_MOVE_RC     = 0x10, // Movimiento manual (adelante, atrás, giro)
+
+    // Parámetros PID (Crucial para el balanceo)
+    CMD_PID_KP      = 0x20, // Ajustar constante Proporcional
+    CMD_PID_KI      = 0x21, // Ajustar constante Integral
+    CMD_PID_KD      = 0x22, // Ajustar constante Derivativa
+    CMD_PID_SETPOINT = 0x23, // Ajustar ángulo de equilibrio (offset del centro de masa)
+
+    // Telemetría (STM32 -> Qt)
+    CMD_TELEMETRY   = 0xA0, // Envío de ángulos, velocidad y sensores IR
+    CMD_LOG_MSG     = 0xA1  // Envío de mensajes de texto para debug
 };
 /* USER CODE END PTD */
 
@@ -91,14 +107,15 @@ enum {
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-//FLAGS
+// ================= [ Flags ] ================= //
 volatile 	uint8_t flagDisplay=0;
 			uint8_t flagSendUNER = 0;
 			uint8_t dma_ready = 0;
 			uint8_t calibration_ready = 0; // Bandera para no activar el PID antes de tiempo
-//CONTADORES
+// ================= [ Counters ] ================= //
 			uint16_t contador = 0;
-volatile 	uint32_t counter=0;	//volatile por que se usan en interrupciones
+volatile 	uint32_t counter=0;		/*!< Utilizado en la interrupción del Timer 4. Es volatile por que se usan en interrupciones*/
+			uint8_t  counter1=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
 //RECEPCION DE DATOS
 char rx_buffer[20];
 uint8_t rx_index = 0;
@@ -121,17 +138,8 @@ uint8_t mpu_data[14]; // Los 14 bytes que trae el DMA
 float gyro_bias = 0;
 volatile float giro=0, giro_z=0, salida=0;
 volatile uint16_t accelx=0, accely=0, accelz=0;
-
 uint32_t lastTime0 = 0;
-
-
 PayloadUNER_t telemetria;
-
-
-
-
-
-
 // recibidos desde el qt
 uint8_t rx_buffer_uart[256];
 uint16_t delayHB= 60; //ENTRE 1 Y 200
@@ -162,6 +170,7 @@ static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
+void DataToQt();
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void Robot_Drive(int16_t speed_L, int16_t speed_R);
 void MPU6050_Calibrate(void);
@@ -170,6 +179,44 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void DataToQt(){
+
+		flagSendUNER=0;
+		telemetria.data.acc_x = accelx;
+		telemetria.data.acc_y = accely;
+		telemetria.data.acc_z = accelz;
+		telemetria.data.gyro_pitch = (int16_t)giro;
+		telemetria.data.gyro_yaw = (int16_t)giro_z;
+		telemetria.data.pitch_angle = angle_y;
+		telemetria.data.pos_x = 3;
+		telemetria.data.pos_y = 2;
+		telemetria.data.velocidad = 1;
+		telemetria.data.modo = 0;
+		telemetria.data.IR[0] = 100;
+		telemetria.data.IR[1] = 200;
+		telemetria.data.IR[2] = 300;
+		telemetria.data.IR[3] = 400;
+		telemetria.data.IR[4] = 500;
+		telemetria.data.IR[5] = 600;
+		telemetria.data.IR[6] = 700;
+		telemetria.data.IR[7] = 800;
+		telemetria.data.infoAdicional=0;
+		uint8_t frame[52]; 							// 4(UNER) + 1(LEN) + 1(TOKEN) + 1(CMD) + 27(PAYLOAD) + 1(CHK)
+		memcpy(&frame[0], "UNER", 4);    			// Header
+		frame[4] = 46;                  			// Length (CMD + Payload + CHK)
+		frame[5] = 0xFD;                			// TOKEN (ejemplo de constante de fin cabecera)
+		frame[6] = 0x01;                			// CMD: 0x01 = Telemetría
+		memcpy(&frame[7], telemetria.buffer, 44); 	// Payload
+		// 3. Cálculo del Checksum XOR
+		uint8_t checksum = 0;
+		for (int i = 0; i < 51; i++) { // calculamos el checksu,
+			checksum ^= frame[i];
+		}
+		frame[51] = checksum;           // agregamos Checksum
+		HAL_UART_Transmit_DMA(&huart1, frame, 52);// enviamos los datos al ESP01 via UART con DMA
+
+
+}
 void Robot_Drive(int16_t speed_L, int16_t speed_R) {
     // Motor 1 (PA8, PA9, PB4)
 	// 1. Aplicar Deadband (Zona muerta)
@@ -229,22 +276,29 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
     }
 }
 void MPU6050_Calibrate(void) {
-    int32_t sum = 0;
-    int num_samples = 500;
-    for (int i = 0; i < num_samples; i++) {
-        // Leemos los registros del giroscopio en el eje Y (0x45 y 0x46)
-        uint8_t raw_data[2];
-        HAL_I2C_Mem_Read(&hi2c1, (0x68 << 1), 0x45, 1, raw_data, 2, 100);
+    if(calibration_ready==0){
+		int32_t sum_gy = 0;
+		int32_t sum_ay = 0; // Para saber el ángulo inicial de inclinación
+		int num_samples = 1000; // Un poquito más de muestras para mayor precisión
+		uint8_t buffer[6];
 
-        int16_t gy = (int16_t)(raw_data[0] << 8 | raw_data[1]);
-        sum += gy;
+		for (int i = 0; i < num_samples; i++) {
+			// Leemos Accel_Y (para el ángulo inicial) y Gyro_Y
+			// Accel_Y: 0x3D, 0x3E | Gyro_Y: 0x45, 0x46
+			// Para optimizar, podrías leer todos los ejes de una, pero vamos a lo que necesitás:
+			HAL_I2C_Mem_Read(&hi2c1, (0x68 << 1), 0x45, 1, buffer, 2, 100);
+			int16_t gy_raw = (int16_t)(buffer[0] << 8 | buffer[1]);
+			sum_gy += gy_raw;
 
-        HAL_Delay(2); // Pequeña espera entre muestras
-    }
-    // Calculamos el promedio en unidades LSB y lo pasamos a grados/seg
-  //  gyro_bias = (float)(sum / num_samples) / 131.0f;
-    gyro_bias = (float)(sum / num_samples) / 65.5f;
-    calibration_ready = 1; // Ya podemos activar el control
+			HAL_Delay(2);
+		}
+
+		// Bias en unidades RAW para restarlo directo antes de convertir a grados
+		// Es más eficiente procesar en RAW y convertir al final
+		gyro_bias = (float)sum_gy / (float)num_samples;
+
+		calibration_ready = 1;
+		}
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	// utilizamos esta interrupción del timer para llamar la lectura del I2C vía DMA
@@ -312,47 +366,37 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 }
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    if (huart->Instance == USART1)
-    {
-    	for (int i = 0; i < (Size - 6); i++)
-    	        {
-    	            if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' &&
-    	                rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R')
-    	            {
-    	                uint8_t len   = rx_buffer_uart[i+4];
-    	                uint8_t token = rx_buffer_uart[i+5];
-    	                uint8_t cmd   = rx_buffer_uart[i+6];
-
-    	                if (token != ':') continue;
-    	                uint8_t pos_checksum = i + 5 + len;
-    	                if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
-
-    	                uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
-    	                uint8_t checksum_calc = 0;
-
-    	                // XOR de todo desde UNER hasta antes del checksum
-    	                for(int k = i; k < pos_checksum; k++){
-    	                    checksum_calc ^= rx_buffer_uart[k];
-    	                }
-    	                if (checksum_calc == checksum_recibido) {
-    	                    uint8_t *payload_ptr = &rx_buffer_uart[i+7];
-
-    	                    switch(cmd) {
-    	                        case CMD_SET_HB:
-    	                             delayHB = payload_ptr[0];
-    	                            break;
-    	                        // Aquí irás agregando tus otros casos
-    	                        case CMD_ALIVE:
-    	                             break;
-    	                    }
-    	                    // Limpiamos buffer para no reprocesar
-    	                    memset(rx_buffer_uart, 0, Size);
-    	                    break; // Salimos del for
-    	                }
-    	            }
-    	        }
-    	        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
-    	    }
+    if (huart->Instance == USART1){
+    	for (int i = 0; i < (Size - 6); i++){
+			if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' && rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
+				uint8_t len   = rx_buffer_uart[i+4];
+				uint8_t token = rx_buffer_uart[i+5];
+				uint8_t cmd   = rx_buffer_uart[i+6];
+				if (token != ':') continue;
+				uint8_t pos_checksum = i + 5 + len;
+				if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
+				uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
+				uint8_t checksum_calc = 0;
+				for(int k = i; k < pos_checksum; k++){
+					checksum_calc ^= rx_buffer_uart[k];
+				}
+				if (checksum_calc == checksum_recibido) {
+					uint8_t *payload_ptr = &rx_buffer_uart[i+7];
+					switch(cmd) {
+						case CMD_SET_HB:
+							 delayHB = payload_ptr[0];
+							break;
+						case CMD_CALIBRATE:
+							calibration_ready=0;
+							 break;
+					}
+					memset(rx_buffer_uart, 0, Size);
+					break; // Salimos del for
+				}
+			}
+		}
+		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+	}
 }
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
@@ -416,7 +460,6 @@ int main(void)
     HAL_Delay(2000);
     MPU6050_Calibrate();
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
-    // Setea el pin en ALTO (3.3V)
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
@@ -431,16 +474,12 @@ int main(void)
 		// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y
 		// no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
-	   flagSendUNER=1;
-
-	   // debería poner aca la flagDisplay
-
-
-	   //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-	   //uint8_t msg_buffer[12] = "HOLA MUNDO!!";
-	   //HAL_UART_Transmit_DMA(&huart1, (uint8_t*)&msg_buffer, sizeof(msg_buffer));
+	   DataToQt(); //llamada cada 50ms
+	   counter1++;
+	   if(counter1 > 4)
+		   flagDisplay=1;
+	   	   MPU6050_Calibrate();	// solo se llamará si la bandera dentro de la funcion esta activa
 	   }
-
 	if(flagDisplay){
 		flagDisplay=0;
 		char msg[20];
@@ -450,42 +489,7 @@ int main(void)
 //		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE); // [cite: 40]
 //		SSD1306_UpdateScreen(); // Fundamental para que se vea el cambio [cite: 26]
 	}
-	if (flagSendUNER) {
-			flagSendUNER=0;
-	        // Actualizamos los datos de la unión con los valores calculados
-	        telemetria.data.acc_x = accelx;
-	        telemetria.data.acc_y = accely;
-	        telemetria.data.acc_z = accelz;
-	        telemetria.data.gyro_pitch = (int16_t)giro;
-	        telemetria.data.gyro_yaw = (int16_t)giro_z;
-	        telemetria.data.pitch_angle = angle_y;
-	        telemetria.data.pos_x = 3;
-	        telemetria.data.pos_y = 2;
-	        telemetria.data.velocidad = 1;
-	        telemetria.data.modo = 0;
-	        telemetria.data.IR[0] = 100;
-	        telemetria.data.IR[1] = 200;
-	        telemetria.data.IR[2] = 300;
-	        telemetria.data.IR[3] = 400;
-	        telemetria.data.IR[4] = 500;
-	        telemetria.data.IR[5] = 600;
-	        telemetria.data.IR[6] = 700;
-	        telemetria.data.IR[7] = 800;
-	        telemetria.data.infoAdicional=0;
-	        uint8_t frame[52]; 							// 4(UNER) + 1(LEN) + 1(TOKEN) + 1(CMD) + 27(PAYLOAD) + 1(CHK)
-	        memcpy(&frame[0], "UNER", 4);    			// Header
-	        frame[4] = 46;                  			// Length (CMD + Payload + CHK)
-	        frame[5] = 0xFD;                			// TOKEN (ejemplo de constante de fin cabecera)
-	        frame[6] = 0x01;                			// CMD: 0x01 = Telemetría
-	        memcpy(&frame[7], telemetria.buffer, 44); 	// Payload
-	        // 3. Cálculo del Checksum XOR
-	        uint8_t checksum = 0;
-	        for (int i = 0; i < 51; i++) { // calculamos el checksu,
-	            checksum ^= frame[i];
-	        }
-	        frame[51] = checksum;           // agregamos Checksum
-	        HAL_UART_Transmit_DMA(&huart1, frame, 52);// enviamos los datos al ESP01 via UART con DMA
-	    }
+
   }
   /* USER CODE END 3 */
 }
