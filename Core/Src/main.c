@@ -59,11 +59,34 @@ typedef union {
     PayloadData_t data;
     uint8_t buffer[sizeof(PayloadData_t)]; // 27 bytes totales
 } PayloadUNER_t;
+
+
+typedef struct {
+    uint8_t header[4];      // "UNER"
+    uint8_t length;         // CMD + N_Payload + Checksum
+    uint8_t token;          // ':'
+    uint8_t cmd;            // ID del comando
+    uint8_t payload[64];    // Buffer genérico (sobra espacio)
+    // El checksum no lo ponemos en el struct fijo porque su posición varía
+} UnerPacket_t;
+
+enum {
+    CMD_ALIVE       = 0x01,
+    CMD_SET_HB      = 0x02,
+    CMD_MOVE_RC     = 0x05,
+    CMD_PID_KP      = 0x06,
+    // ... agrega el resto
+};
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MPU6050_ADDR (0x68 << 1) // Dirección I2C desplazada
+
+#define UNER_HEADER_STR "UNER"
+#define UNER_TOKEN      ':'    // 0x3A según tu PDF o preferencia
+
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -81,12 +104,12 @@ char rx_buffer[20];
 uint8_t rx_index = 0;
 uint8_t rx_data;
 // Nuevas variables para compensar la diferencia entre motores
-int16_t deadband_L = 500;				// Ajustá este valor según tu motor 1
-int16_t deadband_R = 500; 				// Ajustá este valor según tu motor 2
+int16_t deadband_L = 500;		/*!< Zona Muerta del PWM para el motor 1*/
+int16_t deadband_R = 500; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
-float Kp = 80.0;		/*!< Término Proporcional*/
-float Ki = 0.5;			/*!< Término Integrativo: */
-float Kd = 2.5;			/*!< Término Derivativo: */
+float Kp = 80.0;				/*!< Término Proporcional*/
+float Ki = 0.5;					/*!< Término Integrativo: */
+float Kd = 2.5;					/*!< Término Derivativo: */
 float integral = 0, last_error = 0;
 float setpoint = 0.0; 						// El ángulo donde el robot se queda parado (0 grados)
 // =================[ Variables del Filtro del MPU6050 ] =================//
@@ -100,9 +123,18 @@ volatile float giro=0, giro_z=0, salida=0;
 volatile uint16_t accelx=0, accely=0, accelz=0;
 
 uint32_t lastTime0 = 0;
-uint8_t rx_buffer_uart[256];
+
 
 PayloadUNER_t telemetria;
+
+
+
+
+
+
+// recibidos desde el qt
+uint8_t rx_buffer_uart[256];
+uint16_t delayHB= 60; //ENTRE 1 Y 200
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -224,9 +256,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14);
 		}
         counter++;
-        if(counter > 60){ // ~200ms
+        if(counter > delayHB){ // ~200ms
             counter = 0;
-            flagDisplay = 1;
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED [cite: 46]
         }
     }
@@ -283,15 +314,52 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart->Instance == USART1)
     {
-        CDC_Transmit_FS(rx_buffer_uart, Size);
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
-    }
+    	for (int i = 0; i < (Size - 6); i++)
+    	        {
+    	            if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' &&
+    	                rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R')
+    	            {
+    	                uint8_t len   = rx_buffer_uart[i+4];
+    	                uint8_t token = rx_buffer_uart[i+5];
+    	                uint8_t cmd   = rx_buffer_uart[i+6];
+
+    	                if (token != ':') continue;
+    	                uint8_t pos_checksum = i + 5 + len;
+    	                if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
+
+    	                uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
+    	                uint8_t checksum_calc = 0;
+
+    	                // XOR de todo desde UNER hasta antes del checksum
+    	                for(int k = i; k < pos_checksum; k++){
+    	                    checksum_calc ^= rx_buffer_uart[k];
+    	                }
+    	                if (checksum_calc == checksum_recibido) {
+    	                    uint8_t *payload_ptr = &rx_buffer_uart[i+7];
+
+    	                    switch(cmd) {
+    	                        case CMD_SET_HB:
+    	                             delayHB = payload_ptr[0];
+    	                            break;
+    	                        // Aquí irás agregando tus otros casos
+    	                        case CMD_ALIVE:
+    	                             break;
+    	                    }
+    	                    // Limpiamos buffer para no reprocesar
+    	                    memset(rx_buffer_uart, 0, Size);
+    	                    break; // Salimos del for
+    	                }
+    	            }
+    	        }
+    	        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+    	    }
 }
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     // Si hubo ruido o error de trama (común al arrancar el ESP)
     if (huart->Instance == USART1)
     {
+
         HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
     }
 }
@@ -364,6 +432,10 @@ int main(void)
 		// no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
 	   flagSendUNER=1;
+
+	   // debería poner aca la flagDisplay
+
+
 	   //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 	   //uint8_t msg_buffer[12] = "HOLA MUNDO!!";
 	   //HAL_UART_Transmit_DMA(&huart1, (uint8_t*)&msg_buffer, sizeof(msg_buffer));
