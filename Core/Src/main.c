@@ -27,6 +27,21 @@
   *   el motor izquierdo y PB3 con PA15 para el derecho, contando además con un
   *   sistema de seguridad que desactiva los actuadores ante inclinaciones críticas
   *   superiores a 45 grados.
+  *
+  *
+  *   ============= [ Actualizaciones ] =============
+  *   15-2:
+  *   Se implementaron los comandos para la comunicación inalambrica entre el robot
+  *   y la interfaz Qt. Los mismos se componen de 2 partes: CMD name y Param. Algunos
+  *   comandos no tienen parámetros
+  *
+  *   16-2:
+  *   Se implementará la opción de utilizar diferentes filtros para los valores del
+  *   MPU6050.
+  *
+  *   ============= [ Cosas por hacer ] =============
+  *
+  *   Inm
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -74,25 +89,29 @@ enum {
     // Sistema y Heartbeat
     CMD_ALIVE       = 0x01, // Verificar conexión
     CMD_SET_HB      = 0x02, // Configurar intervalo de Heartbeat
-
     // Control de Estado
     CMD_CALIBRATE   = 0x05, // Calibración de MPU6050
     CMD_START       = 0x06, // Activar motores / Inicio de balanceo
     CMD_STOP        = 0x07, // Parada de emergencia / Motores a 0
-
     // Control Remoto (Manual)
     CMD_MOVE_RC     = 0x10, // Movimiento manual (adelante, atrás, giro)
-
     // Parámetros PID (Crucial para el balanceo)
     CMD_PID_KP      = 0x20, // Ajustar constante Proporcional
     CMD_PID_KI      = 0x21, // Ajustar constante Integral
     CMD_PID_KD      = 0x22, // Ajustar constante Derivativa
     CMD_PID_SETPOINT = 0x23, // Ajustar ángulo de equilibrio (offset del centro de masa)
-
     // Telemetría (STM32 -> Qt)
     CMD_TELEMETRY   = 0xA0, // Envío de ángulos, velocidad y sensores IR
     CMD_LOG_MSG     = 0xA1  // Envío de mensajes de texto para debug
 };
+
+typedef enum {
+    FILTRO_COMPLEMENTARIO = 0,	/*!< Predeterminado */
+    FILTRO_KALMAN = 1,			/*!< Presenta matemática más compleja que el filtro complementario */
+    FILTRO_SOLO_ACCEL = 2 		/*!< Desactivar filtro */
+} FiltroTipo_t;
+
+FiltroTipo_t filtro_actual = FILTRO_COMPLEMENTARIO; // Por defecto
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -108,10 +127,13 @@ enum {
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 // ================= [ Flags ] ================= //
-volatile 	uint8_t flagDisplay=0;
-			uint8_t flagSendUNER = 0;
-			uint8_t dma_ready = 0;
-			uint8_t calibration_ready = 0; // Bandera para no activar el PID antes de tiempo
+volatile 	uint8_t 		flagDisplay=0;
+			uint8_t 		flagSendUNER = 0;
+			uint8_t 		dma_ready = 0;
+			uint8_t 		calibration_ready = 0; // Bandera para no activar el PID antes de tiempo
+			//banderas de modo o máquina de estado
+			FiltroTipo_t 	currentlySelectedFilter = FILTRO_COMPLEMENTARIO;
+
 // ================= [ Counters ] ================= //
 			uint16_t contador = 0;
 volatile 	uint32_t counter=0;		/*!< Utilizado en la interrupción del Timer 4. Es volatile por que se usan en interrupciones*/
@@ -134,6 +156,16 @@ float angle_y = 0;
 float alpha = 0.95; // Factor del filtro complementario
 uint32_t last_time = 0;
 uint8_t mpu_data[14]; // Los 14 bytes que trae el DMA
+
+//filtro kalman
+float Q_angle = 0.001f;   // Proceso: Incertidumbre del acelerómetro
+float Q_bias = 0.003f;    // Proceso: Incertidumbre de la deriva del giro
+float R_measure = 0.03f;  // Medición: Ruido del sensor (ajustar si vibra mucho)
+
+float angle_kalman = 0.0f;
+float bias_kalman = 0.0f;
+float P_matrix[2][2] = {{0, 0}, {0, 0}};
+
 // =================[ Variables de Calibración ] =================//
 float gyro_bias = 0;
 volatile float giro=0, giro_z=0, salida=0;
@@ -143,6 +175,9 @@ PayloadUNER_t telemetria;
 // recibidos desde el qt
 uint8_t rx_buffer_uart[256];
 uint16_t delayHB= 60; //ENTRE 1 Y 200
+
+
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -179,8 +214,37 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void DataToQt(){
+float aplicarKalman(float newAngle, float newRate, float dt) {
+    // 1. Predicción
+    float rate = newRate - bias_kalman;
+    angle_kalman += dt * rate;
 
+    P_matrix[0][0] += dt * (dt * P_matrix[1][1] - P_matrix[0][1] - P_matrix[1][0] + Q_angle);
+    P_matrix[0][1] -= dt * P_matrix[1][1];
+    P_matrix[1][0] -= dt * P_matrix[1][1];
+    P_matrix[1][1] += Q_bias * dt;
+
+    // 2. Actualización (Corrección)
+    float S = P_matrix[0][0] + R_measure;
+    float K[2]; // Ganancia de Kalman
+    K[0] = P_matrix[0][0] / S;
+    K[1] = P_matrix[1][0] / S;
+
+    float y = newAngle - angle_kalman;
+    angle_kalman += K[0] * y;
+    bias_kalman += K[1] * y;
+
+    float P00_temp = P_matrix[0][0];
+    float P01_temp = P_matrix[0][1];
+
+    P_matrix[0][0] -= K[0] * P00_temp;
+    P_matrix[0][1] -= K[0] * P01_temp;
+    P_matrix[1][0] -= K[1] * P00_temp;
+    P_matrix[1][1] -= K[1] * P01_temp;
+
+    return angle_kalman;
+}
+void DataToQt(){
 		flagSendUNER=0;
 		telemetria.data.acc_x = accelx;
 		telemetria.data.acc_y = accely;
@@ -254,7 +318,6 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
         __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)(-speed_R));
     }
 }
-
 void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
     uint8_t check, data;
 
@@ -305,17 +368,24 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	// en la dirección del MPU y cargamos esos datos en mpu_data.
 	// En esta interrupción tambien actualizamos la bandera para el display y hacemos
 	// el HeartBit con el if del counter
+
+	/*
+	 * Frecuencia del Timer: 72MHz
+	 * Conteo hasta el periodo (ARR): 4999
+	 * Resultado: interrupcion cada 5ms
+	 * */
     if (htim->Instance == TIM4 && calibration_ready) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
 			HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14);
 		}
         counter++;
-        if(counter > delayHB){ // ~200ms
+        if(counter > delayHB){
             counter = 0;
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED [cite: 46]
         }
     }
 }
+/*
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	// en esta interrupción provocada por la llegada de los datos de I2C sacamos los
 	// datos en crudo de las aceleraciones y giros para procesarlos y calcular el PID
@@ -331,18 +401,17 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		int16_t gx = (int16_t)(mpu_data[8] << 8 | mpu_data[9]);   // Nuevo: Gyro X (Roll)
 		int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]); // Gyro Y (Pitch)
 		int16_t gz = (int16_t)(mpu_data[12] << 8 | mpu_data[13]); // Nuevo: Gyro Z (Yaw)
-        accelx = ax;
-        accely = ay;
-        accelz = az;
-        giro 	= (float)gy / 65.5f;
-        giro_z 	= (float)gz / 65.5f;
-        angle_y = (float)gx / 65.5f;
+
+
+
 
         float gyro_rate = ((float)gy / 65.5f) - gyro_bias;
-//        giro = (float)gy / 131.0f; // Ejemplo de escala para 250dps
-//        float gyro_rate = ((float)gy / 131.0f) - gyro_bias;
+
 	   float accel_angle = atan2f((float)ax, (float)az) * 57.2957f;
-	   //angle_y = alpha * (angle_y + gyro_rate * 0.01f) + (1.0f - alpha) * accel_angle;
+
+
+
+
 	   angle_y = alpha * (angle_y + gyro_rate * 0.005f) + (1.0f - alpha) * accel_angle;
 
 	   float error = angle_y - setpoint;
@@ -362,6 +431,72 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		   Robot_Drive((int16_t)output, (int16_t)output);
 		   salida=output;
 	   }
+    }
+}
+*/
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+    if (hi2c->Instance == I2C1) {
+        // --- BLOQUE 1: RECONSTRUCCIÓN DE DATOS RAW ---
+        // El MPU6050 manda 2 bytes por eje (High y Low).
+        // Desplazamos el primero 8 bits y sumamos el segundo para formar un int16_t.
+        int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
+        int16_t ay = (int16_t)(mpu_data[2] << 8 | mpu_data[3]);
+        int16_t az = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
+        // Saltamos mpu_data[6] y [7] porque son la Temperatura.
+        int16_t gx = (int16_t)(mpu_data[8] << 8 | mpu_data[9]);
+        int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]);
+        int16_t gz = (int16_t)(mpu_data[12] << 8 | mpu_data[13]);
+        // --- BLOQUE 2: CONVERSIÓN A UNIDADES FÍSICAS ---
+        // gyro_bias es el error que calculaste en la calibración.
+        // 65.5f es el factor de escala para +/- 500 dps (grados por segundo).
+        float gyro_rate = ((float)gy - gyro_bias) / 65.5f;
+        // Calculamos el ángulo inclinado usando solo el acelerómetro.
+        // atan2f te da el ángulo en radianes, multiplicamos por 57.29 para pasar a grados.
+        float accel_angle = atan2f((float)ax, (float)az) * 57.2957f;
+        // --- BLOQUE 3: FILTRO COMPLEMENTARIO ---
+        // Aquí es donde unimos la velocidad del giro con la estabilidad del acelerómetro.
+        // angle_y "recuerda" su valor anterior, le suma lo que giró en 5ms (0.005s)
+        // y lo corrige un poquito con el ángulo del acelerómetro para que no derive.
+        switch(currentlySelectedFilter){
+        default:
+        case FILTRO_COMPLEMENTARIO:
+        	angle_y = alpha * (angle_y + gyro_rate * 0.005f) + (1.0f - alpha) * accel_angle;
+        	break;
+        case FILTRO_KALMAN:
+        	angle_y = aplicarKalman(accel_angle, gyro_rate, 0.005f);
+        	break;
+        case FILTRO_SOLO_ACCEL:
+        	angle_y= accel_angle;
+        	break;
+        }
+        // --- BLOQUE 4: CÁLCULO DEL ERROR Y PID ---
+        float error = angle_y - setpoint; // setpoint suele ser 0 (vertical)
+        float P = Kp * error;  // P: Proporcional (reacciona al error actual)
+        integral += error * 0.005f; // I: Integral (suma el error en el tiempo para eliminar errores estacionarios)
+        // Anti-Windup: Evita que la integral crezca hasta el infinito si el robot se traba
+        if(integral > 1000) integral = 1000;
+        else if(integral < -1000) integral = -1000;
+        float D = Kd * (error - last_error) / 0.005f;// D: Derivativo (reacciona a la velocidad del cambio, frena las oscilaciones)
+        last_error = error;
+        // --- BLOQUE 5: SALIDA A MOTORES Y SEGURIDAD ---
+        float output = P + (Ki * integral) + D;
+        // Lógica de "Safe Shutdown": Si el robot se cae (más de 45°), apagamos motores.
+        if (angle_y > 45.0f || angle_y < -45.0f) {
+            Robot_Drive(0, 0);
+            integral = 0; // Reseteamos integral para el próximo intento
+        } else {
+            // Enviamos la corrección a los motores
+            Robot_Drive((int16_t)output, (int16_t)output);
+            salida = output; // Para telemetría en Qt
+        }
+
+        //datos cargados para mandar al Qt
+        accelx = ax;
+	   accely = ay;
+	   accelz = az;
+	   giro 	= (float)gy / 65.5f;
+	   giro_z 	= (float)gz / 65.5f;
+	//   angle_y = (float)gx / 65.5f;
     }
 }
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
@@ -477,10 +612,10 @@ int main(void)
 	   DataToQt(); //llamada cada 50ms
 	   counter1++;
 	   if(counter1 > 4)
-		   flagDisplay=1;
+		   flagDisplay=1; //cada 200ms
 	   	   MPU6050_Calibrate();	// solo se llamará si la bandera dentro de la funcion esta activa
 	   }
-	if(flagDisplay){
+	if(flagDisplay){//cada 200ms
 		flagDisplay=0;
 		char msg[20];
 //		SSD1306_Fill(SSD1306_COLOR_BLACK); // Borra lo anterior [cite: 28]}
