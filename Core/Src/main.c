@@ -132,61 +132,55 @@ volatile 	uint8_t 		flagDisplay=0;
 			uint8_t 		flagSendUNER = 0;
 			uint8_t 		dma_ready = 0;
 			uint8_t 		calibration_ready = 0; // Bandera para no activar el PID antes de tiempo
+			uint8_t			motorsIsOn = 0;
 			//banderas de modo o máquina de estado
 			FiltroTipo_t 	currentlySelectedFilter = FILTRO_COMPLEMENTARIO;
 
 // ================= [ Counters ] ================= //
-			uint16_t 	contador = 0;
-volatile 	uint32_t 	counter=0;		/*!< Utilizado en la interrupción del Timer 4. Es volatile por que se usan en interrupciones*/
-			uint8_t  	counter1=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
+			uint16_t 		contador = 0;
+volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4. Es volatile por que se usan en interrupciones*/
+			uint8_t  		counter1=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
 //RECEPCION DE DATOS
-			char 		rx_buffer[20];
+			char 			rx_buffer[20];
 			uint8_t 		rx_index = 0;
-			uint8_t 	rx_data;
+			uint8_t 		rx_data;
 // Nuevas variables para compensar la diferencia entre motores
-			int16_t 	deadband_L = 500;		/*!< Zona Muerta del PWM para el motor 1*/
-			int16_t 	deadband_R = 500; 		/*!< Zona Muerta del PWM para el motor 2*/
+			int16_t 		deadband_L = 500;		/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_R = 500; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
-			float Kp = 80.0;	/*!< Término Proporcional: Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float Ki = 0.5;		/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float Kd = 2.5;		/*!< Término Derivativo: mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float integral = 0, last_error = 0;
-			float setpoint = 0.0; 						// El ángulo donde el robot se queda parado (0 grados)
+			float 			Kp = 80.0;	/*!< Término Proporcional: Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 0.5;		/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 2.5;		/*!< Término Derivativo: mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			integral = 0, last_error = 0;
+			float 			setpoint = 0.0; 						// El ángulo donde el robot se queda parado (0 grados)
 // =================[ Variables del Filtro del MPU6050 ] =================//
-			float angle_y = 0;
-			float alpha = 0.95; // Factor del filtro complementario
-			uint32_t last_time = 0;
-			uint8_t mpu_data[14]; // Los 14 bytes que trae el DMA
-
+			float 			angle_y = 0;
+			float 			alpha = 0.95; // Factor del filtro complementario
+			uint32_t 		last_time = 0;
+			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
 //filtro kalman
-			float Q_angle = 0.001f;   // Proceso: Incertidumbre del acelerómetro
-			float Q_bias = 0.003f;    // Proceso: Incertidumbre de la deriva del giro
-			float R_measure = 0.03f;  // Medición: Ruido del sensor (ajustar si vibra mucho)
-
-			float angle_kalman = 0.0f;
-			float bias_kalman = 0.0f;
-			float P_matrix[2][2] = {{0, 0}, {0, 0}};
-
+			float 			Q_angle = 0.001f;   // Proceso: Incertidumbre del acelerómetro
+			float 			Q_bias = 0.003f;    // Proceso: Incertidumbre de la deriva del giro
+			float 			R_measure = 0.03f;  // Medición: Ruido del sensor (ajustar si vibra mucho)
+			float 			angle_kalman = 0.0f;
+			float 			bias_kalman = 0.0f;
+			float 			P_matrix[2][2] = {{0, 0}, {0, 0}};
 // =================[ Variables de Calibración ] =================//
-			float gyro_bias = 0;
-
+			float 			gyro_bias = 0;
 // =================[ Protocolo UNER ] =================//
-volatile 	uint16_t 	accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
-volatile 	uint16_t 	accely=0;
-volatile 	uint16_t	accelz=0;
-volatile 	float 		giro=0;
-volatile 	float		giro_z=0;
-volatile 	float		accelGiro=0;
-volatile 	float		salida=0;
+volatile 	uint16_t 		accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
+volatile 	uint16_t 		accely=0;
+volatile 	uint16_t		accelz=0;
+volatile 	float 			giro=0;
+volatile 	float			giro_z=0;
+volatile 	float			accelGiro=0;
+volatile 	float			salida=0;
 
 uint32_t lastTime0 = 0;
 PayloadUNER_t telemetria;
 // recibidos desde el qt
 uint8_t rx_buffer_uart[256];
-uint16_t delayHB= 60; //ENTRE 1 Y 200
-
-
-
+uint16_t delayHB= 200; //ENTRE 1 Y 200
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -445,11 +439,13 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	   float D = Kd * (error - last_error) / 0.005f;
 	   last_error = error;
 	   float output = P + (Ki * integral) + D;
-	   if (angle_y > 45.0f || angle_y < -45.0f) {
+
+	   if ((angle_y > 45.0f || angle_y < -45.0f)) {
 		   Robot_Drive(0, 0);
 		   integral = 0;
 	   } else {
-		   Robot_Drive((int16_t)output, (int16_t)output);
+		   if(motorsIsOn){	   		Robot_Drive((int16_t)output, (int16_t)output);}
+		   if(motorsIsOn==0){	    Robot_Drive(0, 0);}
 		   salida=output;
 	   }
     }
@@ -523,13 +519,16 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 							 delayHB = payload_ptr[0];
 							break;
 						case CMD_CALIBRATE:
-							calibration_ready=0;
+							 Robot_Drive(0, 0);
+							 calibration_ready=0;
 							 break;
 						default:
 						case CMD_ALIVE:
-
+							sendCMD(1, 0); // te devuelvo un alive
 							break;
-
+						case CMD_ONOFFMOTORS:
+							motorsIsOn = payload_ptr[0];
+							break;
 					}
 					memset(rx_buffer_uart, 0, Size);
 					break; // Salimos del for
