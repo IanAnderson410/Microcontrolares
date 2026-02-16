@@ -87,24 +87,25 @@ typedef struct {
 
 enum {
     // Sistema y Heartbeat
-    CMD_ALIVE       = 0x01, // Verificar conexión
-    CMD_SET_HB      = 0x02, // Configurar intervalo de Heartbeat
-    // Control de Estado
-    CMD_CALIBRATE   = 0x05, // Calibración de MPU6050
-    CMD_START       = 0x06, // Activar motores / Inicio de balanceo
-    CMD_STOP        = 0x07, // Parada de emergencia / Motores a 0
+    CMD_ALIVE       		= 1, // Verificar conexión
+    CMD_SET_HB      		= 0x02, // Configurar intervalo de Heartbeat
+    CMD_CALIBRATE   		= 0x05, // Calibración de MPU6050
+    CMD_START       		= 0x06, // Activar motores / Inicio de balanceo
+    CMD_STOP        		= 0x07, // Parada de emergencia / Motores a 0
     // Control Remoto (Manual)
-    CMD_MOVE_RC     = 0x10, // Movimiento manual (adelante, atrás, giro)
+    CMD_MOVE_RC     		= 0x10, // Movimiento manual (adelante, atrás, giro)
     // Parámetros PID (Crucial para el balanceo)
-    CMD_PID_KP      = 0x20, // Ajustar constante Proporcional
-    CMD_PID_KI      = 0x21, // Ajustar constante Integral
-    CMD_PID_KD      = 0x22, // Ajustar constante Derivativa
-    CMD_PID_SETPOINT = 0x23, // Ajustar ángulo de equilibrio (offset del centro de masa)
+    CMD_PID_KP      		= 0x20, // Ajustar constante Proporcional
+    CMD_PID_KI      		= 0x21, // Ajustar constante Integral
+    CMD_PID_KD      		= 0x22, // Ajustar constante Derivativa
+    CMD_PID_SETPOINT 		= 0x23, // Ajustar ángulo de equilibrio (offset del centro de masa)
     // Telemetría (STM32 -> Qt)
-    CMD_TELEMETRY   = 0xA0, // Envío de ángulos, velocidad y sensores IR
-    CMD_LOG_MSG     = 0xA1  // Envío de mensajes de texto para debug
+    CMD_TELEMETRY   		= 0xA0, // Envío de ángulos, velocidad y sensores IR
+    CMD_LOG_MSG     		= 0xA1,  // Envío de mensajes de texto para debug
+	CMD_CHANGE_FILTER_MPU 	= 16,
+	CMD_ONOFFMOTORS 		= 17, 		/*!< Prender y apagar motores*/
+	CMD_DATA 				= 18		/*!< El robot manda datos de la unidad Sensitiva*/
 };
-
 typedef enum {
     FILTRO_COMPLEMENTARIO = 0,	/*!< Predeterminado */
     FILTRO_KALMAN = 1,			/*!< Presenta matemática más compleja que el filtro complementario */
@@ -252,6 +253,21 @@ float aplicarKalman(float newAngle, float newRate, float dt) {
 
     return angle_kalman;
 }
+void sendCMD(uint8_t cmd, uint16_t param) {
+    uint8_t frame[10];
+    memcpy(&frame[0], "UNER", 4);     // [0-3] Header
+    frame[4] = 4;                     //
+    frame[5] = 0xFD;                  // [5] Token
+    frame[6] = cmd;                   // [6] CMD
+    frame[7] = (uint8_t)(param & 0xFF);        // Byte Menos Significativo (LSB)
+    frame[8] = (uint8_t)((param >> 8) & 0xFF); // Byte Más Significativo (MSB)
+    uint8_t checksum = 0;
+    for(int i=0; i<9; i++) {
+        checksum ^= frame[i];
+    }
+    frame[9] = checksum;              // [9] Checksum al final
+    HAL_UART_Transmit_DMA(&huart1, frame, 10);
+}
 void DataToQt(){
 		flagSendUNER=0;
 		telemetria.data.acc_x = accelx;
@@ -277,7 +293,7 @@ void DataToQt(){
 		memcpy(&frame[0], "UNER", 4);    			// Header
 		frame[4] = 46;                  			// Length (CMD + Payload + CHK)
 		frame[5] = 0xFD;                			// TOKEN (ejemplo de constante de fin cabecera)
-		frame[6] = 0x01;                			// CMD: 0x01 = Telemetría
+		frame[6] = CMD_DATA;                			// CMD: 0x01 = Telemetría
 		memcpy(&frame[7], telemetria.buffer, 44); 	// Payload
 		// 3. Cálculo del Checksum XOR
 		uint8_t checksum = 0;
@@ -509,6 +525,11 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 						case CMD_CALIBRATE:
 							calibration_ready=0;
 							 break;
+						default:
+						case CMD_ALIVE:
+
+							break;
+
 					}
 					memset(rx_buffer_uart, 0, Size);
 					break; // Salimos del for

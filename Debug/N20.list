@@ -27,25 +27,25 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000030  00000000  00000000  000122e8  2**0
                   CONTENTS, READONLY
- 12 .debug_info   0001c1e9  00000000  00000000  00012318  2**0
+ 12 .debug_info   0001c276  00000000  00000000  00012318  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 00003ff1  00000000  00000000  0002e501  2**0
+ 13 .debug_abbrev 00004002  00000000  00000000  0002e58e  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 00001880  00000000  00000000  000324f8  2**3
+ 14 .debug_aranges 00001888  00000000  00000000  00032590  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_rnglists 00001332  00000000  00000000  00033d78  2**0
+ 15 .debug_rnglists 00001339  00000000  00000000  00033e18  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  00005dcc  00000000  00000000  000350aa  2**0
+ 16 .debug_macro  00005dcc  00000000  00000000  00035151  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0001e6f5  00000000  00000000  0003ae76  2**0
+ 17 .debug_line   0001e74a  00000000  00000000  0003af1d  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000975aa  00000000  00000000  0005956b  2**0
+ 18 .debug_str    000975e7  00000000  00000000  00059667  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  000f0b15  2**0
+ 19 .comment      00000043  00000000  00000000  000f0c4e  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00007ab0  00000000  00000000  000f0b58  2**2
+ 20 .debug_frame  00007ad4  00000000  00000000  000f0c94  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 21 .debug_line_str 0000005e  00000000  00000000  000f8608  2**0
+ 21 .debug_line_str 0000005e  00000000  00000000  000f8768  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -1482,6 +1482,11 @@ float aplicarKalman(float newAngle, float newRate, float dt) {
  80011ac:	2000001c 	.word	0x2000001c
 
 080011b0 <DataToQt>:
+        checksum ^= frame[i];
+    }
+    frame[9] = checksum;              // [9] Checksum al final
+    HAL_UART_Transmit_DMA(&huart1, frame, 10);
+}
 void DataToQt(){
  80011b0:	b5f0      	push	{r4, r5, r6, r7, lr}
  80011b2:	b091      	sub	sp, #68	@ 0x44
@@ -1633,8 +1638,8 @@ void DataToQt(){
 		frame[5] = 0xFD;                			// TOKEN (ejemplo de constante de fin cabecera)
  8001302:	23fd      	movs	r3, #253	@ 0xfd
  8001304:	727b      	strb	r3, [r7, #9]
-		frame[6] = 0x01;                			// CMD: 0x01 = Telemetría
- 8001306:	2301      	movs	r3, #1
+		frame[6] = CMD_DATA;                			// CMD: 0x01 = Telemetría
+ 8001306:	2312      	movs	r3, #18
  8001308:	72bb      	strb	r3, [r7, #10]
 		memcpy(&frame[7], telemetria.buffer, 44); 	// Payload
  800130a:	4b1f      	ldr	r3, [pc, #124]	@ (8001388 <DataToQt+0x1d8>)
@@ -2519,8 +2524,13 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
  8001a26:	d002      	beq.n	8001a2e <HAL_UARTEx_RxEventCallback+0xd6>
  8001a28:	2b05      	cmp	r3, #5
  8001a2a:	d006      	beq.n	8001a3a <HAL_UARTEx_RxEventCallback+0xe2>
+							calibration_ready=0;
+							 break;
+						default:
+						case CMD_ALIVE:
+
+							break;
  8001a2c:	e009      	b.n	8001a42 <HAL_UARTEx_RxEventCallback+0xea>
-						case CMD_SET_HB:
 							 delayHB = payload_ptr[0];
  8001a2e:	68bb      	ldr	r3, [r7, #8]
  8001a30:	781b      	ldrb	r3, [r3, #0]
@@ -2529,13 +2539,13 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
  8001a36:	801a      	strh	r2, [r3, #0]
 							break;
  8001a38:	e003      	b.n	8001a42 <HAL_UARTEx_RxEventCallback+0xea>
-						case CMD_CALIBRATE:
 							calibration_ready=0;
  8001a3a:	4b13      	ldr	r3, [pc, #76]	@ (8001a88 <HAL_UARTEx_RxEventCallback+0x130>)
  8001a3c:	2200      	movs	r2, #0
  8001a3e:	701a      	strb	r2, [r3, #0]
 							 break;
  8001a40:	bf00      	nop
+
 					}
 					memset(rx_buffer_uart, 0, Size);
  8001a42:	887b      	ldrh	r3, [r7, #2]
