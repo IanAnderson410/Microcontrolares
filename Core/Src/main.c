@@ -218,33 +218,25 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 float aplicarKalman(float newAngle, float newRate, float dt) {
-    // 1. Predicción
     float rate = newRate - bias_kalman;
     angle_kalman += dt * rate;
-
     P_matrix[0][0] += dt * (dt * P_matrix[1][1] - P_matrix[0][1] - P_matrix[1][0] + Q_angle);
     P_matrix[0][1] -= dt * P_matrix[1][1];
     P_matrix[1][0] -= dt * P_matrix[1][1];
     P_matrix[1][1] += Q_bias * dt;
-
-    // 2. Actualización (Corrección)
     float S = P_matrix[0][0] + R_measure;
     float K[2]; // Ganancia de Kalman
     K[0] = P_matrix[0][0] / S;
     K[1] = P_matrix[1][0] / S;
-
     float y = newAngle - angle_kalman;
     angle_kalman += K[0] * y;
     bias_kalman += K[1] * y;
-
     float P00_temp = P_matrix[0][0];
     float P01_temp = P_matrix[0][1];
-
     P_matrix[0][0] -= K[0] * P00_temp;
     P_matrix[0][1] -= K[0] * P01_temp;
     P_matrix[1][0] -= K[1] * P00_temp;
     P_matrix[1][1] -= K[1] * P01_temp;
-
     return angle_kalman;
 }
 void sendCMD(uint8_t cmd, uint16_t param) {
@@ -289,31 +281,23 @@ void DataToQt(){
 		frame[5] = 0xFD;                			// TOKEN (ejemplo de constante de fin cabecera)
 		frame[6] = CMD_DATA;                			// CMD: 0x01 = Telemetría
 		memcpy(&frame[7], telemetria.buffer, 44); 	// Payload
-		// 3. Cálculo del Checksum XOR
 		uint8_t checksum = 0;
-		for (int i = 0; i < 51; i++) { // calculamos el checksu,
+		for (int i = 0; i < 51; i++) { // calculamos el checksum
 			checksum ^= frame[i];
 		}
 		frame[51] = checksum;           // agregamos Checksum
 		HAL_UART_Transmit_DMA(&huart1, frame, 52);// enviamos los datos al ESP01 via UART con DMA
 }
 void Robot_Drive(int16_t speed_L, int16_t speed_R) {
-    // Motor 1 (PA8, PA9, PB4)
-	// 1. Aplicar Deadband (Zona muerta)
-	    if (speed_L > 0) speed_L += deadband_L;
+	    if (speed_L > 0) speed_L += deadband_L;			// Aplicar Deadband (Zona muerta)
 	    else if (speed_L < 0) speed_L -= deadband_L;
-
 	    if (speed_R > 0) speed_R += deadband_R;
 	    else if (speed_R < 0) speed_R -= deadband_R;
-
-	    // 2. Saturación final al ARR (3599)
-	    if (speed_L > 3599) speed_L = 3599;
+	    if (speed_L > 3599) speed_L = 3599; 			// Establecemos límites
 	    if (speed_L < -3599) speed_L = -3599;
 	    if (speed_R > 3599) speed_R = 3599;
 	    if (speed_R < -3599) speed_R = -3599;
-
-    if (speed_L >= 0) {
-
+    if (speed_L >= 0) { // Motor 1 (PA8, PA9, PB4)
        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
 	   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
         __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)speed_L);
@@ -322,9 +306,7 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
         __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)(-speed_L));
     }
-
-    // Motor 2 (PB3, PA15, PB5)
-    if (speed_R >= 0) {
+    if (speed_R >= 0) {// Motor 2 (PB3, PA15, PB5)
     	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
         __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)speed_R);
@@ -336,10 +318,8 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 }
 void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
     uint8_t check, data;
-
     // 1. Verificamos si el sensor responde (Who Am I)
     HAL_I2C_Mem_Read(hi2c, MPU6050_ADDR, 0x75, 1, &check, 1, 100);
-
     if (check == 0x68) { // El valor por defecto del registro WHO_AM_I es 0x68
         // 2. Power Management: Salir de Sleep Mode
         data = 0x00;
@@ -350,7 +330,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
         // 4. Configurar Giroscopio (+/- 500 dps)
         data = 0x08;
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1B, 1, &data, 1, 100);
-        data = 0x03; // Filtro de ~42Hz. Limpia muchísima basura del sensor.
+        data = 0x05; // Filtro de ~42Hz. Limpia basura del sensor. Valor recomendable 0x03
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1A, 1, &data, 1, 100);
     }
 }
@@ -404,9 +384,9 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]); // Gyro Y (Pitch)
 		int16_t gz = (int16_t)(mpu_data[12] << 8 | mpu_data[13]); // Gyro Z (Yaw)
 
-        float gyro_rate = ((float)gy / 65.5f) - gyro_bias;		//PITCH
-		//float gyro_rate = ((float)gy / 65.5f);		//PITCH
-		float accel_angle = atan2f((float)ax, (float)az) * 57.2957f;
+        float gyro_rate = ((float)gy / 65.5f) - gyro_bias;						//PITCH
+		//float gyro_rate = ((float)gy / 65.5f);								//PITCH
+		float accel_angle = (atan2f((float)ax, (float)az) * 57.2957f) - 45.2f ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
 
 		accelx 	= ax;
 		accely 	= ay;
