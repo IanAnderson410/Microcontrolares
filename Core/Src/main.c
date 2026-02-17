@@ -88,23 +88,22 @@ typedef struct {
 enum {
     // Sistema y Heartbeat
     CMD_ALIVE       		= 1, // Verificar conexión
-    CMD_SET_HB      		= 0x02, // Configurar intervalo de Heartbeat
-    CMD_CALIBRATE   		= 0x05, // Calibración de MPU6050
-    CMD_START       		= 0x06, // Activar motores / Inicio de balanceo
-    CMD_STOP        		= 0x07, // Parada de emergencia / Motores a 0
+    CMD_SET_HB      		= 2, // Configurar intervalo de Heartbeat
+    CMD_CALIBRATE   		= 5, // Calibración de MPU6050
+    CMD_START       		= 6, // Activar motores / Inicio de balanceo
+    CMD_STOP        		= 7, // Parada de emergencia / Motores a 0
     // Control Remoto (Manual)
-    CMD_MOVE_RC     		= 0x10, // Movimiento manual (adelante, atrás, giro)
-    // Parámetros PID (Crucial para el balanceo)
-    CMD_PID_KP      		= 0x20, // Ajustar constante Proporcional
-    CMD_PID_KI      		= 0x21, // Ajustar constante Integral
-    CMD_PID_KD      		= 0x22, // Ajustar constante Derivativa
-    CMD_PID_SETPOINT 		= 0x23, // Ajustar ángulo de equilibrio (offset del centro de masa)
-    // Telemetría (STM32 -> Qt)
-    CMD_TELEMETRY   		= 0xA0, // Envío de ángulos, velocidad y sensores IR
-    CMD_LOG_MSG     		= 0xA1,  // Envío de mensajes de texto para debug
+    CMD_MOVE_RC     		= 10, // Movimiento manual (adelante, atrás, giro)
+   // CMD_TELEMETRY   		= 0xA0, // Envío de ángulos, velocidad y sensores IR
+   // CMD_LOG_MSG     		= 0xA1,  // Envío de mensajes de texto para debug
 	CMD_CHANGE_FILTER_MPU 	= 16,
 	CMD_ONOFFMOTORS 		= 17, 		/*!< Prender y apagar motores*/
-	CMD_DATA 				= 18		/*!< El robot manda datos de la unidad Sensitiva*/
+	CMD_DATA 				= 18,		/*!< El robot manda datos de la unidad Sensitiva*/
+
+	CMD_PID_KP      		= 20, /*!< Ajustar Término Proporcional*/
+	CMD_PID_KI      		= 21, /*!< Ajustar Término Integral*/
+	CMD_PID_KD      		= 22, /*!< Ajustar Término Derivativa*/
+	CMD_PID_SETPOINT 		= 23 /*!< Ajustar  Offset*/
 };
 typedef enum {
     FILTRO_COMPLEMENTARIO = 0,	/*!< Predeterminado */
@@ -148,11 +147,12 @@ volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4.
 			int16_t 		deadband_L = 500;		/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 500; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
-			float 			Kp = 80.0;	/*!< Término Proporcional: Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.5;		/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 2.5;		/*!< Término Derivativo: mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			Kp = 80.0;			/*!< Término Proporcional: Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 0.5;			/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 2.5;			/*!< Término Derivativo: mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = 45.2f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0, last_error = 0;
-			float 			setpoint = 0.0; 						// El ángulo donde el robot se queda parado (0 grados)
+
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y = 0;
 			float 			alpha = 0.95; // Factor del filtro complementario
@@ -386,7 +386,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 
         float gyro_rate = ((float)gy / 65.5f) - gyro_bias;						//PITCH
 		//float gyro_rate = ((float)gy / 65.5f);								//PITCH
-		float accel_angle = (atan2f((float)ax, (float)az) * 57.2957f) - 45.2f ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
+		float accel_angle = (atan2f((float)ax, (float)az) * 57.2957f) - setpoint ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
 
 		accelx 	= ax;
 		accely 	= ay;
@@ -509,6 +509,43 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 						case CMD_ONOFFMOTORS:
 							motorsIsOn = payload_ptr[0];
 							break;
+						case CMD_PID_KP:
+							if(payload_ptr[0] > 15 && payload_ptr[0] < 100){
+								Kp = payload_ptr[0];
+								sendCMD(CMD_PID_KP, 1); // efectivamente se cambio a dicho valor
+							}
+							else{
+								sendCMD(CMD_PID_KP, 0); // Valor inválido
+							}
+							break;
+						case CMD_PID_KD:
+							if(payload_ptr[0] > 1 && payload_ptr[0] < 10){
+								Kd = payload_ptr[0];
+								sendCMD(CMD_PID_KD, 1); // efectivamente se cambio a dicho valor
+							}
+							else{
+								sendCMD(CMD_PID_KD, 0); // Valor inválido
+							}
+							break;
+						case CMD_PID_KI:
+							if(payload_ptr[0] > 0.5 && payload_ptr[0] < 50){
+								Ki = payload_ptr[0];
+								sendCMD(CMD_PID_KI, 1); // efectivamente se cambio a dicho valor
+							}
+							else{
+								sendCMD(CMD_PID_KI, 0); // Valor Inválido
+							}
+							break;
+						case CMD_PID_SETPOINT:
+							if(payload_ptr[0] > -45 && payload_ptr[0] < 45){
+								setpoint = (float)payload_ptr[0];
+								sendCMD(CMD_PID_SETPOINT, 1); // efectivamente se cambio a dicho valor
+							}
+							else{
+								sendCMD(CMD_PID_SETPOINT, 0); // Valor Inválido
+							}
+							break;
+
 					}
 					memset(rx_buffer_uart, 0, Size);
 					break; // Salimos del for
