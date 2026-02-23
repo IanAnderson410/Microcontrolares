@@ -91,15 +91,14 @@ enum {
     CMD_CALIBRATE   		= 5, // Calibración de MPU6050
     CMD_START       		= 6, // Activar motores / Inicio de balanceo
     CMD_STOP        		= 7, // Parada de emergencia / Motores a 0
-	CMD_TCP_CONNECTED		= 8,		/*!< Comando utilizado en la conexión del TCP y el robot. 1 conectado, 0 desconectado*/
-    // Control Remoto (Manual)
+	CMD_TCP_CONNECTED		= 8,	/*!< Comando utilizado en la conexión del TCP y el robot. 1 conectado, 0 desconectado*/
+	CMD_CHANGE_OLED_SCREEN  = 9,	/*!< Cambia o apaga la pantalla OLED*/
     CMD_MOVE_RC     		= 10, 		// Movimiento manual (adelante, atrás, giro)
    // CMD_TELEMETRY   		= 0xA0, 		// Envío de ángulos, velocidad y sensores IR
    // CMD_LOG_MSG     		= 0xA1,  // Envío de mensajes de texto para debug
 	CMD_CHANGE_FILTER_MPU 	= 16,
 	CMD_ONOFFMOTORS 		= 17, 		/*!< Prender y apagar motores*/
 	CMD_DATA 				= 18,		/*!< El robot manda datos de la unidad Sensitiva*/
-
 	CMD_PID_KP      		= 20, 		/*!< Ajustar Término Proporcional*/
 	CMD_PID_KI      		= 21, 		/*!< Ajustar Término Integral*/
 	CMD_PID_KD      		= 22, 		/*!< Ajustar Término Derivativa*/
@@ -137,11 +136,13 @@ Buzzer_Seq_t hBuzzer = {0}; // Inicializamos en cero
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 // ================= [ Flags ] ================= //
-volatile 	uint8_t 		flagDisplay=0;
-			uint8_t 		flagSendUNER = 0;
-			uint8_t 		dma_ready = 0;
-			uint8_t 		calibration_ready = 0; // Bandera para no activar el PID antes de tiempo
-			uint8_t			motorsIsOn = 0;
+volatile 	uint8_t 		flagDisplay			=	0;
+			uint8_t 		flagSendUNER 		= 	0;
+			uint8_t			flagWIFI			=   0;
+			uint8_t 		flagOLED 			= 	0;
+			uint8_t 		dma_ready 			= 	0;
+			uint8_t 		calibration_ready 	= 	0; // Bandera para no activar el PID antes de tiempo
+			uint8_t			motorsIsOn 			=	0;
 			//banderas de modo o máquina de estado
 			FiltroTipo_t 	currentlySelectedFilter = FILTRO_COMPLEMENTARIO;
 
@@ -200,6 +201,8 @@ uint16_t adc_buffer[8]; // El buffer que llena el DMA
 char msg[20];
 
 uint8_t BS=0;
+
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -380,14 +383,17 @@ void DataToQt(){
 		telemetria.data.pos_y = 2;
 		telemetria.data.velocidad = 1;
 		telemetria.data.modo = 0;
-		telemetria.data.IR[0] = 100;
-		telemetria.data.IR[1] = 200;
-		telemetria.data.IR[2] = 300;
-		telemetria.data.IR[3] = 400;
-		telemetria.data.IR[4] = 500;
-		telemetria.data.IR[5] = 600;
-		telemetria.data.IR[6] = 700;
-		telemetria.data.IR[7] = 800;
+		for(uint8_t i=0; i<8; i++){
+			telemetria.data.IR[i] = adc_buffer[i];
+		}
+//		telemetria.data.IR[0] = 100;
+//		telemetria.data.IR[1] = 200;
+//		telemetria.data.IR[2] = 300;
+//		telemetria.data.IR[3] = 400;
+//		telemetria.data.IR[4] = 500;
+//		telemetria.data.IR[5] = 600;
+//		telemetria.data.IR[6] = 700;
+//		telemetria.data.IR[7] = 800;
 		telemetria.data.infoAdicional=0;
 		uint8_t frame[52]; 							// 4(UNER) + 1(LEN) + 1(TOKEN) + 1(CMD) + 27(PAYLOAD) + 1(CHK)
 		memcpy(&frame[0], "UNER", 4);    			// Header
@@ -555,11 +561,15 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 						case CMD_TCP_CONNECTED:
 							if(payload_ptr[0]){	//conectado
 								BS_tcpConnectSecuence();
+								flagWIFI=1;
 							}
 							else if(payload_ptr[0]==0){				//desconectado
 								BS_Error();
+								flagWIFI=0;
 							}
-
+							break;
+						case CMD_CHANGE_OLED_SCREEN:
+							flagOLED = payload_ptr[0];
 							break;
 						case CMD_PID_KP:
 							if(payload_ptr[0] > 15 && payload_ptr[0] < 100){
@@ -597,7 +607,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 								sendCMD(CMD_PID_SETPOINT, 0); // Valor Inválido
 							}
 							break;
-
 					}
 					memset(rx_buffer_uart, 0, Size);
 					break; // Salimos del for
@@ -704,17 +713,60 @@ int main(void)
 	if(flagDisplay){//cada 200ms
 		flagDisplay=0;
 		if (!oled_is_busy) {
-		        SSD1306_Fill(SSD1306_COLOR_BLACK);
-		        for (int i = 0; i < 4; i++) {
-		            sprintf(msg, "C%d:%4hu", i, adc_buffer[i]);
-		            SSD1306_GotoXY(2, 15 + (i * 12));
-		            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		            sprintf(msg, "C%d:%4hu", i + 4, adc_buffer[i + 4]);
-		            SSD1306_GotoXY(65, 15 + (i * 12));
-		            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		        }
-		        // NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
-		        oled_update_requested = 1;
+				switch(flagOLED){
+				case 0:
+				    oled_update_requested = 1;
+					break;
+				case 1:
+					SSD1306_Fill(SSD1306_COLOR_BLACK);
+					for (int i = 0; i < 4; i++) {
+						sprintf(msg, "C%d:%4hu", i, adc_buffer[i]);
+						SSD1306_GotoXY(2, 15 + (i * 12));
+						SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+
+						sprintf(msg, "C%d:%4hu", i + 4, adc_buffer[i + 4]);
+						SSD1306_GotoXY(65, 15 + (i * 12));
+						SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+					}
+
+					if (flagWIFI) {
+						// Dibujamos el icono de WiFi (podes usar lineas o circulos)
+						SSD1306_Clear();
+						SSD1306_DrawLine(110, 8, 114, 4, SSD1306_COLOR_WHITE); // Onda 1
+						SSD1306_DrawLine(114, 4, 118, 8, SSD1306_COLOR_WHITE);
+						SSD1306_DrawLine(112, 10, 116, 10, SSD1306_COLOR_WHITE); // Punto base
+					} else {
+						// Icono tachado o texto simple
+						SSD1306_Clear();
+						SSD1306_GotoXY(105, 2);
+						SSD1306_Puts("X", &Font_7x10, SSD1306_COLOR_WHITE);
+						SSD1306_DrawLine(105, 2, 120, 12, SSD1306_COLOR_WHITE); // Tachado
+					}
+
+					oled_update_requested = 1;// NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
+					break;
+				case 2:
+					SSD1306_Fill(SSD1306_COLOR_BLACK);
+					for (int i = 0; i < 8; i++) {
+					        // 1. Calculamos el ancho de la barra (Supongamos 50 píxeles de ancho máximo)
+					        // Mapeo: (Valor ADC * Ancho Máximo) / 4095
+					        uint8_t barWidth = (uint8_t)((adc_buffer[i] * 50) / 4095);
+					        uint8_t yPos = 0 + (i * 7);
+					        if(i==0 || i == 7){
+					        	char label[4];
+								sprintf(label, "IR%d", i);
+								SSD1306_GotoXY(2, yPos);
+								SSD1306_Puts(label, &Font_7x10, SSD1306_COLOR_WHITE);
+					        }
+					        SSD1306_DrawRectangle(25, yPos, 50, 5, SSD1306_COLOR_WHITE);
+					        SSD1306_DrawFilledRectangle(25, yPos, barWidth, 5, SSD1306_COLOR_WHITE);
+					    }
+
+					    oled_update_requested = 1; // Le avisamos al scheduler que mande los datos al OLED
+					break;
+				}
+
 		    }
 	}
 
