@@ -26,6 +26,7 @@ extern I2C_HandleTypeDef hi2c1;
 #define SSD1306_I2C &hi2c1
 
 
+
 /* Write command */
 #define SSD1306_WRITECOMMAND(command)      ssd1306_I2C_Write(SSD1306_I2C_ADDR, 0x00, (command))
 /* Write data */
@@ -47,6 +48,11 @@ typedef struct {
 /* Private variable */
 static SSD1306_t SSD1306;
 
+
+uint8_t dma_page_buffer[135];
+extern volatile uint8_t oled_update_requested;
+extern volatile uint8_t oled_current_page;
+extern volatile uint8_t oled_is_busy; // Para saber si el display está ocupado
 
 uint8_t SSD1306_Init(void) {
 
@@ -203,7 +209,6 @@ char SSD1306_Putc(char ch, FontDef_t* Font, SSD1306_COLOR_t color) {
 		/* Error */
 		return 0;
 	}
-	
 	/* Go through font */
 	for (i = 0; i < Font->FontHeight; i++) {
 		b = Font->data[(ch - 32) * Font->FontHeight + i];
@@ -218,11 +223,9 @@ char SSD1306_Putc(char ch, FontDef_t* Font, SSD1306_COLOR_t color) {
 	
 	/* Increase pointer */
 	SSD1306.CurrentX += Font->FontWidth;
-	
 	/* Return character written */
 	return ch;
 }
-
 char SSD1306_Puts(char* str, FontDef_t* Font, SSD1306_COLOR_t color) {
 	/* Write characters */
 	while (*str) {
@@ -245,38 +248,26 @@ void SSD1306_DrawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, SSD130
 	int16_t dx, dy, sx, sy, err, e2, i, tmp; 
 	
 	/* Check for overflow */
-	if (x0 >= SSD1306_WIDTH) {
-		x0 = SSD1306_WIDTH - 1;
-	}
-	if (x1 >= SSD1306_WIDTH) {
-		x1 = SSD1306_WIDTH - 1;
-	}
-	if (y0 >= SSD1306_HEIGHT) {
-		y0 = SSD1306_HEIGHT - 1;
-	}
-	if (y1 >= SSD1306_HEIGHT) {
-		y1 = SSD1306_HEIGHT - 1;
-	}
-	
+	if (x0 >= SSD1306_WIDTH)	{	x0 = SSD1306_WIDTH - 1;		}
+	if (x1 >= SSD1306_WIDTH)	{	x1 = SSD1306_WIDTH - 1;		}
+	if (y0 >= SSD1306_HEIGHT)	{	y0 = SSD1306_HEIGHT - 1;	}
+	if (y1 >= SSD1306_HEIGHT)	{	y1 = SSD1306_HEIGHT - 1;	}
 	dx = (x0 < x1) ? (x1 - x0) : (x0 - x1); 
 	dy = (y0 < y1) ? (y1 - y0) : (y0 - y1); 
 	sx = (x0 < x1) ? 1 : -1; 
 	sy = (y0 < y1) ? 1 : -1; 
 	err = ((dx > dy) ? dx : -dy) / 2; 
-
 	if (dx == 0) {
 		if (y1 < y0) {
 			tmp = y1;
 			y1 = y0;
 			y0 = tmp;
 		}
-		
 		if (x1 < x0) {
 			tmp = x1;
 			x1 = x0;
 			x0 = tmp;
 		}
-		
 		/* Vertical line */
 		for (i = y0; i <= y1; i++) {
 			SSD1306_DrawPixel(x0, i, c);
@@ -650,11 +641,45 @@ for(i = 0; i < count; i++)
 dt[i+1] = data[i];
 HAL_I2C_Master_Transmit(SSD1306_I2C, address, dt, count+1, 10);
 }
-
-
 void ssd1306_I2C_Write(uint8_t address, uint8_t reg, uint8_t data) {
 	uint8_t dt[2];
 	dt[0] = reg;
 	dt[1] = data;
 	HAL_I2C_Master_Transmit(SSD1306_I2C, address, dt, 2, 10);
+}
+
+void SSD1306_UpdatePage_DMA(uint8_t page) {
+    if (page >= 8) return;
+
+    // --- ARMAMOS TODO EL PAQUETE EN LA RAM (0 bloqueos) ---
+
+    // 1. Comando: Ir a la página
+    dma_page_buffer[0] = 0x80;         // Control: Sigue un comando
+    dma_page_buffer[1] = 0xB0 + page;  // Comando: Page Address
+
+    // 2. Comando: Columna baja = 0
+    dma_page_buffer[2] = 0x80;         // Control: Sigue un comando
+    dma_page_buffer[3] = 0x00;         // Comando: Lower Column
+
+    // 3. Comando: Columna alta = 0
+    dma_page_buffer[4] = 0x80;         // Control: Sigue un comando
+    dma_page_buffer[5] = 0x10;         // Comando: Higher Column
+
+    // 4. Control final: Lo que sigue son los 128 píxeles
+    dma_page_buffer[6] = 0x40;         // Control: Siguen DATOS
+
+    // 5. Copiamos los 128 bytes de la pantalla
+    for(int i = 0; i < SSD1306_WIDTH; i++) {
+        dma_page_buffer[7 + i] = SSD1306_Buffer[(SSD1306_WIDTH * page) + i];
+    }
+  //  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    // --- DISPARAMOS EL DMA UNA SOLA VEZ ---
+    // Esto retorna instantáneamente. Cero bloqueos. El hardware hace todo.
+    if (HAL_I2C_Master_Transmit_DMA(SSD1306_I2C, SSD1306_I2C_ADDR, dma_page_buffer, 135) != HAL_OK) {
+            // Si el DMA falló en arrancar (por ejemplo, bus ocupado por ruido)
+            // Forzamos el reinicio de las banderas para que no se quede trabado para siempre
+            oled_current_page = 0;
+            oled_update_requested = 0;
+            oled_is_busy = 0;
+        }
 }

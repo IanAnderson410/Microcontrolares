@@ -175,17 +175,28 @@ volatile 	float 			giro=0;
 volatile 	float			giro_z=0;
 volatile 	float			accelGiro=0;
 volatile 	float			salida=0;
+// =================[ I2C Scheduler ] =================//
+volatile uint8_t oled_update_requested = 0;
+volatile uint8_t oled_current_page = 0;
+volatile uint8_t oled_is_busy = 0; // Para saber si el display está ocupado
 
 uint32_t lastTime0 = 0;
 PayloadUNER_t telemetria;
 // recibidos desde el qt
 uint8_t rx_buffer_uart[256];
 uint16_t delayHB= 200; //ENTRE 1 Y 200
+
+uint16_t adc_buffer[8]; // El buffer que llena el DMA
+char msg[20];
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
+
 I2C_HandleTypeDef hi2c1;
 DMA_HandleTypeDef hdma_i2c1_rx;
+DMA_HandleTypeDef hdma_i2c1_tx;
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
@@ -207,7 +218,10 @@ static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
+void calculoPID(void);
+float aplicarKalman(float newAngle, float newRate, float dt);
 void DataToQt();
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void Robot_Drive(int16_t speed_L, int16_t speed_R);
@@ -217,6 +231,59 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void calculoPID(void){
+	int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
+			int16_t ay = (int16_t)(mpu_data[2] << 8 | mpu_data[3]); // Nuevo: Accel Y
+			int16_t az = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
+			//int16_t gx = (int16_t)(mpu_data[8] << 8 | mpu_data[9]);   // Nuevo: Gyro X (Roll)
+			int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]); // Gyro Y (Pitch)
+			int16_t gz = (int16_t)(mpu_data[12] << 8 | mpu_data[13]); // Gyro Z (Yaw)
+
+	        float gyro_rate = ((float)gy / 65.5f) - gyro_bias;						//PITCH
+			//float gyro_rate = ((float)gy / 65.5f);								//PITCH
+			float accel_angle = (atan2f((float)ax, (float)az) * 57.2957f) - setpoint ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
+
+			accelx 	= ax;
+			accely 	= ay;
+			accelz 	= az;
+			giro 	= gyro_rate;
+			giro_z 	= (float)gz / 65.5f;
+			accelGiro = accel_angle;
+
+		   switch(currentlySelectedFilter){
+			   default:
+			   case FILTRO_COMPLEMENTARIO:
+				angle_y = alpha * (angle_y + gyro_rate * 0.005f) + (1.0f - alpha) * accel_angle;
+				break;
+			   case FILTRO_KALMAN:
+				angle_y = aplicarKalman(accel_angle, gyro_rate, 0.005f);
+				break;
+			   case FILTRO_SOLO_ACCEL:
+				angle_y= accel_angle;
+				break;
+			   }
+		   float error = angle_y - setpoint;
+		   //float error = angle_y - 45.2f;
+
+		   float P = Kp * error;
+		   //integral += error * 0.01f;
+		   integral += error * 0.005f;
+		   if(integral > 1000) integral = 1000;
+		   else if(integral < -1000) integral = -1000;
+		  // float D = Kd * (error - last_error) / 0.01f;
+		   float D = Kd * (error - last_error) / 0.005f;
+		   last_error = error;
+		   float output = P + (Ki * integral) + D;
+
+		   if ((angle_y > 45.0f || angle_y < -45.0f)) {
+			   Robot_Drive(0, 0);
+			   integral = 0;
+		   } else {
+			   if(motorsIsOn){	   		Robot_Drive((int16_t)output, (int16_t)output);}
+			   if(motorsIsOn==0){	    Robot_Drive(0, 0);}
+			   salida=output;
+		   }
+}
 float aplicarKalman(float newAngle, float newRate, float dt) {
     float rate = newRate - bias_kalman;
     angle_kalman += dt * rate;
@@ -366,6 +433,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         if(counter > delayHB){
             counter = 0;
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED [cite: 46]
+
+
         }
     }
 }
@@ -377,105 +446,32 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 //	   datos (HAL_I2C_MemRxCpltCallback), garantizás que el cálculo se hace con los datos
 //	   más frescos posibles.
     if (hi2c->Instance == I2C1) {
-    	int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
-		int16_t ay = (int16_t)(mpu_data[2] << 8 | mpu_data[3]); // Nuevo: Accel Y
-		int16_t az = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
-		//int16_t gx = (int16_t)(mpu_data[8] << 8 | mpu_data[9]);   // Nuevo: Gyro X (Roll)
-		int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]); // Gyro Y (Pitch)
-		int16_t gz = (int16_t)(mpu_data[12] << 8 | mpu_data[13]); // Gyro Z (Yaw)
+    	calculoPID();
+	   if (oled_update_requested) {
+			oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
 
-        float gyro_rate = ((float)gy / 65.5f) - gyro_bias;						//PITCH
-		//float gyro_rate = ((float)gy / 65.5f);								//PITCH
-		float accel_angle = (atan2f((float)ax, (float)az) * 57.2957f) - setpoint ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
+			// Mandamos solo la página actual
+			SSD1306_UpdatePage_DMA(oled_current_page);
 
-		accelx 	= ax;
-		accely 	= ay;
-		accelz 	= az;
-		giro 	= gyro_rate;
-		giro_z 	= (float)gz / 65.5f;
-		accelGiro = accel_angle;
+			// Incrementamos para la próxima vez
+			oled_current_page++;
+			if (oled_current_page >= 8) {
+				// Ya mandamos toda la pantalla. Terminamos el proceso.
+				oled_current_page = 0;
+				oled_update_requested = 0;
+			}
+		}
 
-	   switch(currentlySelectedFilter){
-		   default:
-		   case FILTRO_COMPLEMENTARIO:
-			angle_y = alpha * (angle_y + gyro_rate * 0.005f) + (1.0f - alpha) * accel_angle;
-			break;
-		   case FILTRO_KALMAN:
-			angle_y = aplicarKalman(accel_angle, gyro_rate, 0.005f);
-			break;
-		   case FILTRO_SOLO_ACCEL:
-			angle_y= accel_angle;
-			break;
-		   }
-	   float error = angle_y - setpoint;
-	   //float error = angle_y - 45.2f;
-
-	   float P = Kp * error;
-	   //integral += error * 0.01f;
-	   integral += error * 0.005f;
-	   if(integral > 1000) integral = 1000;
-	   else if(integral < -1000) integral = -1000;
-	  // float D = Kd * (error - last_error) / 0.01f;
-	   float D = Kd * (error - last_error) / 0.005f;
-	   last_error = error;
-	   float output = P + (Ki * integral) + D;
-
-	   if ((angle_y > 45.0f || angle_y < -45.0f)) {
-		   Robot_Drive(0, 0);
-		   integral = 0;
-	   } else {
-		   if(motorsIsOn){	   		Robot_Drive((int16_t)output, (int16_t)output);}
-		   if(motorsIsOn==0){	    Robot_Drive(0, 0);}
-		   salida=output;
-	   }
     }
 }
-/*
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
     if (hi2c->Instance == I2C1) {
-        // --- BLOQUE 1: RECONSTRUCCIÓN DE DATOS RAW ---
-        // El MPU6050 manda 2 bytes por eje (High y Low).
-        // Desplazamos el primero 8 bits y sumamos el segundo para formar un int16_t.
-        int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
-        int16_t ay = (int16_t)(mpu_data[2] << 8 | mpu_data[3]);
-        int16_t az = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
-        // Saltamos mpu_data[6] y [7] porque son la Temperatura.
-       // int16_t gx = (int16_t)(mpu_data[8] << 8 | mpu_data[9]);
-        int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]);
-        int16_t gz = (int16_t)(mpu_data[12] << 8 | mpu_data[13]);
-        // --- BLOQUE 2: CONVERSIÓN A UNIDADES FÍSICAS ---
-        // gyro_bias es el error que calculaste en la calibración.
-        // 65.5f es el factor de escala para +/- 500 dps (grados por segundo).
-        float gyro_rate = ((float)gy - gyro_bias) / 65.5f;
-        // Calculamos el ángulo inclinado usando solo el acelerómetro.
-        // atan2f te da el ángulo en radianes, multiplicamos por 57.29 para pasar a grados.
-        float accel_angle = atan2f((float)ax, (float)az) * 57.2957f;
-        // --- BLOQUE 3: FILTRO COMPLEMENTARIO ---
-        // Aquí es donde unimos la velocidad del giro con la estabilidad del acelerómetro.
-        // angle_y "recuerda" su valor anterior, le suma lo que giró en 5ms (0.005s)
-        // y lo corrige un poquito con el ángulo del acelerómetro para que no derive.
-        accelx = ax;
-		   accely = ay;
-		   accelz = az;
-		   giro 	= (float)gy / 65.5f;
-		   giro_z 	= (float)gz / 65.5f;
-        switch(currentlySelectedFilter){
-        default:
-        case FILTRO_COMPLEMENTARIO:
-        	angle_y = alpha * (angle_y + gyro_rate * 0.005f) + (1.0f - alpha) * accel_angle;
-        	break;
-        case FILTRO_KALMAN:
-        	angle_y = aplicarKalman(accel_angle, gyro_rate, 0.005f);
-        	break;
-        case FILTRO_SOLO_ACCEL:
-        	angle_y= accel_angle;
-        	break;
+    	//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED [cite: 46]
+        if (oled_current_page == 0 && !oled_update_requested) {
+            oled_is_busy = 0; // Liberamos para que el while(1) pueda armar el siguiente frame
         }
-
     }
-
-
-*/
+}
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart->Instance == USART1){
@@ -603,9 +599,12 @@ int main(void)
   MX_USB_DEVICE_Init();
   MX_TIM4_Init();
   MX_USART1_UART_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
+
     uint8_t mpu_wake = 0;
     HAL_I2C_Mem_Write(&hi2c1, (0x68 << 1), 0x6B, 1, &mpu_wake, 1, 100);
+    HAL_Delay(1000);
     if (SSD1306_Init() != 1) { // OJO: Verificá si tu librería devuelve 1 o 0 en éxito
         Error_Handler();
     }
@@ -614,10 +613,16 @@ int main(void)
     HAL_TIM_Base_Start_IT(&htim4);
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-    HAL_Delay(2000);
+    HAL_Delay(500);
     MPU6050_Calibrate();
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET);
+
+    if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 8) != HAL_OK) {
+          /* Error de iniciación */
+          Error_Handler();
+      }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -633,19 +638,26 @@ int main(void)
 	   lastTime0 = HAL_GetTick();
 	   DataToQt(); //llamada cada 50ms
 	   counter1++;
-	   if(counter1 > 4){
+	   if(counter1 > 6){
 		   flagDisplay=1; //cada 200ms
 	   	   MPU6050_Calibrate();	// solo se llamará si la bandera dentro de la funcion esta activa
 	   }
 	}
 	if(flagDisplay){//cada 200ms
 		flagDisplay=0;
-	//	char msg[20];
-//		SSD1306_Fill(SSD1306_COLOR_BLACK); // Borra lo anterior [cite: 28]}
-//		SSD1306_GotoXY(2, 15); // [cite: 36]
-//		sprintf(msg, "OUT:%.2f", salida);
-//		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE); // [cite: 40]
-//		SSD1306_UpdateScreen(); // Fundamental para que se vea el cambio [cite: 26]
+		if (!oled_is_busy) {
+		        SSD1306_Fill(SSD1306_COLOR_BLACK);
+		        for (int i = 0; i < 4; i++) {
+		            sprintf(msg, "C%d:%4hu", i, adc_buffer[i]);
+		            SSD1306_GotoXY(2, 15 + (i * 12));
+		            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+		            sprintf(msg, "C%d:%4hu", i + 4, adc_buffer[i + 4]);
+		            SSD1306_GotoXY(65, 15 + (i * 12));
+		            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+		        }
+		        // NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
+		        oled_update_requested = 1;
+		    }
 	}
 
   }
@@ -695,6 +707,121 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 8;
+  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_2;
+  sConfig.Rank = 2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Rank = 3;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_4;
+  sConfig.Rank = 4;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_5;
+  sConfig.Rank = 5;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_6;
+  sConfig.Rank = 6;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_7;
+  sConfig.Rank = 7;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Rank = 8;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -811,7 +938,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 3599;
+  htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
@@ -931,6 +1058,12 @@ static void MX_DMA_Init(void)
   /* DMA1_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+  /* DMA1_Stream6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 3, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
+  /* DMA2_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
   /* DMA2_Stream2_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
@@ -955,14 +1088,14 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2|MOTB_IN1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2|GPIO_PIN_10|MOTB_IN1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9|GPIO_PIN_10|MOTB_IN2_Pin, GPIO_PIN_RESET);
@@ -974,8 +1107,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB2 MOTB_IN1_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|MOTB_IN1_Pin;
+  /*Configure GPIO pins : PB2 PB10 MOTB_IN1_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_10|MOTB_IN1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
