@@ -84,7 +84,6 @@ typedef struct {
     uint8_t payload[64];    // Buffer genérico (sobra espacio)
     // El checksum no lo ponemos en el struct fijo porque su posición varía
 } UnerPacket_t;
-
 enum {
     // Sistema y Heartbeat
     CMD_ALIVE       		= 1, // Verificar conexión
@@ -92,18 +91,19 @@ enum {
     CMD_CALIBRATE   		= 5, // Calibración de MPU6050
     CMD_START       		= 6, // Activar motores / Inicio de balanceo
     CMD_STOP        		= 7, // Parada de emergencia / Motores a 0
+	CMD_TCP_CONNECTED		= 8,		/*!< Comando utilizado en la conexión del TCP y el robot. 1 conectado, 0 desconectado*/
     // Control Remoto (Manual)
-    CMD_MOVE_RC     		= 10, // Movimiento manual (adelante, atrás, giro)
-   // CMD_TELEMETRY   		= 0xA0, // Envío de ángulos, velocidad y sensores IR
+    CMD_MOVE_RC     		= 10, 		// Movimiento manual (adelante, atrás, giro)
+   // CMD_TELEMETRY   		= 0xA0, 		// Envío de ángulos, velocidad y sensores IR
    // CMD_LOG_MSG     		= 0xA1,  // Envío de mensajes de texto para debug
 	CMD_CHANGE_FILTER_MPU 	= 16,
 	CMD_ONOFFMOTORS 		= 17, 		/*!< Prender y apagar motores*/
 	CMD_DATA 				= 18,		/*!< El robot manda datos de la unidad Sensitiva*/
 
-	CMD_PID_KP      		= 20, /*!< Ajustar Término Proporcional*/
-	CMD_PID_KI      		= 21, /*!< Ajustar Término Integral*/
-	CMD_PID_KD      		= 22, /*!< Ajustar Término Derivativa*/
-	CMD_PID_SETPOINT 		= 23 /*!< Ajustar  Offset*/
+	CMD_PID_KP      		= 20, 		/*!< Ajustar Término Proporcional*/
+	CMD_PID_KI      		= 21, 		/*!< Ajustar Término Integral*/
+	CMD_PID_KD      		= 22, 		/*!< Ajustar Término Derivativa*/
+	CMD_PID_SETPOINT 		= 23 		/*!< Ajustar  Offset*/
 };
 typedef enum {
     FILTRO_COMPLEMENTARIO = 0,	/*!< Predeterminado */
@@ -112,6 +112,16 @@ typedef enum {
 } FiltroTipo_t;
 
 FiltroTipo_t filtro_actual = FILTRO_COMPLEMENTARIO; // Por defecto
+
+typedef struct {
+    uint16_t duration;  // Cuánto tiempo suena (ms)
+    uint16_t interval;  // Cuánto tiempo de silencio entre beeps (ms)
+    uint8_t repeat;    // Cuántos beeps faltan por sonar
+    uint32_t last_tick; // Auxiliar para el tiempo
+    uint8_t state;      // 0 = Silencio, 1 = Sonando
+} Buzzer_Seq_t;
+
+Buzzer_Seq_t hBuzzer = {0}; // Inicializamos en cero
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -188,6 +198,8 @@ uint16_t delayHB= 200; //ENTRE 1 Y 200
 
 uint16_t adc_buffer[8]; // El buffer que llena el DMA
 char msg[20];
+
+uint8_t BS=0;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -220,6 +232,9 @@ static void MX_TIM4_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
+void buzzerSecuence(Buzzer_Seq_t *seq);
+void BS_tcpConnectSecuence();
+void BS_Error();
 void calculoPID(void);
 float aplicarKalman(float newAngle, float newRate, float dt);
 void DataToQt();
@@ -231,6 +246,38 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void buzzerSecuence(Buzzer_Seq_t *seq) {
+    if (seq->repeat == 0) {
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET); // Asegurar apagado
+        return;
+    }
+    uint32_t current_tick = HAL_GetTick();
+    if (seq->state == 0 && (current_tick - seq->last_tick >= seq->interval)) {
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
+        seq->state = 1;
+        seq->last_tick = current_tick;
+    }
+    else if (seq->state == 1 && (current_tick - seq->last_tick >= seq->duration)) {
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
+        seq->state = 0;
+        seq->last_tick = current_tick;
+        seq->repeat--; // Descontamos un beep
+    }
+}
+void BS_tcpConnectSecuence() {
+    hBuzzer.duration = 100;  // Beep corto de 100ms
+    hBuzzer.interval = 50;   // Silencio de 50ms
+    hBuzzer.repeat = 2;      // Que suene 2 veces (pip-pip)
+    hBuzzer.state = 0;
+    hBuzzer.last_tick = HAL_GetTick();
+}
+void BS_Error() {
+    hBuzzer.duration = 800;  // Beep largo de 800ms
+    hBuzzer.interval = 100;
+    hBuzzer.repeat = 1;      // Una sola vez (piiiiiii)
+    hBuzzer.state = 0;
+    hBuzzer.last_tick = HAL_GetTick();
+}
 void calculoPID(void){
 	int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
 			int16_t ay = (int16_t)(mpu_data[2] << 8 | mpu_data[3]); // Nuevo: Accel Y
@@ -505,6 +552,15 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 						case CMD_ONOFFMOTORS:
 							motorsIsOn = payload_ptr[0];
 							break;
+						case CMD_TCP_CONNECTED:
+							if(payload_ptr[0]){	//conectado
+								BS_tcpConnectSecuence();
+							}
+							else if(payload_ptr[0]==0){				//desconectado
+								BS_Error();
+							}
+
+							break;
 						case CMD_PID_KP:
 							if(payload_ptr[0] > 15 && payload_ptr[0] < 100){
 								Kp = payload_ptr[0];
@@ -632,10 +688,12 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	if (HAL_GetTick() - lastTime0 > 50) {
+	buzzerSecuence(&hBuzzer);
+	if (HAL_GetTick() - lastTime0 > 50){
 		// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y
 		// no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
+
 	   DataToQt(); //llamada cada 50ms
 	   counter1++;
 	   if(counter1 > 6){
