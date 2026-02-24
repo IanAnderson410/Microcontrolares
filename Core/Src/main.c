@@ -59,20 +59,20 @@
 /* USER CODE BEGIN PTD */
 //Al usar __attribute__((packed)), garantizamos que no haya "padding" (huecos de memoria)
 typedef struct __attribute__((packed)) {
-    int16_t acc_x, acc_y, acc_z; // 6 bytes - Datos crudos para debug en Qt
-    int16_t gyro_pitch, gyro_yaw; // 4 bytes - Pitch (Y) y Yaw (Z)
-    float pitch_angle;            // 4 bytes - El theta filtrado
-    float pos_x;                  // 4 bytes - Trayectoria X
-    float pos_y;                  // 4 bytes - Trayectoria Y
-    float velocidad;              // 4 bytes - Velocidad lineal
-    uint8_t modo;                 // 1 byte  - IDLE, FOLLOW_LINE, etc.
-    uint16_t IR[8];
-    uint8_t infoAdicional;
+    int16_t 	acc_x, acc_y, acc_z; // 6 bytes - Datos crudos para debug en Qt
+    int16_t 	gyro_pitch, gyro_yaw; // 4 bytes - Pitch (Y) y Yaw (Z)
+    float 		pitch_angle;            // 4 bytes - El theta filtrado
+    float 		pos_x;                  // 4 bytes - Trayectoria X
+    float 		pos_y;                  // 4 bytes - Trayectoria Y
+    float 		velocidad;              // 4 bytes - Velocidad lineal
+    uint8_t 	modo;                 // 1 byte  - IDLE, FOLLOW_LINE, etc.
+    uint16_t	IR[8];
+    uint8_t 	infoAdicional;
 } PayloadData_t;
 
 typedef union {
-    PayloadData_t data;
-    uint8_t buffer[sizeof(PayloadData_t)]; // 27 bytes totales
+    PayloadData_t 	data;
+    uint8_t 		buffer[sizeof(PayloadData_t)]; // 27 bytes totales
 } PayloadUNER_t;
 
 
@@ -145,7 +145,6 @@ volatile 	uint8_t 		flagDisplay			=	0;
 			uint8_t			motorsIsOn 			=	0;
 			//banderas de modo o máquina de estado
 			FiltroTipo_t 	currentlySelectedFilter = FILTRO_COMPLEMENTARIO;
-
 // ================= [ Counters ] ================= //
 			uint16_t 		contador = 0;
 volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4. Es volatile por que se usan en interrupciones*/
@@ -163,7 +162,6 @@ volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4.
 			float 			Kd = 2.5;			/*!< Término Derivativo: mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float 			setpoint = 45.2f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0, last_error = 0;
-
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y = 0;
 			float 			alpha = 0.95; // Factor del filtro complementario
@@ -275,64 +273,63 @@ void BS_tcpConnectSecuence() {
     hBuzzer.last_tick = HAL_GetTick();
 }
 void BS_Error() {
-    hBuzzer.duration = 800;  // Beep largo de 800ms
+    hBuzzer.duration = 700;  // Beep largo de 800ms
     hBuzzer.interval = 100;
     hBuzzer.repeat = 1;      // Una sola vez (piiiiiii)
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
 }
 void calculoPID(void){
-	int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
-			int16_t ay = (int16_t)(mpu_data[2] << 8 | mpu_data[3]); // Nuevo: Accel Y
-			int16_t az = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
-			//int16_t gx = (int16_t)(mpu_data[8] << 8 | mpu_data[9]);   // Nuevo: Gyro X (Roll)
-			int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]); // Gyro Y (Pitch)
-			int16_t gz = (int16_t)(mpu_data[12] << 8 | mpu_data[13]); // Gyro Z (Yaw)
+		int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
+		int16_t ay = (int16_t)(mpu_data[2] << 8 | mpu_data[3]); // Nuevo: Accel Y
+		int16_t az = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
+		//int16_t gx = (int16_t)(mpu_data[8] << 8 | mpu_data[9]);   // Nuevo: Gyro X (Roll)
+		int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]); // Gyro Y (Pitch)
+		int16_t gz = (int16_t)(mpu_data[12] << 8 | mpu_data[13]); // Gyro Z (Yaw)
 
-	        float gyro_rate = ((float)gy / 65.5f) - gyro_bias;						//PITCH
-			//float gyro_rate = ((float)gy / 65.5f);								//PITCH
-			float accel_angle = (atan2f((float)ax, (float)az) * 57.2957f) - setpoint ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
+		float gyro_rate = ((float)gy / 65.5f) - gyro_bias;						//PITCH
+		//float gyro_rate = ((float)gy / 65.5f);								//PITCH
+		float accel_angle = (atan2f((float)ax, (float)az) * 57.2957f) - setpoint ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
 
-			accelx 	= ax;
-			accely 	= ay;
-			accelz 	= az;
-			giro 	= gyro_rate;
-			giro_z 	= (float)gz / 65.5f;
-			accelGiro = accel_angle;
-
-		   switch(currentlySelectedFilter){
-			   default:
-			   case FILTRO_COMPLEMENTARIO:
-				angle_y = alpha * (angle_y + gyro_rate * 0.005f) + (1.0f - alpha) * accel_angle;
-				break;
-			   case FILTRO_KALMAN:
-				angle_y = aplicarKalman(accel_angle, gyro_rate, 0.005f);
-				break;
-			   case FILTRO_SOLO_ACCEL:
-				angle_y= accel_angle;
-				break;
-			   }
-		   float error = angle_y - setpoint;
-		   //float error = angle_y - 45.2f;
-
-		   float P = Kp * error;
-		   //integral += error * 0.01f;
-		   integral += error * 0.005f;
-		   if(integral > 1000) integral = 1000;
-		   else if(integral < -1000) integral = -1000;
-		  // float D = Kd * (error - last_error) / 0.01f;
-		   float D = Kd * (error - last_error) / 0.005f;
-		   last_error = error;
-		   float output = P + (Ki * integral) + D;
-
-		   if ((angle_y > 45.0f || angle_y < -45.0f)) {
-			   Robot_Drive(0, 0);
-			   integral = 0;
-		   } else {
-			   if(motorsIsOn){	   		Robot_Drive((int16_t)output, (int16_t)output);}
-			   if(motorsIsOn==0){	    Robot_Drive(0, 0);}
-			   salida=output;
+		accelx 	= ax;
+		accely 	= ay;
+		accelz 	= az;
+		giro 	= gyro_rate;
+		giro_z 	= (float)gz / 65.5f;
+		accelGiro = accel_angle;
+	   switch(currentlySelectedFilter){
+		   default:
+		   case FILTRO_COMPLEMENTARIO:
+			angle_y = alpha * (angle_y + gyro_rate * 0.005f) + (1.0f - alpha) * accel_angle;
+			break;
+		   case FILTRO_KALMAN:
+			angle_y = aplicarKalman(accel_angle, gyro_rate, 0.005f);
+			break;
+		   case FILTRO_SOLO_ACCEL:
+			angle_y= accel_angle;
+			break;
 		   }
+	   float error = angle_y - setpoint;
+	   //float error = angle_y - 45.2f;
+
+	   float P = Kp * error;
+	   //integral += error * 0.01f;
+	   integral += error * 0.005f;
+	   if(integral > 1000) integral = 1000;
+	   else if(integral < -1000) integral = -1000;
+	  // float D = Kd * (error - last_error) / 0.01f;
+	   float D = Kd * (error - last_error) / 0.005f;
+	   last_error = error;
+	   float output = P + (Ki * integral) + D;
+
+	   if ((angle_y > 45.0f || angle_y < -45.0f)) {
+		   Robot_Drive(0, 0);
+		   integral = 0;
+	   } else {
+		   if(motorsIsOn){	   		Robot_Drive((int16_t)output, (int16_t)output);}
+		   if(motorsIsOn==0){	    Robot_Drive(0, 0);}
+		   salida=output;
+	   }
 }
 float aplicarKalman(float newAngle, float newRate, float dt) {
     float rate = newRate - bias_kalman;
@@ -372,6 +369,82 @@ void sendCMD(uint8_t cmd, uint16_t param) {
     HAL_UART_Transmit_DMA(&huart1, frame, 10);
 }
 void DataToQt(){
+
+
+
+	    // 1. CHEQUEO DE DESBORDAMIENTO: No pisar los datos si el DMA sigue enviando el paquete anterior
+	    if (huart1.gState != HAL_UART_STATE_READY) {
+	        return; // El UART está ocupado, saltamos este turno para no corromper la memoria
+	    }
+
+	    flagSendUNER = 0;
+
+	    // 2. Carga de datos
+	    telemetria.data.acc_x       = (int16_t)accelx;
+	    telemetria.data.acc_y       = (int16_t)accely;
+	    telemetria.data.acc_z       = (int16_t)accelz;
+	    telemetria.data.gyro_pitch  = (int16_t)giro;
+	    telemetria.data.gyro_yaw    = (int16_t)giro_z;
+	    telemetria.data.pitch_angle = (float)accelGiro;
+	    telemetria.data.pos_x       = 3.0f;
+	    telemetria.data.pos_y       = 2.0f;
+	    telemetria.data.velocidad   = 1.0f;
+
+	    for(uint8_t i=0; i<8; i++) {
+	        telemetria.data.IR[i] = adc_buffer[i];
+	    }
+
+	    telemetria.data.modo = (uint8_t)motorsIsOn;
+	    telemetria.data.infoAdicional = 1;
+
+	    // 3. LA MAGIA: 'static' hace que la memoria no se borre al salir de la función
+	    static uint8_t frame[52];
+
+	    memcpy(&frame[0], "UNER", 4);
+	    frame[4] = 46;                  // Length = CMD(1) + Payload(44) + CHK(1)
+	    frame[5] = ':';                 // TOKEN
+	    frame[6] = 18;                  // CMD_DATA
+	    memcpy(&frame[7], telemetria.buffer, 44);
+
+	    // 4. Checksum seguro
+	    uint8_t checksum = 0;
+	    for (int i = 0; i < 51; i++) {
+	        checksum ^= frame[i];
+	    }
+	    frame[51] = checksum;
+
+	    // 5. Envío
+	    HAL_UART_Transmit_DMA(&huart1, frame, 52);
+
+	/*
+	    flagSendUNER = 0;
+	    telemetria.data.acc_x 			= (int16_t)accelx;
+	    telemetria.data.acc_y 			= (int16_t)accely;
+	    telemetria.data.acc_z 			= (int16_t)accelz;
+	    telemetria.data.gyro_pitch 		= (int16_t)giro;
+	    telemetria.data.gyro_yaw 		= (int16_t)giro_z;
+	    telemetria.data.pitch_angle		= (float)accelGiro;
+	    telemetria.data.pos_x 			= 3.0f;
+	    telemetria.data.pos_y 			= 2.0f;
+	    telemetria.data.velocidad 		= 1.0f;
+	    for(uint8_t i=0; i<8; i++)  	telemetria.data.IR[i] = adc_buffer[i];
+	    telemetria.data.modo 			= (uint8_t)motorsIsOn; // O el modo que corresponda
+	    telemetria.data.infoAdicional 	= 1; // Usalo como infoAdicional
+	    static uint8_t frame[52];
+	    memcpy(&frame[0], "UNER", 4);    //
+	    frame[4] = 46;                  // Length = 1(CMD) + 44(Payload) + 1(CHK)
+	    frame[5] = ':';                 // TOKEN coincidente con Qt
+	    frame[6] = CMD_DATA;            // CMD 18
+	    memcpy(&frame[7], telemetria.buffer, 44);
+	    uint8_t checksum = 0;
+	    for (int i = 0; i < 51; i++) {
+	        checksum ^= frame[i];
+	    }
+	    frame[51] = checksum;
+	    HAL_UART_Transmit_DMA(&huart1, frame, 52); // Envío al ESP01
+	   // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+*/
+	/*
 		flagSendUNER=0;
 		telemetria.data.acc_x = accelx;
 		telemetria.data.acc_y = accely;
@@ -407,6 +480,8 @@ void DataToQt(){
 		}
 		frame[51] = checksum;           // agregamos Checksum
 		HAL_UART_Transmit_DMA(&huart1, frame, 52);// enviamos los datos al ESP01 via UART con DMA
+
+		*/
 }
 void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    if (speed_L > 0) speed_L += deadband_L;			// Aplicar Deadband (Zona muerta)
@@ -478,20 +553,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	 * Conteo hasta el periodo (ARR): 4999
 	 * Resultado: interrupcion cada 5ms
 	 * */
-    if (htim->Instance == TIM4 && calibration_ready) {
+    if (htim->Instance == TIM4 && calibration_ready!= 0) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
 			HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14);
 		}
         counter++;
         if(counter > delayHB){
             counter = 0;
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED [cite: 46]
-
-
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
         }
     }
 }
-
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	// en esta interrupción provocada por la llegada de los datos de I2C sacamos los
 	// datos en crudo de las aceleraciones y giros para procesarlos y calcular el PID
@@ -500,12 +572,11 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 //	   más frescos posibles.
     if (hi2c->Instance == I2C1) {
     	calculoPID();
+    	/*
 	   if (oled_update_requested) {
 			oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
-
 			// Mandamos solo la página actual
 			SSD1306_UpdatePage_DMA(oled_current_page);
-
 			// Incrementamos para la próxima vez
 			oled_current_page++;
 			if (oled_current_page >= 8) {
@@ -514,16 +585,18 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 				oled_update_requested = 0;
 			}
 		}
-
+		*/
     }
 }
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
-    if (hi2c->Instance == I2C1) {
+    /*
+	if (hi2c->Instance == I2C1) {
     	//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED [cite: 46]
         if (oled_current_page == 0 && !oled_update_requested) {
             oled_is_busy = 0; // Liberamos para que el while(1) pueda armar el siguiente frame
         }
-    }
+    }*/
+
 }
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
@@ -619,9 +692,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     // Si hubo ruido o error de trama (común al arrancar el ESP)
-    if (huart->Instance == USART1)
-    {
-
+    if (huart->Instance == USART1){
         HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
     }
 }
@@ -666,15 +737,16 @@ int main(void)
   MX_USART1_UART_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-
     uint8_t mpu_wake = 0;
     HAL_I2C_Mem_Write(&hi2c1, (0x68 << 1), 0x6B, 1, &mpu_wake, 1, 100);
-    HAL_Delay(1000);
-    if (SSD1306_Init() != 1) { // OJO: Verificá si tu librería devuelve 1 o 0 en éxito
-        Error_Handler();
-    }
-    SSD1306_Fill(SSD1306_COLOR_BLACK);
-    SSD1306_UpdateScreen();
+
+//		Descomentar para activar OLED
+//    if (SSD1306_Init() != 1) { // OJO: Verificá si tu librería devuelve 1 o 0 en éxito
+//        Error_Handler();
+//    }
+//    SSD1306_Fill(SSD1306_COLOR_BLACK);
+//    SSD1306_UpdateScreen();
+
     HAL_TIM_Base_Start_IT(&htim4);
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
@@ -698,19 +770,17 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	buzzerSecuence(&hBuzzer);
-	if (HAL_GetTick() - lastTime0 > 50){
-		// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y
-		// no para calcular nada por que no es confiable
+	if (HAL_GetTick() - lastTime0 > 50){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
-
 	   DataToQt(); //llamada cada 50ms
 	   counter1++;
-	   if(counter1 > 6){
-		   flagDisplay=1; //cada 200ms
+	   if(counter1 > 6){		// se llama cad 300ms
+		   //flagDisplay=1; 		// poner en 1 para habilitar el display
 	   	   MPU6050_Calibrate();	// solo se llamará si la bandera dentro de la funcion esta activa
 	   }
 	}
-	if(flagDisplay){//cada 200ms
+	/*
+	if(flagDisplay){	//DISPLAY DESACTIVADO
 		flagDisplay=0;
 		if (!oled_is_busy) {
 				switch(flagOLED){
@@ -723,13 +793,10 @@ int main(void)
 						sprintf(msg, "C%d:%4hu", i, adc_buffer[i]);
 						SSD1306_GotoXY(2, 15 + (i * 12));
 						SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-
 						sprintf(msg, "C%d:%4hu", i + 4, adc_buffer[i + 4]);
 						SSD1306_GotoXY(65, 15 + (i * 12));
 						SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 					}
-
 					if (flagWIFI) {
 						// Dibujamos el icono de WiFi (podes usar lineas o circulos)
 						SSD1306_Clear();
@@ -743,7 +810,6 @@ int main(void)
 						SSD1306_Puts("X", &Font_7x10, SSD1306_COLOR_WHITE);
 						SSD1306_DrawLine(105, 2, 120, 12, SSD1306_COLOR_WHITE); // Tachado
 					}
-
 					oled_update_requested = 1;// NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
 					break;
 				case 2:
@@ -768,12 +834,10 @@ int main(void)
 				}
 
 		    }
-	}
-
+		}*/
   }
   /* USER CODE END 3 */
 }
-
 /**
   * @brief System Clock Configuration
   * @retval None
