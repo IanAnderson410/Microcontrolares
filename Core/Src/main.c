@@ -86,23 +86,26 @@ typedef struct {
 } UnerPacket_t;
 enum {
     // Sistema y Heartbeat
-    CMD_ALIVE       		= 1, // Verificar conexión
-    CMD_SET_HB      		= 2, // Configurar intervalo de Heartbeat
-    CMD_CALIBRATE   		= 5, // Calibración de MPU6050
-    CMD_START       		= 6, // Activar motores / Inicio de balanceo
-    CMD_STOP        		= 7, // Parada de emergencia / Motores a 0
-	CMD_TCP_CONNECTED		= 8,	/*!< Comando utilizado en la conexión del TCP y el robot. 1 conectado, 0 desconectado*/
-	CMD_CHANGE_OLED_SCREEN  = 9,	/*!< Cambia o apaga la pantalla OLED*/
-    CMD_MOVE_RC     		= 10, 		// Movimiento manual (adelante, atrás, giro)
-   // CMD_TELEMETRY   		= 0xA0, 		// Envío de ángulos, velocidad y sensores IR
-   // CMD_LOG_MSG     		= 0xA1,  // Envío de mensajes de texto para debug
-	CMD_CHANGE_FILTER_MPU 	= 16,
-	CMD_ONOFFMOTORS 		= 17, 		/*!< Prender y apagar motores*/
-	CMD_DATA 				= 18,		/*!< El robot manda datos de la unidad Sensitiva*/
-	CMD_PID_KP      		= 20, 		/*!< Ajustar Término Proporcional*/
-	CMD_PID_KI      		= 21, 		/*!< Ajustar Término Integral*/
-	CMD_PID_KD      		= 22, 		/*!< Ajustar Término Derivativa*/
-	CMD_PID_SETPOINT 		= 23 		/*!< Ajustar  Offset*/
+	CMD_ALIVE       			= 0, 		/*!< Busca confirmar conexión inalambrica*/
+    CMD_ACK 	      			= 1, 		/*!< Confirma conexión inalambrica*/
+    CMD_SET_HB      			= 2, 		// Configurar intervalo de Heartbeat
+    CMD_CALIBRATE   			= 5, 		// Calibración de MPU6050
+    CMD_START       			= 6, 		// Activar motores / Inicio de balanceo
+    CMD_STOP        			= 7, 		// Parada de emergencia / Motores a 0
+	CMD_TCP_CONNECTED			= 8,		/*!< Comando utilizado en la conexión del TCP y el robot. 1 conectado, 0 desconectado*/
+	CMD_CHANGE_OLED_SCREEN  	= 9,		/*!< Cambia o apaga la pantalla OLED*/
+    CMD_MOVE_RC     			= 10, 		// Movimiento manual (adelante, atrás, giro)
+   // CMD_TELEMETRY   			= 0xA0, 	// Envío de ángulos, velocidad y sensores IR
+   // CMD_LOG_MSG     			= 0xA1,  	// Envío de mensajes de texto para debug
+	CMD_CHANGE_DEADLINE_LEFT 	= 14,
+	CMD_CHANGE_DEADLINE_RIGHT 	= 15,
+	CMD_CHANGE_FILTER_MPU 		= 16,
+	CMD_ONOFFMOTORS 			= 17, 		/*!< Prender y apagar motores*/
+	CMD_DATA 					= 18,		/*!< El robot manda datos de la unidad Sensitiva*/
+	CMD_PID_KP      			= 20, 		/*!< Ajustar Término Proporcional*/
+	CMD_PID_KI      			= 21, 		/*!< Ajustar Término Integral*/
+	CMD_PID_KD      			= 22, 		/*!< Ajustar Término Derivativa*/
+	CMD_PID_SETPOINT 			= 23 		/*!< Ajustar  Offset*/
 };
 typedef enum {
     FILTRO_COMPLEMENTARIO = 0,	/*!< Predeterminado */
@@ -154,12 +157,12 @@ volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4.
 			uint8_t 		rx_index = 0;
 			uint8_t 		rx_data;
 // Nuevas variables para compensar la diferencia entre motores
-			int16_t 		deadband_L = 500;		/*!< Zona Muerta del PWM para el motor 1*/
-			int16_t 		deadband_R = 500; 		/*!< Zona Muerta del PWM para el motor 2*/
+			int16_t 		deadband_L = 2000;		/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_R = 2000; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
-			float 			Kp = 80.0;			/*!< Término Proporcional: Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Kp = 50.0;			/*!< Término Proporcional: Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 0.5;			/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 2.5;			/*!< Término Derivativo: mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			Kd = 3;			/*!< Término Derivativo: mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float 			setpoint = 45.2f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0, last_error = 0;
 // =================[ Variables del Filtro del MPU6050 ] =================//
@@ -197,10 +200,15 @@ uint16_t delayHB= 200; //ENTRE 1 Y 200
 
 uint16_t adc_buffer[8]; // El buffer que llena el DMA
 char msg[20];
-
 uint8_t BS=0;
 
+// Banderas y contadores
+volatile uint8_t flagNuevaMedicionMPU = 0;
+uint8_t contadorMuestras = 0;
+int16_t ax_filtrado, ay_filtrado, az_filtrado, gy_filtrado, gz_filtrado;
 
+volatile int32_t axSum = 0, aySum = 0, azSum = 0, gySum = 0, gzSum = 0;
+uint8_t indexMediaMovil = 0;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -236,6 +244,7 @@ static void MX_ADC1_Init(void);
 void buzzerSecuence(Buzzer_Seq_t *seq);
 void BS_tcpConnectSecuence();
 void BS_Error();
+void BS_ACK_NOT_FOUND();
 void calculoPID(void);
 float aplicarKalman(float newAngle, float newRate, float dt);
 void DataToQt();
@@ -273,29 +282,28 @@ void BS_tcpConnectSecuence() {
     hBuzzer.last_tick = HAL_GetTick();
 }
 void BS_Error() {
-    hBuzzer.duration = 700;  // Beep largo de 800ms
+    hBuzzer.duration = 500;  // Beep largo de 800ms
     hBuzzer.interval = 100;
     hBuzzer.repeat = 1;      // Una sola vez (piiiiiii)
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
 }
+void BS_ACK_NOT_FOUND(){
+	hBuzzer.duration = 200;  // Beep largo de 800ms
+	hBuzzer.interval = 50;
+	hBuzzer.repeat = 3;      // Una sola vez (piiiiiii)
+	hBuzzer.state = 0;
+	hBuzzer.last_tick = HAL_GetTick();
+}
 void calculoPID(void){
-		int16_t ax = (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
-		int16_t ay = (int16_t)(mpu_data[2] << 8 | mpu_data[3]); // Nuevo: Accel Y
-		int16_t az = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
-		//int16_t gx = (int16_t)(mpu_data[8] << 8 | mpu_data[9]);   // Nuevo: Gyro X (Roll)
-		int16_t gy = (int16_t)(mpu_data[10] << 8 | mpu_data[11]); // Gyro Y (Pitch)
-		int16_t gz = (int16_t)(mpu_data[12] << 8 | mpu_data[13]); // Gyro Z (Yaw)
-
-		float gyro_rate = ((float)gy / 65.5f) - gyro_bias;						//PITCH
+		float gyro_rate = ((float)gy_filtrado / 65.5f) - gyro_bias;						//PITCH
 		//float gyro_rate = ((float)gy / 65.5f);								//PITCH
-		float accel_angle = (atan2f((float)ax, (float)az) * 57.2957f) - setpoint ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
-
-		accelx 	= ax;
-		accely 	= ay;
-		accelz 	= az;
+		float accel_angle = (atan2f((float)ax_filtrado, (float)az_filtrado) * 57.2957f) - setpoint ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
+		accelx 	= ax_filtrado;
+		accely 	= ay_filtrado;
+		accelz 	= az_filtrado;
 		giro 	= gyro_rate;
-		giro_z 	= (float)gz / 65.5f;
+		giro_z 	= (float)gz_filtrado / 65.5f;
 		accelGiro = accel_angle;
 	   switch(currentlySelectedFilter){
 		   default:
@@ -369,119 +377,32 @@ void sendCMD(uint8_t cmd, uint16_t param) {
     HAL_UART_Transmit_DMA(&huart1, frame, 10);
 }
 void DataToQt(){
-
-
-
-	    // 1. CHEQUEO DE DESBORDAMIENTO: No pisar los datos si el DMA sigue enviando el paquete anterior
-	    if (huart1.gState != HAL_UART_STATE_READY) {
-	        return; // El UART está ocupado, saltamos este turno para no corromper la memoria
-	    }
-
-	    flagSendUNER = 0;
-
-	    // 2. Carga de datos
-	    telemetria.data.acc_x       = (int16_t)accelx;
-	    telemetria.data.acc_y       = (int16_t)accely;
-	    telemetria.data.acc_z       = (int16_t)accelz;
-	    telemetria.data.gyro_pitch  = (int16_t)giro;
-	    telemetria.data.gyro_yaw    = (int16_t)giro_z;
-	    telemetria.data.pitch_angle = (float)accelGiro;
-	    telemetria.data.pos_x       = 3.0f;
-	    telemetria.data.pos_y       = 2.0f;
-	    telemetria.data.velocidad   = 1.0f;
-
-	    for(uint8_t i=0; i<8; i++) {
-	        telemetria.data.IR[i] = adc_buffer[i];
-	    }
-
-	    telemetria.data.modo = (uint8_t)motorsIsOn;
-	    telemetria.data.infoAdicional = 1;
-
-	    // 3. LA MAGIA: 'static' hace que la memoria no se borre al salir de la función
-	    static uint8_t frame[52];
-
-	    memcpy(&frame[0], "UNER", 4);
-	    frame[4] = 46;                  // Length = CMD(1) + Payload(44) + CHK(1)
-	    frame[5] = ':';                 // TOKEN
-	    frame[6] = 18;                  // CMD_DATA
-	    memcpy(&frame[7], telemetria.buffer, 44);
-
-	    // 4. Checksum seguro
-	    uint8_t checksum = 0;
-	    for (int i = 0; i < 51; i++) {
-	        checksum ^= frame[i];
-	    }
-	    frame[51] = checksum;
-
-	    // 5. Envío
-	    HAL_UART_Transmit_DMA(&huart1, frame, 52);
-
-	/*
-	    flagSendUNER = 0;
-	    telemetria.data.acc_x 			= (int16_t)accelx;
-	    telemetria.data.acc_y 			= (int16_t)accely;
-	    telemetria.data.acc_z 			= (int16_t)accelz;
-	    telemetria.data.gyro_pitch 		= (int16_t)giro;
-	    telemetria.data.gyro_yaw 		= (int16_t)giro_z;
-	    telemetria.data.pitch_angle		= (float)accelGiro;
-	    telemetria.data.pos_x 			= 3.0f;
-	    telemetria.data.pos_y 			= 2.0f;
-	    telemetria.data.velocidad 		= 1.0f;
-	    for(uint8_t i=0; i<8; i++)  	telemetria.data.IR[i] = adc_buffer[i];
-	    telemetria.data.modo 			= (uint8_t)motorsIsOn; // O el modo que corresponda
-	    telemetria.data.infoAdicional 	= 1; // Usalo como infoAdicional
-	    static uint8_t frame[52];
-	    memcpy(&frame[0], "UNER", 4);    //
-	    frame[4] = 46;                  // Length = 1(CMD) + 44(Payload) + 1(CHK)
-	    frame[5] = ':';                 // TOKEN coincidente con Qt
-	    frame[6] = CMD_DATA;            // CMD 18
-	    memcpy(&frame[7], telemetria.buffer, 44);
-	    uint8_t checksum = 0;
-	    for (int i = 0; i < 51; i++) {
-	        checksum ^= frame[i];
-	    }
-	    frame[51] = checksum;
-	    HAL_UART_Transmit_DMA(&huart1, frame, 52); // Envío al ESP01
-	   // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
-*/
-	/*
-		flagSendUNER=0;
-		telemetria.data.acc_x = accelx;
-		telemetria.data.acc_y = accely;
-		telemetria.data.acc_z = accelz;
-		telemetria.data.gyro_pitch = 	(int16_t)(giro);
-		telemetria.data.gyro_yaw = 		(int16_t)(giro_z );
-		telemetria.data.pitch_angle = 	(int16_t)(accelGiro) ;
-		telemetria.data.pos_x = 3;
-		telemetria.data.pos_y = 2;
-		telemetria.data.velocidad = 1;
-		telemetria.data.modo = 0;
-		for(uint8_t i=0; i<8; i++){
-			telemetria.data.IR[i] = adc_buffer[i];
-		}
-//		telemetria.data.IR[0] = 100;
-//		telemetria.data.IR[1] = 200;
-//		telemetria.data.IR[2] = 300;
-//		telemetria.data.IR[3] = 400;
-//		telemetria.data.IR[4] = 500;
-//		telemetria.data.IR[5] = 600;
-//		telemetria.data.IR[6] = 700;
-//		telemetria.data.IR[7] = 800;
-		telemetria.data.infoAdicional=0;
-		uint8_t frame[52]; 							// 4(UNER) + 1(LEN) + 1(TOKEN) + 1(CMD) + 27(PAYLOAD) + 1(CHK)
-		memcpy(&frame[0], "UNER", 4);    			// Header
-		frame[4] = 46;                  			// Length (CMD + Payload + CHK)
-		frame[5] = 0xFD;                			// TOKEN (ejemplo de constante de fin cabecera)
-		frame[6] = CMD_DATA;                			// CMD: 0x01 = Telemetría
-		memcpy(&frame[7], telemetria.buffer, 44); 	// Payload
-		uint8_t checksum = 0;
-		for (int i = 0; i < 51; i++) { // calculamos el checksum
-			checksum ^= frame[i];
-		}
-		frame[51] = checksum;           // agregamos Checksum
-		HAL_UART_Transmit_DMA(&huart1, frame, 52);// enviamos los datos al ESP01 via UART con DMA
-
-		*/
+	if (huart1.gState != HAL_UART_STATE_READY) 	        return; // El UART está ocupado, saltamos este turno para no corromper la memoria
+	flagSendUNER = 0;
+	telemetria.data.acc_x       = (int16_t)accelx;
+	telemetria.data.acc_y       = (int16_t)accely;
+	telemetria.data.acc_z       = (int16_t)accelz;
+	telemetria.data.gyro_pitch  = (int16_t)giro;
+	telemetria.data.gyro_yaw    = (int16_t)giro_z;
+	telemetria.data.pitch_angle = (float)accelGiro;
+	telemetria.data.pos_x       = 3.0f;
+	telemetria.data.pos_y       = 2.0f;
+	telemetria.data.velocidad   = 1.0f;
+	for(uint8_t i=0; i<8; i++) 		 telemetria.data.IR[i] = adc_buffer[i];
+	telemetria.data.modo = 0; 		//iddle
+	telemetria.data.infoAdicional = 1;
+	static uint8_t frame[52];	// static hace que no se borre al salir de la función
+	memcpy(&frame[0], "UNER", 4);
+	frame[4] = 46;                  // Length = CMD(1) + Payload(44) + CHK(1)
+	frame[5] = ':';                 // TOKEN
+	frame[6] = 18;                  // CMD_DATA
+	memcpy(&frame[7], telemetria.buffer, 44);
+	uint8_t checksum = 0;
+	for (int i = 0; i < 51; i++) {
+		checksum ^= frame[i];
+	}
+	frame[51] = checksum;
+	HAL_UART_Transmit_DMA(&huart1, frame, 52);
 }
 void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    if (speed_L > 0) speed_L += deadband_L;			// Aplicar Deadband (Zona muerta)
@@ -493,21 +414,22 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    if (speed_R > 3599) speed_R = 3599;
 	    if (speed_R < -3599) speed_R = -3599;
     if (speed_L >= 0) { // Motor 1 (PA8, PA9, PB4)
-       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-	   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+       HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_RESET);
+	   HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin, GPIO_PIN_SET);
         __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)speed_L);
     } else {
-    	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+    	HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin, GPIO_PIN_RESET);
         __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)(-speed_L));
     }
     if (speed_R >= 0) {// Motor 2 (PB3, PA15, PB5)
-    	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+    	HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_SET);
+    	HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_RESET);
         __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)speed_R);
     } else {
-    	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
+    	HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_RESET);
+    	HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_SET);
+
         __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)(-speed_R));
     }
 }
@@ -550,12 +472,13 @@ void MPU6050_Calibrate(void) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	/*
 	 * Frecuencia del Timer: 72MHz
-	 * Conteo hasta el periodo (ARR): 4999
-	 * Resultado: interrupcion cada 5ms
+	 * Conteo hasta el periodo (ARR): 999
+	 * Resultado: interrupcion cada 1ms
 	 * */
     if (htim->Instance == TIM4 && calibration_ready!= 0) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
 			HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14);
+
 		}
         counter++;
         if(counter > delayHB){
@@ -570,8 +493,19 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	// Al procesar el PID inmediatamente después de que el DMA termina de recibir los
 //	   datos (HAL_I2C_MemRxCpltCallback), garantizás que el cálculo se hace con los datos
 //	   más frescos posibles.
-    if (hi2c->Instance == I2C1) {
-    	calculoPID();
+	if (hi2c->Instance == I2C1) {
+	        // Sumamos directamente al acumulador
+	        axSum += (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
+	        aySum += (int16_t)(mpu_data[2] << 8 | mpu_data[3]);
+	        azSum += (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
+	        gySum += (int16_t)(mpu_data[10] << 8 | mpu_data[11]);
+	        gzSum += (int16_t)(mpu_data[12] << 8 | mpu_data[13]);
+	        contadorMuestras++;
+	        // Cuando llegamos a 5 muestras (5 ms), avisamos al main
+	        if (contadorMuestras >= 5) {
+	            flagNuevaMedicionMPU = 1;
+	        }
+
     	/*
 	   if (oled_update_requested) {
 			oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
@@ -626,7 +560,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 							 break;
 						default:
 						case CMD_ALIVE:
-							sendCMD(1, 0); // te devuelvo un alive
+							sendCMD(CMD_ACK, 0); // te devuelvo un alive
+							break;
+						case CMD_ACK:
+
 							break;
 						case CMD_ONOFFMOTORS:
 							motorsIsOn = payload_ptr[0];
@@ -640,6 +577,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 								BS_Error();
 								flagWIFI=0;
 							}
+							break;
+						case CMD_CHANGE_DEADLINE_LEFT:
+							deadband_L = payload_ptr[0];
+							break;
+						case CMD_CHANGE_DEADLINE_RIGHT:
+							deadband_R = payload_ptr[0];
 							break;
 						case CMD_CHANGE_OLED_SCREEN:
 							flagOLED = payload_ptr[0];
@@ -696,7 +639,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
         HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
     }
 }
-
 /* USER CODE END 0 */
 
 /**
@@ -746,20 +688,14 @@ int main(void)
 //    }
 //    SSD1306_Fill(SSD1306_COLOR_BLACK);
 //    SSD1306_UpdateScreen();
-
     HAL_TIM_Base_Start_IT(&htim4);
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
     HAL_Delay(500);
     MPU6050_Calibrate();
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
-
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET);
-
-    if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 8) != HAL_OK) {
-          /* Error de iniciación */
-          Error_Handler();
-      }
+    if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 8) != HAL_OK) 	Error_Handler(); 	// Error de inicialización del ADC
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -770,13 +706,30 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	buzzerSecuence(&hBuzzer);
+	if(flagNuevaMedicionMPU) {
+	    // Calculamos el promedio
+	    ax_filtrado = axSum / 5;
+	    ay_filtrado = aySum / 5;
+	    az_filtrado = azSum / 5;
+	    gy_filtrado = gySum / 5;
+	    gz_filtrado = gzSum / 5;
+	    // ¡CRÍTICO! Resetear los acumuladores y el contador para el próximo ciclo
+	    axSum = 0; aySum = 0; azSum = 0; gySum = 0; gzSum = 0;
+	    contadorMuestras = 0;
+	    flagNuevaMedicionMPU = 0;
+	    calculoPID();
+	    //Robot_Drive(1600, 1600);
+
+	}
 	if (HAL_GetTick() - lastTime0 > 50){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
 	   DataToQt(); //llamada cada 50ms
 	   counter1++;
-	   if(counter1 > 6){		// se llama cad 300ms
+	   if(counter1 > 200){			//Este if entrada cada 1 segundo
 		   //flagDisplay=1; 		// poner en 1 para habilitar el display
-	   	   MPU6050_Calibrate();	// solo se llamará si la bandera dentro de la funcion esta activa
+		   sendCMD(CMD_ALIVE, 0);	// ALIVE
+	   	   MPU6050_Calibrate();		// solo se llamará si la bandera dentro de la funcion esta activa
+	   	   counter1=0;
 	   }
 	}
 	/*
@@ -838,6 +791,7 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
+
 /**
   * @brief System Clock Configuration
   * @retval None
@@ -1054,7 +1008,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 3599;
+  htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -1269,10 +1223,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2|GPIO_PIN_10|MOTB_IN1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2|GPIO_PIN_10|MOT2_IN1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9|GPIO_PIN_10|MOTB_IN2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin|MOT1_IN2_Pin|MOT2_IN2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -1281,15 +1235,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB2 PB10 MOTB_IN1_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_10|MOTB_IN1_Pin;
+  /*Configure GPIO pins : PB2 PB10 MOT2_IN1_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_10|MOT2_IN1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA9 PA10 MOTB_IN2_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10|MOTB_IN2_Pin;
+  /*Configure GPIO pins : MOT1_IN1_Pin MOT1_IN2_Pin MOT2_IN2_Pin */
+  GPIO_InitStruct.Pin = MOT1_IN1_Pin|MOT1_IN2_Pin|MOT2_IN2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
