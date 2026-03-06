@@ -132,8 +132,10 @@ Buzzer_Seq_t hBuzzer = {0}; // Inicializamos en cero
 
 #define UNER_HEADER_STR "UNER"
 #define UNER_TOKEN      ':'    // 0x3A según tu PDF o preferencia
-
-
+// ================= [ PID ] ================= //
+#define ALPHA_LPF 0.2f    // Suaviza las vibraciones del acelerómetro
+#define ALPHA_HPF 0.98f   // Elimina el drift lento del giroscopio
+#define DT_PID 0.005f     // Nuestro nuevo dt exacto de 5 ms
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -157,13 +159,13 @@ volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4.
 			uint8_t 		rx_index = 0;
 			uint8_t 		rx_data;
 // Nuevas variables para compensar la diferencia entre motores
-			int16_t 		deadband_L = 760;		/*!< Zona Muerta del PWM para el motor 1*/
-			int16_t 		deadband_R = 400; 		/*!< Zona Muerta del PWM para el motor 2*/
+			int16_t 		deadband_L = 95;		/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_R = 75; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
-			float 			Kp = 20.0;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Kp = 13.0;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 0.0;				/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 5.0;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 45.2f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
+			float 			Kd = 3.5;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = 16.5f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0, last_error = 0;
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y = 0;
@@ -217,6 +219,16 @@ int16_t ax_filtrado, ay_filtrado, az_filtrado, gy_filtrado, gz_filtrado;
 
 volatile int32_t axSum = 0, aySum = 0, azSum = 0, gySum = 0, gzSum = 0;
 uint8_t indexMediaMovil = 0;
+
+
+// --- Variables para los Filtros IIR ---
+float ax_lpf = 0.0f;
+float az_lpf = 0.0f;
+float gy_hpf = 0.0f;
+float gy_prev_raw = 0.0f;
+
+// --- Constantes de Sintonía ---
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -316,10 +328,10 @@ void calculoPID(void){
 	   switch(currentlySelectedFilter){
 		   default:
 		   case FILTRO_COMPLEMENTARIO:
-			angle_y = alpha * (angle_y + gyro_rate * 0.01f) + (1.0f - alpha) * accel_angle;
+			angle_y = alpha * (angle_y + gyro_rate * DT_PID) + (1.0f - alpha) * accel_angle;
 			break;
 		   case FILTRO_KALMAN:
-			angle_y = aplicarKalman(accel_angle, gyro_rate, 0.01f);
+			angle_y = aplicarKalman(accel_angle, gyro_rate, DT_PID);
 			break;
 		   case FILTRO_SOLO_ACCEL:
 			angle_y= accel_angle;
@@ -329,11 +341,11 @@ void calculoPID(void){
 	   //float error = angle_y - 45.2f;
 	   float P = Kp * error;
 	   //integral += error * 0.01f;
-	   integral += error * 0.01f;
+	   integral += error * DT_PID;
 	   if(integral > 1000) integral = 1000;
 	   else if(integral < -1000) integral = -1000;
 	  // float D = Kd * (error - last_error) / 0.01f;
-	   float D = Kd * (error - last_error) / 0.01f;
+	   float D = Kd * (error - last_error) / DT_PID;
 	   last_error = error;
 	   float output = P + (Ki * integral) + D;
 	   if ((angle_y > 95.0f || angle_y < -95.0f)) {
@@ -522,34 +534,31 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	        gzSum += (int16_t)(mpu_data[12] << 8 | mpu_data[13]);
 	        contadorMuestras++;
 	        // Cuando llegamos a 5 muestras (5 ms), avisamos al main
-	        if (contadorMuestras >= 10) {
+	        if (contadorMuestras >= 5) {
 	            flagNuevaMedicionMPU = 1;
 	        }
-
-    	/*
-	   if (oled_update_requested) {
-			oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
-			// Mandamos solo la página actual
-			SSD1306_UpdatePage_DMA(oled_current_page);
-			// Incrementamos para la próxima vez
-			oled_current_page++;
-			if (oled_current_page >= 8) {
-				// Ya mandamos toda la pantalla. Terminamos el proceso.
-				oled_current_page = 0;
-				oled_update_requested = 0;
-			}
-		}
-		*/
+	        if (oled_update_requested) {
+	        			oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
+	        			// Mandamos solo la página actual
+	        			SSD1306_UpdatePage_DMA(oled_current_page);
+	        			// Incrementamos para la próxima vez
+	        			oled_current_page++;
+	        			if (oled_current_page >= 8) {
+	        				// Ya mandamos toda la pantalla. Terminamos el proceso.
+	        				oled_current_page = 0;
+	        				oled_update_requested = 0;
+	        			}
+	        		}
     }
 }
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
-    /*
+
 	if (hi2c->Instance == I2C1) {
     	//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED [cite: 46]
         if (oled_current_page == 0 && !oled_update_requested) {
             oled_is_busy = 0; // Liberamos para que el while(1) pueda armar el siguiente frame
         }
-    }*/
+    }
 
 }
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
@@ -620,16 +629,27 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 							flagOLED = payload_ptr[0];
 							break;
 						case CMD_PID_KP:
-							if(payload_ptr[0] > 10 && payload_ptr[0] < 300){
-								Kp = payload_ptr[0];
-								sendCMD(CMD_PID_KP, Kp); // efectivamente se cambio a dicho valor
+
+							float valor_recibido;
+							memcpy(&valor_recibido, payload_ptr, sizeof(float));
+							if(valor_recibido > 10.0f && valor_recibido < 300.0f){
+								Kp = valor_recibido;
 							}
 							else{
-								sendCMD(CMD_PID_KP, -1); // Valor inválido
+								 sendCMD(CMD_PID_KP, 1);
 							}
 							break;
+
+//							if(payload_ptr[0] >= 0 && payload_ptr[0] < 300){
+//								Kp = payload_ptr[0];
+//								sendCMD(CMD_PID_KP, Kp); // efectivamente se cambio a dicho valor
+//							}
+//							else{
+//								sendCMD(CMD_PID_KP, -1); // Valor inválido
+//							}
+							break;
 						case CMD_PID_KD:
-							if(payload_ptr[0] > 1 && payload_ptr[0] < 100){
+							if(payload_ptr[0] >= 0 && payload_ptr[0] < 100){
 								Kd = payload_ptr[0];
 								sendCMD(CMD_PID_KD, Kd); // efectivamente se cambio a dicho valor
 							}
@@ -638,7 +658,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 							}
 							break;
 						case CMD_PID_KI:
-							if(payload_ptr[0] > 0.5 && payload_ptr[0] < 50){
+							if(payload_ptr[0] >= 0 && payload_ptr[0] < 50){
 								Ki = payload_ptr[0];
 								sendCMD(CMD_PID_KI, Ki); // efectivamente se cambio a dicho valor
 							}
@@ -714,11 +734,12 @@ int main(void)
     uint8_t mpu_wake = 0;
     HAL_I2C_Mem_Write(&hi2c1, (0x68 << 1), 0x6B, 1, &mpu_wake, 1, 100);
 //		Descomentar para activar OLED
-//    if (SSD1306_Init() != 1) { // OJO: Verificá si tu librería devuelve 1 o 0 en éxito
-//        Error_Handler();
-//    }
-//    SSD1306_Fill(SSD1306_COLOR_BLACK);
-//    SSD1306_UpdateScreen();
+    if (SSD1306_Init() != 1) { // OJO: Verificá si tu librería devuelve 1 o 0 en éxito
+        Error_Handler();
+    }
+    SSD1306_Fill(SSD1306_COLOR_BLACK);
+    SSD1306_UpdateScreen();
+
     HAL_TIM_Base_Start_IT(&htim4);
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
@@ -738,40 +759,77 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	buzzerSecuence(&hBuzzer);
 	if(flagNuevaMedicionMPU) {
-	    // Calculamos el promedio
-	    ax_filtrado = axSum / 10;
-	    ay_filtrado = aySum / 10;
-	    az_filtrado = azSum / 10;
-	    gy_filtrado = gySum / 10;
-	    gz_filtrado = gzSum / 10;
+	    // 1. Promediamos las 5 muestras (Anti-aliasing rápido de 5ms)
+	    float ax_raw = (float)axSum / 5.0f;
+	    float az_raw = (float)azSum / 5.0f;
+	    float gy_raw = (float)gySum / 5.0f;
+
+	    // Reseteamos acumuladores
 	    axSum = 0; aySum = 0; azSum = 0; gySum = 0; gzSum = 0;
 	    contadorMuestras = 0;
 	    flagNuevaMedicionMPU = 0;
-	    calculoPID();
-	    //Robot_Drive(3590, 3590);
 
+	    // 2. Filtro PASA BAJOS al Acelerómetro (Filtra la vibración)
+	    ax_lpf = (ALPHA_LPF * ax_raw) + ((1.0f - ALPHA_LPF) * ax_lpf);
+	    az_lpf = (ALPHA_LPF * az_raw) + ((1.0f - ALPHA_LPF) * az_lpf);
+	    gy_hpf = ALPHA_HPF * (gy_hpf + gy_raw - gy_prev_raw);
+	    gy_prev_raw = gy_raw;
+	    ax_filtrado = (int16_t)ax_lpf;
+	    az_filtrado = (int16_t)az_lpf;
+	    gy_filtrado = (int16_t)gy_hpf;
+	    // (ay_filtrado y gz_filtrado los podés pasar directo si los usás para telemetría)
+
+	    // 5. Ejecutamos el lazo de control
+	    calculoPID();
 	}
 	if (HAL_GetTick() - lastTime0 > 50){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
 	   DataToQt(); //llamada cada 50ms
 	   counter1++;
-	   if(counter1 > 200){			//Este if entrada cada 1 segundo
-		   //flagDisplay=1; 		// poner en 1 para habilitar el display
-		   sendCMD(CMD_ALIVE, 0);	// ALIVE
+	   if(counter1 > 2){			//Este if entrada cada 1 segundo
+		   flagDisplay=1; 		// poner en 1 para habilitar el display
+		   //sendCMD(CMD_ALIVE, 0);	// ALIVE
 	   	   MPU6050_Calibrate();		// solo se llamará si la bandera dentro de la funcion esta activa
 	   	   counter1=0;
 	   }
 	}
-	/*
+
 	if(flagDisplay){	//DISPLAY DESACTIVADO
 		flagDisplay=0;
 		if (!oled_is_busy) {
+			SSD1306_Fill(SSD1306_COLOR_BLACK);
 				switch(flagOLED){
 				case 0:
+					sprintf(msg, "Kp: %.2f",Kp);
+					SSD1306_GotoXY(2, 0);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+					sprintf(msg, "Kd: %.2f",Kd);
+					SSD1306_GotoXY(2, 10);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+					sprintf(msg, "Ki: %.2f",Ki);
+					SSD1306_GotoXY(2, 20);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+					sprintf(msg, "DBL: %d",deadband_L);
+					SSD1306_GotoXY(2, 30);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+					sprintf(msg, "DBR: %d",deadband_R);
+					SSD1306_GotoXY(2, 40);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+
+					sprintf(msg, "SP: %.1f", setpoint);
+					SSD1306_GotoXY(2, 50);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+					sprintf(msg, "====================");
+					SSD1306_GotoXY(2, 60);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
 				    oled_update_requested = 1;
 					break;
 				case 1:
-					SSD1306_Fill(SSD1306_COLOR_BLACK);
 					for (int i = 0; i < 4; i++) {
 						sprintf(msg, "C%d:%4hu", i, adc_buffer[i]);
 						SSD1306_GotoXY(2, 15 + (i * 12));
@@ -796,7 +854,6 @@ int main(void)
 					oled_update_requested = 1;// NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
 					break;
 				case 2:
-					SSD1306_Fill(SSD1306_COLOR_BLACK);
 					for (int i = 0; i < 8; i++) {
 					        // 1. Calculamos el ancho de la barra (Supongamos 50 píxeles de ancho máximo)
 					        // Mapeo: (Valor ADC * Ancho Máximo) / 4095
@@ -817,7 +874,7 @@ int main(void)
 				}
 
 		    }
-		}*/
+		}
   }
   /* USER CODE END 3 */
 }
