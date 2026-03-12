@@ -53,6 +53,7 @@
 /* USER CODE BEGIN Includes */
 #include "ssd1306.h"
 #include "fonts.h"
+#include "math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -159,17 +160,17 @@ volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4.
 			uint8_t 		rx_index = 0;
 			uint8_t 		rx_data;
 // Nuevas variables para compensar la diferencia entre motores
-			int16_t 		deadband_L = 20;		/*!< Zona Muerta del PWM para el motor 1*/
-			int16_t 		deadband_R = 0; 		/*!< Zona Muerta del PWM para el motor 2*/
+			int16_t 		deadband_L = 150;		/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_R = 100; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
-			float 			Kp = 75.0;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Kp = 95.0;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 0.0;				/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 0.5;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 0.5f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
+			float 			Kd = 4.0;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = 6.5f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0, last_error = 0;
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y = 0;
-			float 			alpha = 0.95f; // Factor del filtro complementario
+			float 			alpha = 0.98f; // Factor del filtro complementario
 			uint32_t 		last_time = 0;
 			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
 //filtro kalman
@@ -347,7 +348,7 @@ void calculoPID(void){
 	   float P = Kp * error;
 	   float D = Kd * gyro_rate; //Kd * (error - last_error) / DT_PID;//
 	   float I = Ki * integral;
-	   float output = P + D; // Funcion de transferencia
+	   float output = P + I + D ; // Funcion de transferencia
 
 	   last_error = error;
 	   if ((angle_y > 95.0f || angle_y < -95.0f)) {
@@ -469,7 +470,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
         // 4. Configurar Giroscopio (+/- 500 dps)
         data = 0x08;
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1B, 1, &data, 1, 100);
-        data = 0x00; // Filtro de ~42Hz. Limpia basura del sensor. Valor recomendable 0x03
+        data = 0x02; // Filtro de ~42Hz. Limpia basura del sensor. 0x02 agrega un retardo de 2 ms a la medicion el cual se suma al retardo de la lectura
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1A, 1, &data, 1, 100);
     }
 }
@@ -511,8 +512,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	 * */
     if (htim->Instance == TIM4) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
-			HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14);
-		}
+    		HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14); // los datos tardan 0.38ms en ser leidos + 2ms retardo. Son 153 bits a 400k bits/s
+    	}
         counter++;
         if(counter > delayHB){
             counter = 0;
@@ -533,9 +534,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 			az_filtrado = (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
 			gy_filtrado = (int16_t)(mpu_data[10] << 8 | mpu_data[11]);
 			gz_filtrado = (int16_t)(mpu_data[12] << 8 | mpu_data[13]);
-
-	        flagNuevaMedicionMPU ++;
-
+			flagNuevaMedicionMPU ++;
 	        if (oled_update_requested) {
 				oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
 				SSD1306_UpdatePage_DMA(oled_current_page);
@@ -758,11 +757,11 @@ int main(void)
 	   lastTime0 = HAL_GetTick();
 	   buzzerSecuence(&hBuzzer);
 	   DataToQt(); //llamada cada 50ms
-//	   counter1++;
-//	   if(counter1 > 2){			//Este if entrada cada 1 segundo
-//		   flagDisplay=1; 		// poner en 1 para habilitar el display
-//	   	   counter1=0;
-//	   }
+	   counter1++;
+	   if(counter1 > 3){			//Este if entrada cada 1 segundo
+		   flagDisplay=1; 		// poner en 1 para habilitar el display
+	   	   counter1=0;
+	   }
 	}
 	if(flagDisplay){	//DISPLAY DESACTIVADO
 		flagDisplay=0;
@@ -793,11 +792,11 @@ int main(void)
 					SSD1306_GotoXY(2, 50);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-					sprintf(msg, "====================");
-					SSD1306_GotoXY(2, 60);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//					sprintf(msg, "====================");
+//					SSD1306_GotoXY(2, 60);
+//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				   // oled_update_requested = 1;
+				    //oled_update_requested = 1;
 					break;
 				case 1:
 					for (int i = 0; i < 4; i++) {
