@@ -1,0 +1,22 @@
+[33m268acf6[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m copia de seguridad
+[33m6f2ef2a[m Se reestructuro el Qt y se agregó el modelo 3d del robot
+[33mfcc4784[m Copia de seguridad antes de hacer modificaciones importantes
+[33m3b5b651[m PID mejorado muchísimo
+[33m730c217[m Mejora en PID, dando los primeros pasos
+[33md0f3bdc[m Copia de seguridad, trabajo general realizado
+[33mf2e222e[m Motores arreglados
+[33m2a90026[m Se hizo más robusto la comunicación. Se apago temporalmente el OLED
+[33m0062a9c[m OLED mejorado, agregadas las 2 pantallas. Falta brújula
+[33m2d4af1b[m buzzer mejorado
+[33m859d38a[m ADC, buzzer y pantalla no bloqueantes agregados y funcionando correctamente
+[33m55e5f5d[m Modificador de los valores del PID desde Qt implementado
+[33md188c45[m Angulo en X implementado en QT con precisión muy buena, mejora en el ruido del MPU y apliación del offset
+[33m30ab5c9[m On Off motores
+[33m4250e33[m Se mejoró aún más los comandos
+[33me948622[m Mejora en comandos
+[33m338a82d[m MPU mejorado, filtros kalman y complemetario implementados. Mejora en la documentacion
+[33me42e213[m Comandos mejorados, calibración del MPU funcionando
+[33m5150c9c[m Comunicación mejorada, implementación de comandos
+[33mcc3bcca[m PAYLOAD mejorado, interfaz ampliada. Falta CHK
+[33m72afe06[m qt agregado
+[33me9c61fc[m[33m ([m[1;31mp2026/master[m[33m)[m Primer commit
