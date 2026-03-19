@@ -117,7 +117,7 @@ typedef enum {
     FILTRO_SOLO_ACCEL = 2 		/*!< Desactivar filtro */
 } FiltroTipo_t;
 
-FiltroTipo_t filtro_actual = FILTRO_COMPLEMENTARIO; // Por defecto
+
 
 typedef struct {
     uint16_t duration;  // Cuánto tiempo suena (ms)
@@ -136,8 +136,8 @@ Buzzer_Seq_t hBuzzer = {0}; // Inicializamos en cero
 #define UNER_HEADER_STR "UNER"
 #define UNER_TOKEN      ':'    // 0x3A según tu PDF o preferencia
 // ================= [ PID ] ================= //
-#define ALPHA_ACCEL 0.5f    // Suaviza las vibraciones del acelerómetro
-#define DT_PID 0.01f     // Nuestro nuevo dt exacto de 5 ms
+#define ALPHA_ACCEL 	0.5f    // Suaviza las vibraciones del acelerómetro
+#define DT_PID 			0.01f
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -148,7 +148,7 @@ volatile 	uint8_t 		flagDisplay			=	0;
 			uint8_t			flagWIFI			=   0;
 			uint8_t 		flagOLED 			= 	0;
 			uint8_t 		dma_ready 			= 	0;
-			uint8_t 		calibration_ready 	= 	1; // Bandera para no activar el PID antes de tiempo
+			uint8_t 		calibration_ready 	= 	0; // Bandera para no activar el PID antes de tiempo
 			uint8_t			motorsIsOn 			=	1;
 			//banderas de modo o máquina de estado
 			FiltroTipo_t 	currentlySelectedFilter = FILTRO_COMPLEMENTARIO; //FILTRO_COMPLEMENTARIO;
@@ -164,14 +164,14 @@ volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4.
 			int16_t 		deadband_L = 50;		/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 0; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
-			float 			Kp = 220.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Kp = 40.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 0.4f;				/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 1.8f;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 0.4f; // 4.0f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
+			float 			Kd = 1.0f;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = 7; // 4.0f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0, last_error = 0;
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y = 0;
-			float 			alpha = 0.97f; // Factor del filtro complementario
+			float 			alpha = 0.94f; // Factor del filtro complementario
 			uint32_t 		last_time = 0;
 			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
 //filtro kalman
@@ -298,29 +298,27 @@ void buzzerSecuence(Buzzer_Seq_t *seq) {
 void BS_tcpConnectSecuence() {
     hBuzzer.duration = 100;  // Beep corto de 100ms
     hBuzzer.interval = 50;   // Silencio de 50ms
-    hBuzzer.repeat = 2;      // Que suene 2 veces (pip-pip)
+    hBuzzer.repeat = 2;      // bip bip
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
 }
 void BS_Error() {
     hBuzzer.duration = 500;  // Beep largo de 800ms
     hBuzzer.interval = 100;
-    hBuzzer.repeat = 1;      // Una sola vez (piiiiiii)
+    hBuzzer.repeat = 1;      //bip
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
 }
 void BS_ACK_NOT_FOUND(){
 	hBuzzer.duration = 200;  // Beep largo de 800ms
 	hBuzzer.interval = 50;
-	hBuzzer.repeat = 3;      // Una sola vez (piiiiiii)
+	hBuzzer.repeat = 3;
 	hBuzzer.state = 0;
 	hBuzzer.last_tick = HAL_GetTick();
 }
 void calculoPID(void){
-		//float gyro_rate = ((float)gy_filtrado / 65.5f) - gyro_bias_y;						//PITC
-		// FIJATE EL SIGNO MENOS AL PRINCIPIO:
-		float gyro_rate = -(((float)gy_filtrado / 65.5f) - gyro_bias_y);
-		//float gyro_rate = ((float)gy / 65.5f);								//PITCH
+		//float gyro_rate = -(((float)gy_filtrado / 65.5f) - gyro_bias_y);
+		float gyro_rate = -(((float)gy_filtrado - gyro_bias_y) / 65.5f);							//PITCH
 		float accel_angle = (atan2f((float)ax_filtrado, (float)az_filtrado) * 57.2957f) ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
 		accelx 	= ax_filtrado;
 		accely 	= ay_filtrado;
@@ -328,7 +326,6 @@ void calculoPID(void){
 		giro 	= gyro_rate;
 		giro_z 	= (float)gz_filtrado / 65.5f;
 		accelGiro = accel_angle;
-
 	   switch(currentlySelectedFilter){
 		   default:
 		   case FILTRO_COMPLEMENTARIO:
@@ -354,14 +351,18 @@ void calculoPID(void){
 	   float output = P + I + D ; // Funcion de transferencia
 
 	   last_error = error;
-	   if ((angle_y > 25.0f || angle_y < - 25.0f)) {
-		   Robot_Drive(0, 0);
-	//	   if(angle_y > 45.0f ) //Robot_Drive(3549, 3599);
-		//   if(angle_y < 45.0f ) //Robot_Drive(-3549, -3599);
+	   //if ((angle_y > 7.0f || angle_y < - 7.0f)) {
+		   //Robot_Drive(0, 0);
+		//   HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+		   //if(angle_y > 7.0f ) 		Robot_Drive(2549, 2599);
+		  // if(angle_y < -7.0f ) 	Robot_Drive(-2549, -2599);
+		  // if(motorsIsOn==0)		Robot_Drive(0, 0);
 		  // integral = 0;
-	   }
-	   if(motorsIsOn){	   	Robot_Drive((int16_t)output, (int16_t)output);}
-	   if(motorsIsOn==0){	Robot_Drive(0, 0);}
+	//   }
+
+		   if(motorsIsOn){	   	Robot_Drive((int16_t)output, (int16_t)output);}
+		   if(motorsIsOn==0){	Robot_Drive(0, 0);}
+
 	   salida = output;
 }
 float aplicarKalman(float newAngle, float newRate, float dt) {
@@ -472,7 +473,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
         // 4. Configurar Giroscopio (+/- 500 dps)
         data = 0x08;
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1B, 1, &data, 1, 100);
-        data = 0x04; // Filtro de ~42Hz. Limpia basura del sensor. 0x02 agrega un retardo de 2 ms a la medicion el cual se suma al retardo de la lectura
+        data = 0x00; // Filtro de ~42Hz. Limpia basura del sensor. 0x02 agrega un retardo de 2 ms a la medicion el cual se suma al retardo de la lectura
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1A, 1, &data, 1, 100);
     }
 }
@@ -484,17 +485,21 @@ void MPU6050_Calibrate(void) {
         uint8_t buffer[14]; // Leemos los 14 registros de un tirón (Accel, Temp, Gyro)
 
         for (int i = 0; i < num_samples; i++) {
-            // Leemos desde 0x3B (Accel X) hasta 0x48 (Gyro Z) - Total 14 bytes
-            HAL_I2C_Mem_Read(&hi2c1, (0x68 << 1), 0x3B, 1, buffer, 14, 100);
+            // Si la lectura falla, nos quedamos atrapados acá (Error de hardware)
+            if (HAL_I2C_Mem_Read(&hi2c1, (0x68 << 1), 0x3B, 1, buffer, 14, 100) != HAL_OK) {
+                Error_Handler(); // O prendé un LED rojo para avisarte
+            }
+
             // Acelerómetro
             axS += (int16_t)(buffer[0] << 8 | buffer[1]);
             ayS += (int16_t)(buffer[2] << 8 | buffer[3]);
             azS += (int16_t)(buffer[4] << 8 | buffer[5]);
-            // Giroscopio (empezando en el byte 8 del buffer, saltando temperatura)
+            // Giroscopio
             gxS += (int16_t)(buffer[8] << 8 | buffer[9]);
             gyS += (int16_t)(buffer[10] << 8 | buffer[11]);
             gzS += (int16_t)(buffer[12] << 8 | buffer[13]);
-            HAL_Delay(1); // Un pequeño delay para no saturar el bus
+
+            HAL_Delay(1);
         }
         // Calculamos los promedios (Bias)
         accel_bias_x = (float)axS / num_samples;
@@ -519,7 +524,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         counter++;
         if(counter > delayHB){
             counter = 0;
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+           // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
         }
     }
 }
@@ -539,7 +544,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 			flagNuevaMedicionMPU = 1;
 	        if (oled_update_requested) {
 				oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
-				SSD1306_UpdatePage_DMA(oled_current_page);
+				//SSD1306_UpdatePage_DMA(oled_current_page);
 				oled_current_page++;				// Incrementamos para la próxima vez
 				if (oled_current_page >= 8) {
 					oled_current_page = 0;// Ya mandamos toda la pantalla. Terminamos el proceso.
@@ -615,12 +620,13 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 							break;
 						case CMD_PID_KP:
 							Kp = (float)payload_ptr[0];
+							//Kp = ((uint16_t)payload_ptr[1] | ((uint16_t)payload_ptr[0] << 8));
 							break;
 						case CMD_PID_KD:
-							Kp = (float)payload_ptr[0];
+							Kd = (float)payload_ptr[0];
 							break;
 						case CMD_PID_KI:
-							Kp = (float)payload_ptr[0];
+							Ki = (float)payload_ptr[0];
 							break;
 						case CMD_PID_SETPOINT:
 							setpoint = (float)payload_ptr[0];
@@ -687,7 +693,11 @@ int main(void)
         }
         SSD1306_Fill(SSD1306_COLOR_BLACK);
         SSD1306_UpdateScreen();
+        HAL_Delay(100);
         MPU6050_Init(&hi2c1);
+        HAL_Delay(500);
+        MPU6050_Calibrate();
+
         if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 8) != HAL_OK) {
             Error_Handler();
         }
@@ -696,6 +706,9 @@ int main(void)
         HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
         HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
         HAL_TIM_Base_Start_IT(&htim4);
+
+
+
 
   /* USER CODE END 2 */
 
@@ -742,16 +755,26 @@ int main(void)
 					SSD1306_GotoXY(1, 50);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-					sprintf(msg, "ALPHA:%.2f", alpha);
+					sprintf(msg, "AY: %.2f", angle_y);
 					SSD1306_GotoXY(60, 0);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					sprintf(msg, "ALPHA:%.2f", alpha);
+					sprintf(msg, "OUT:%.2f", salida);
 					SSD1306_GotoXY(60, 10);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+					sprintf(msg, "GYB: %.2f", gyro_bias_y);
+					SSD1306_GotoXY(60, 30);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+					sprintf(msg, "AY:%.0d", ay_filtrado);
+					SSD1306_GotoXY(60, 40);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+					sprintf(msg, "GY:%.0d", gy_filtrado);
+					SSD1306_GotoXY(60, 50);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 //					sprintf(msg, "====================");
 //					SSD1306_GotoXY(2, 60);
 //					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				    oled_update_requested = 1;
+				  //  oled_update_requested = 1;
 					break;
 				case 1:
 					for (int i = 0; i < 4; i++) {
