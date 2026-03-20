@@ -164,14 +164,14 @@ volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4.
 			int16_t 		deadband_L = 50;		/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 0; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
-			float 			Kp = 40.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Kp = 150.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 0.4f;				/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 1.0f;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			Kd = 0.0f;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float 			setpoint = 7; // 4.0f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0, last_error = 0;
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y = 0;
-			float 			alpha = 0.94f; // Factor del filtro complementario
+			float 			alpha = 0.65f; // Factor del filtro complementario
 			uint32_t 		last_time = 0;
 			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
 //filtro kalman
@@ -317,6 +317,21 @@ void BS_ACK_NOT_FOUND(){
 	hBuzzer.last_tick = HAL_GetTick();
 }
 void calculoPID(void){
+
+
+		static uint32_t ultimo_tiempo = 0;
+		uint32_t tiempo_actual = HAL_GetTick(); // O el timer de microsegundos que prefieras
+		float dt_real = (float)(tiempo_actual - ultimo_tiempo) / 1000.0f;
+		ultimo_tiempo = tiempo_actual;
+
+		// Para evitar picos locos en la primer lectura o desbordes:
+		if (dt_real > 0.1f) dt_real = 0.01f;
+
+
+		 dt_real = 0.01f;
+	// Actualizamos la matemática pura:
+
+
 		//float gyro_rate = -(((float)gy_filtrado / 65.5f) - gyro_bias_y);
 		float gyro_rate = -(((float)gy_filtrado - gyro_bias_y) / 65.5f);							//PITCH
 		float accel_angle = (atan2f((float)ax_filtrado, (float)az_filtrado) * 57.2957f) ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
@@ -329,10 +344,10 @@ void calculoPID(void){
 	   switch(currentlySelectedFilter){
 		   default:
 		   case FILTRO_COMPLEMENTARIO:
-			angle_y = alpha * (angle_y + gyro_rate * DT_PID) + (1.0f - alpha) * accel_angle;
+			angle_y = alpha * (angle_y + gyro_rate * dt_real) + (1.0f - alpha) * accel_angle;
 			break;
 		   case FILTRO_KALMAN:
-			angle_y = aplicarKalman(accel_angle, gyro_rate, DT_PID);
+			angle_y = aplicarKalman(accel_angle, gyro_rate, dt_real);
 			break;
 		   case FILTRO_SOLO_ACCEL:
 			angle_y= accel_angle;
@@ -341,13 +356,13 @@ void calculoPID(void){
 
 	   float error = angle_y - setpoint;
 	   //  if (error < 0.2f && error > -0.2f) error = 0;
-	   integral += error * DT_PID;
+	   integral += error * dt_real;
 	   if(integral > 1000) integral = 1000;
 	   else if(integral < -1000) integral = -1000;
 
 	   float P = Kp * error;
 	   float I = Ki * integral;
-	   float D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //float D = Kd * gyro_rate; //Kd * (error - last_error) / DT_PID;//
+	   float D = Kd * gyro_rate; //  Kd * (error - last_error) / dt_real; //Kd * gyro_filtrado_ema; //float D = Kd * gyro_rate; //Kd * (error - last_error) / DT_PID;//
 	   float output = P + I + D ; // Funcion de transferencia
 
 	   last_error = error;
@@ -473,8 +488,12 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
         // 4. Configurar Giroscopio (+/- 500 dps)
         data = 0x08;
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1B, 1, &data, 1, 100);
-        data = 0x00; // Filtro de ~42Hz. Limpia basura del sensor. 0x02 agrega un retardo de 2 ms a la medicion el cual se suma al retardo de la lectura
+        data = 0x01; // Filtro de ~42Hz. Limpia basura del sensor. 0x02 agrega un retardo de 2 ms a la medicion el cual se suma al retardo de la lectura
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1A, 1, &data, 1, 100);
+        // 5. Configurar Sample Rate a 100 Hz (10 ms)
+        // Frecuencia = 1kHz / (1 + SMPLRT_DIV) -> 1000 / (1 + 9) = 100 Hz
+        data = 0x09;
+        HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x19, 1, &data, 1, 100);
     }
 }
 void MPU6050_Calibrate(void) {
@@ -544,7 +563,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 			flagNuevaMedicionMPU = 1;
 	        if (oled_update_requested) {
 				oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
-				//SSD1306_UpdatePage_DMA(oled_current_page);
+				SSD1306_UpdatePage_DMA(oled_current_page);
 				oled_current_page++;				// Incrementamos para la próxima vez
 				if (oled_current_page >= 8) {
 					oled_current_page = 0;// Ya mandamos toda la pantalla. Terminamos el proceso.
@@ -774,7 +793,7 @@ int main(void)
 //					sprintf(msg, "====================");
 //					SSD1306_GotoXY(2, 60);
 //					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				  //  oled_update_requested = 1;
+				    oled_update_requested = 1;
 					break;
 				case 1:
 					for (int i = 0; i < 4; i++) {
