@@ -157,7 +157,7 @@ volatile 	uint8_t 		flagDisplay			=	0;
 			uint8_t 		flagOLED 			= 	0;
 			uint8_t 		dma_ready 			= 	0;
 			uint8_t 		calibration_ready 	= 	0; // Bandera para no activar el PID antes de tiempo
-			uint8_t			motorsIsOn 			=	0;
+			uint8_t			motorsIsOn 			=	1;
 			//banderas de modo o máquina de estado
 // ================= [ Counters ] ================= //
 			uint16_t 		contador = 0;
@@ -168,17 +168,17 @@ volatile 	uint32_t 		counter=0;				/*!< Utilizado en la interrupción del Timer 
 			uint8_t 		rx_index = 0;
 			uint8_t 		rx_data;
 // =================[ Variables de Control PID ] ================= //
-			float 			Kp = 150.0f;			/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.4f;				/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 0.0f;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 7; // 4.0f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
+			float 			Kp = 180.0f;			/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 0.0f;				/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 0.5f;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = -55; // 4.0f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0, last_error = 0;
-			int16_t 		deadband_L = 50;		/*!< Zona Muerta del PWM para el motor 1*/
-			int16_t 		deadband_R = 0; 		/*!< Zona Muerta del PWM para el motor 2*/
+			int16_t 		deadband_L = 350;		/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_R = 300; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y = 0;
 			float 			angle_y_sinfiltro = 0;
-			float 			alpha = 0.65f; // Factor del filtro complementario
+			float 			alpha = 0.97f; // Factor del filtro complementario
 			uint32_t 		last_time = 0;
 			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
 // =================[ Variables de Calibración ] =================//
@@ -373,9 +373,104 @@ void BS_ACK_NOT_FOUND(){
 	hBuzzer.state = 0;
 	hBuzzer.last_tick = HAL_GetTick();
 }
+/*
+void calculoPID(void){
+		//float gyro_rate = -(((float)gy_filtrado / 65.5f) - gyro_bias_y);
+		float gyro_rate = -(((float)gy_filtrado - gyro_bias_y) / 65.5f);							//PITCH
+		float accel_angle = (atan2f((float)ax_filtrado, (float)az_filtrado) * 57.2957f) ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
+		accelx 	= ax_filtrado;
+		accely 	= ay_filtrado;
+		accelz 	= az_filtrado;
+		giro 	= gyro_rate;
+		giro_z 	= (float)gz_filtrado / 65.5f;
+		accelGiro = accel_angle;
+	   switch(currentlySelectedFilter){
+		   default:
+		   case FILTRO_COMPLEMENTARIO:
+			angle_y = alpha * (angle_y + gyro_rate * DT_PID) + (1.0f - alpha) * accel_angle;
+
+			break;
+		   case FILTRO_SOLO_ACCEL:
+			angle_y= accel_angle;
+			break;
+		   }
+		telemetria.data.gyro_pitch  	=	accel_angle;	//estos datos son para mandar al Qt
+		telemetria.data.pitch_filtrado 	= 	angle_y;
+	   float error = angle_y - setpoint;
+	   //  if (error < 0.2f && error > -0.2f) error = 0;
+	   integral += error * DT_PID;
+	   if(integral > 1000) integral = 1000;
+	   else if(integral < -1000) integral = -1000;
+
+	   float P = Kp * error;
+	   float I = Ki * integral;
+	   float D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //float D = Kd * gyro_rate; //Kd * (error - last_error) / DT_PID;//
+	   float output = P + I + D ; // Funcion de transferencia
+
+	   last_error = error;
+	   //if ((angle_y > 7.0f || angle_y < - 7.0f)) {
+		   //Robot_Drive(0, 0);
+		//   HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+		   //if(angle_y > 7.0f ) 		Robot_Drive(2549, 2599);
+		  // if(angle_y < -7.0f ) 	Robot_Drive(-2549, -2599);
+		  // if(motorsIsOn==0)		Robot_Drive(0, 0);
+		  // integral = 0;
+	//   }
+
+		   if(motorsIsOn){	   	Robot_Drive((int16_t)output, (int16_t)output);}
+		   if(motorsIsOn==0){	Robot_Drive(0, 0);}
+
+	   salida = output;
+}*/
+void calculoPID(void){
+		//float gyro_rate = ((float)gy_filtrado / 65.5f) - gyro_bias_y;						//PITC
+		// FIJATE EL SIGNO MENOS AL PRINCIPIO:
+		float gyro_rate = -(((float)gy_filtrado / 65.5f) - gyro_bias_y);
+		//float gyro_rate = ((float)gy / 65.5f);								//PITCH
+		float accel_angle = (atan2f((float)ax_filtrado, (float)az_filtrado) * 57.2957f) ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
+		accelx 	= ax_filtrado;
+		accely 	= ay_filtrado;
+		accelz 	= az_filtrado;
+		giro 	= gyro_rate;
+		giro_z 	= (float)gz_filtrado / 65.5f;
+		accelGiro = accel_angle;
+
+	   switch(currentlySelectedFilter){
+		   default:
+		   case FILTRO_COMPLEMENTARIO:
+			angle_y = alpha * (angle_y + gyro_rate * DT_PID) + (1.0f - alpha) * accel_angle;
+			break;
+		   case FILTRO_SOLO_ACCEL:
+			angle_y= accel_angle;
+			break;
+		   }
+
+	   float error = angle_y - setpoint;
+	   //  if (error < 0.2f && error > -0.2f) error = 0;
+	   integral += error * DT_PID;
+	   if(integral > 1000) integral = 1000;
+	   else if(integral < -1000) integral = -1000;
+
+	   float P = Kp * error;
+	   float I = Ki * integral;
+	   float D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //float D = Kd * gyro_rate; //Kd * (error - last_error) / DT_PID;//
+	   float output = P + I + D ; // Funcion de transferencia
+
+	   last_error = error;
+	   if ((angle_y > 25.0f || angle_y < - 25.0f)) {
+		   Robot_Drive(0, 0);
+	//	   if(angle_y > 45.0f ) //Robot_Drive(3549, 3599);
+		//   if(angle_y < 45.0f ) //Robot_Drive(-3549, -3599);
+		  // integral = 0;
+	   }
+	   if(motorsIsOn){	   	Robot_Drive((int16_t)output, (int16_t)output);}
+	   if(motorsIsOn==0){	Robot_Drive(0, 0);}
+	   salida = output;
+}
+/*
 void calculoPID(void){
 	float dt_real = 0.01f;
-	float gyro_rate = -(((float)gy_filtrado - gyro_bias_y) / 65.5f);					//este signo negativo esta bien
+	float gyro_rate = (((float)gy_filtrado - gyro_bias_y) / 65.5f);					//este signo negativo esta bien
 	float accel_angle = (atan2f((float)ax_filtrado, (float)az_filtrado) * 57.2957f) ; 	// el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
 	accelx 	= ax_filtrado;
 	accely 	= ay_filtrado;
@@ -392,30 +487,28 @@ void calculoPID(void){
 			angle_y= accel_angle;
 			break;
 	   }
-	telemetria.data.gyro_pitch  		=	accel_angle;
+	telemetria.data.gyro_pitch  	=	accel_angle;	//estos datos son para mandar al Qt
 	telemetria.data.pitch_filtrado 	= 	angle_y;
 	float error = angle_y - setpoint;
-	//  if (error < 0.2f && error > -0.2f) error = 0;
-	integral += error * dt_real;
-	if(integral > 1000) integral = 1000;
-	else if(integral < -1000) integral = -1000;
+	if(motorsIsOn) {
+	   integral += error * dt_real;
+	   if(integral > 1000) integral = 1000;
+	   else if(integral < -1000) integral = -1000;
+	} else {
+	   integral = 0; // Limpiamos la memoria
+	   last_error = error;
+	}
 	float P = Kp * error;
 	float I = Ki * integral;
-	float D = Kd * gyro_rate; //  Kd * (error - last_error) / dt_real; //Kd * gyro_filtrado_ema; //float D = Kd * gyro_rate; //Kd * (error - last_error) / DT_PID;//
-	float output = P + I + D ; // Funcion de transferencia
-	last_error = error;
-	//if ((angle_y > 7.0f || angle_y < - 7.0f)) {
-	   //Robot_Drive(0, 0);
-	//   HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
-	   //if(angle_y > 7.0f ) 		Robot_Drive(2549, 2599);
-	  // if(angle_y < -7.0f ) 	Robot_Drive(-2549, -2599);
-	  // if(motorsIsOn==0)		Robot_Drive(0, 0);
-	  // integral = 0;
-	//   }
-	   if(motorsIsOn){	   	Robot_Drive((int16_t)output, (int16_t)output);}
-	   if(motorsIsOn==0){	Robot_Drive(0, 0);}
+	float D = Kd * gyro_rate;
+	float output = P + I + D;
 	salida = output;
-}
+	if(motorsIsOn) {
+	   Robot_Drive((int16_t)output, (int16_t)output);
+	} else {
+	   Robot_Drive(0, 0);
+	}
+}*/
 void sendCMD(uint8_t cmd, uint16_t param) {
     uint8_t frame[10];
     memcpy(&frame[0], "UNER", 4);     // [0-3] Header
@@ -497,10 +590,10 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1C, 1, &data, 1, 100);
         data = 0x08;			// configuramos el giroscopio en +/- 500 [dps] con el valor 0x08
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1B, 1, &data, 1, 100);
-        data = 0x01; 			// configuramos el filtro de ~42Hz para limpia basura del sensor. 0x02 agrega un retardo de 2 ms a la medicion el cual se suma al retardo de la lectura
+        data = 0x04; 			// configuramos el filtro pasa bajos. 0x02 agrega un retardo de 2 ms a la medicion el cual se suma al retardo de la lectura. Activar este registro aumenta en 8 la tasa de muestreo del giroscopio
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1A, 1, &data, 1, 100);
-        data = 0x09;// 5. Configurar Sample Rate a 100 Hz (10 ms)// Frecuencia = 1kHz / (1 + SMPLRT_DIV) -> 1000 / (1 + 9) = 100 Hz
-        HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x19, 1, &data, 1, 100);
+        data = 0x00;
+        HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x19, 1, &data, 1, 100);	// el registro 25 (dec, 0x19 en hexa) Configurar la frecuencia de muestreo
     }
 }
 void MPU6050_Calibrate(void) {
@@ -546,10 +639,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
     		HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14); // los datos tardan 0.38ms en ser leidos + 2ms retardo. Son 153 bits a 400k bits/s
     	}
+    	else{
+    		 HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+    	}
         counter++;
         if(counter > delayHB){
             counter = 0;
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+          //  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
         }
     }
 }
@@ -567,7 +663,6 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 			gy_filtrado = (int16_t)(mpu_data[10] << 8 | mpu_data[11]);
 			gz_filtrado = (int16_t)(mpu_data[12] << 8 | mpu_data[13]);
 			flagNuevaMedicionMPU = 1;
-
 	        if (oled_update_requested) {
 				oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
 				SSD1306_UpdatePage_DMA(oled_current_page);
@@ -581,7 +676,6 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 }
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	if (hi2c->Instance == I2C1) {
-
         if (oled_current_page == 0 && !oled_update_requested) {
             oled_is_busy = 0; // Liberamos para que el while(1) pueda armar el siguiente frame
         }
@@ -786,11 +880,11 @@ int main(void)
 	}
 	if (HAL_GetTick() - lastTime0 > 100){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
-	   buzzerSecuence(&hBuzzer);
-	   DataToQt();
+//	   buzzerSecuence(&hBuzzer);
+	 //  DataToQt();
 	   flagDisplay=1;
 	}
-	if(flagDisplay){	//DISPLAY DESACTIVADO
+	if(flagDisplay==777){	//DISPLAY DESACTIVADO
 		flagDisplay=0;
 		if (!oled_is_busy) {
 			SSD1306_Fill(SSD1306_COLOR_BLACK);
