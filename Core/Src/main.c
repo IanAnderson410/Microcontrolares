@@ -61,16 +61,17 @@
 /* USER CODE BEGIN PTD */
 //Al usar __attribute__((packed)), garantizamos que no haya "padding" (huecos de memoria)
 typedef struct __attribute__((packed)) {
-    int16_t 	acc_x, acc_y, acc_z; // 6 bytes - Datos crudos para debug en Qt
-    int16_t 	gyro_pitch, gyro_yaw; // 4 bytes - Pitch (Y) y Yaw (Z)
-    float 		pitch_angle;            // 4 bytes - El theta filtrado
-    float 		pos_x;                  // 4 bytes - Trayectoria X
-    float 		pos_y;                  // 4 bytes - Trayectoria Y
-    float 		velocidad;              // 4 bytes - Velocidad lineal
-    uint8_t 	modo;                 // 1 byte  - IDLE, FOLLOW_LINE, etc.
-    uint16_t	IR[8];
-    uint8_t 	infoAdicional;
-} PayloadData_t;
+    int16_t     acc_x, acc_y, acc_z;    // 6 bytes - Datos crudos
+    int16_t     gyro_pitch, gyro_yaw;
+    float       pitch_filtrado;         // 4 bytes - Pitch filtrado
+    float       yaw_filtrado;           // 4 bytes - Yaw filtrado
+    float       pos_x;                  // 4 bytes - Trayectoria X
+    float       pos_y;                  // 4 bytes - Trayectoria Y
+    float       velocidad;              // 4 bytes - Velocidad lineal
+    uint8_t     modo;                   // 1 byte  - IDLE, FOLLOW_LINE, etc.
+    uint16_t    IR[8];                  // 16 bytes- Sensores IR
+    uint8_t     infoAdicional;          // 1 byte  - Info Adicional
+} PayloadData_t;                        // TOTAL = 48 bytes
 
 typedef union {
     PayloadData_t 	data;
@@ -110,14 +111,15 @@ enum {
 	CMD_PID_KD      			= 32, 		/*!< Ajustar Término Derivativa*/
 	CMD_PID_SETPOINT 			= 33, 		/*!< Ajustar  Offset*/
 	CMD_PID_ALPHA 				= 34, 		/*!< Ajustar  Alpha*/
+
+	CMD_NETWORK_CHANGE_SSID		= 40,
+	CMD_NETWORK_CHANGE_PASSWORD	= 41
 };
 typedef enum {
     FILTRO_COMPLEMENTARIO = 0,	/*!< Predeterminado */
     FILTRO_KALMAN = 1,			/*!< Presenta matemática más compleja que el filtro complementario */
     FILTRO_SOLO_ACCEL = 2 		/*!< Desactivar filtro */
 } FiltroTipo_t;
-
-
 
 typedef struct {
     uint16_t duration;  // Cuánto tiempo suena (ms)
@@ -127,21 +129,27 @@ typedef struct {
     uint8_t state;      // 0 = Silencio, 1 = Sonando
 } Buzzer_Seq_t;
 
-Buzzer_Seq_t hBuzzer = {0}; // Inicializamos en cero
 /* USER CODE END PTD */
-
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MPU6050_ADDR (0x68 << 1) // Dirección I2C desplazada
-#define UNER_HEADER_STR "UNER"
-#define UNER_TOKEN      ':'    // 0x3A según tu PDF o preferencia
+
 // ================= [ PID ] ================= //
-#define ALPHA_ACCEL 	0.5f    // Suaviza las vibraciones del acelerómetro
-#define DT_PID 			0.01f
+#define 	ALPHA_ACCEL 		0.5f    // Suaviza las vibraciones del acelerómetro
+#define 	DT_PID 				0.01f
+// ================= [ Comunicación ] ================= //
+#define 	RX_BUFFER_SIZE 		64          // Suficiente para la IP y futuros comandos UNER
+#define 	UNER_HEADER_STR 	"UNER"
+#define 	UNER_TOKEN      	':'    // 0x3A según tu PDF o preferencia
+// ================= [ Periféricos ] ================= //
+#define 	MPU6050_ADDR 	(0x68 << 1) // Dirección I2C desplazada
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+// ================= [ Estructuras ] ================= //
+			PayloadUNER_t 	telemetria;
+			FiltroTipo_t 	currentlySelectedFilter = FILTRO_COMPLEMENTARIO;
+			Buzzer_Seq_t 	hBuzzer = {0}; // Inicializamos en cero
 // ================= [ Flags ] ================= //
 volatile 	uint8_t 		flagDisplay			=	0;
 			uint8_t 		flagSendUNER 		= 	0;
@@ -149,9 +157,8 @@ volatile 	uint8_t 		flagDisplay			=	0;
 			uint8_t 		flagOLED 			= 	0;
 			uint8_t 		dma_ready 			= 	0;
 			uint8_t 		calibration_ready 	= 	0; // Bandera para no activar el PID antes de tiempo
-			uint8_t			motorsIsOn 			=	1;
+			uint8_t			motorsIsOn 			=	0;
 			//banderas de modo o máquina de estado
-			FiltroTipo_t 	currentlySelectedFilter = FILTRO_COMPLEMENTARIO; //FILTRO_COMPLEMENTARIO;
 // ================= [ Counters ] ================= //
 			uint16_t 		contador = 0;
 volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4. Es volatile por que se usan en interrupciones*/
@@ -160,37 +167,27 @@ volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4.
 			char 			rx_buffer[20];
 			uint8_t 		rx_index = 0;
 			uint8_t 		rx_data;
-// Nuevas variables para compensar la diferencia entre motores
-			int16_t 		deadband_L = 50;		/*!< Zona Muerta del PWM para el motor 1*/
-			int16_t 		deadband_R = 0; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
 			float 			Kp = 150.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 0.4f;				/*!< Término Integrativo: Elimina el error de estado estacionario*/
 			float 			Kd = 0.0f;				/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float 			setpoint = 7; // 4.0f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0, last_error = 0;
+			int16_t 		deadband_L = 50;		/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_R = 0; 		/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y = 0;
+			float 			angle_y_sinfiltro = 0;
 			float 			alpha = 0.65f; // Factor del filtro complementario
 			uint32_t 		last_time = 0;
 			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
-//filtro kalman
-			float 			Q_angle = 0.001f;   // Proceso: Incertidumbre del acelerómetro
-			float 			Q_bias = 0.003f;    // Proceso: Incertidumbre de la deriva del giro
-			float 			R_measure = 0.03f;  // Medición: Ruido del sensor (ajustar si vibra mucho)
-			float 			angle_kalman = 0.0f;
-			float 			bias_kalman = 0.0f;
-			float 			P_matrix[2][2] = {{0, 0}, {0, 0}};
 // =================[ Variables de Calibración ] =================//
-			//float 			gyro_bias = 0;
-			float accel_bias_x;
-			float accel_bias_y ;
-			// En el eje Z, restamos la gravedad esperada (ej: 16384 para +/- 2g)
-			// para que el bias sea solo el error del sensor.
-			float accel_bias_z ;
-			float gyro_bias_x ;
-			float gyro_bias_y ;
-			float gyro_bias_z ;
+			float 			accel_bias_x;
+			float 			accel_bias_y ;
+			float 			accel_bias_z ;
+			float 			gyro_bias_x ;
+			float 			gyro_bias_y ;
+			float 			gyro_bias_z ;
 // =================[ Protocolo UNER ] =================//
 volatile 	uint16_t 		accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
 volatile 	uint16_t 		accely=0;
@@ -205,13 +202,13 @@ volatile uint8_t oled_current_page = 0;
 volatile uint8_t oled_is_busy = 0; // Para saber si el display está ocupado
 
 uint32_t lastTime0 = 0;
-PayloadUNER_t telemetria;
+
 // recibidos desde el qt
 uint8_t rx_buffer_uart[256];
 uint16_t delayHB= 200; //ENTRE 1 Y 200
 
 uint16_t adc_buffer[8]; // El buffer que llena el DMA
-char msg[20];
+char msg[255];
 uint8_t BS=0;
 
 // Banderas y contadores
@@ -219,16 +216,15 @@ volatile uint8_t flagNuevaMedicionMPU = 0;
 int16_t ax_filtrado, ay_filtrado, az_filtrado, gy_filtrado, gz_filtrado;
  float gyro_filtrado_ema = 0.0f;
 //volatile int32_t axSum = 0, aySum = 0, azSum = 0, gySum = 0, gzSum = 0;
-uint8_t indexMediaMovil = 0;
 
 
-// --- Variables para los Filtros IIR ---
-float ax_lpf = 0.0f;
-float az_lpf = 0.0f;
-float gy_hpf = 0.0f;
-float gy_prev_raw = 0.0f;
+ /* USER CODE BEGIN PV */
 
-// --- Constantes de Sintonía ---
+
+ char ip_address[16];               // Buffer para guardar el string "192.168.xxx.xxx"
+ volatile uint8_t ip_received_flag = 0; // Bandera para avisar al loop principal
+ uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
+ /* USER CODE END PV */
 
 /* USER CODE END PM */
 
@@ -317,22 +313,13 @@ void BS_ACK_NOT_FOUND(){
 	hBuzzer.last_tick = HAL_GetTick();
 }
 void calculoPID(void){
-
-
-		static uint32_t ultimo_tiempo = 0;
-		uint32_t tiempo_actual = HAL_GetTick(); // O el timer de microsegundos que prefieras
-		float dt_real = (float)(tiempo_actual - ultimo_tiempo) / 1000.0f;
-		ultimo_tiempo = tiempo_actual;
-
+	//	static uint32_t ultimo_tiempo = 0;
+	//	uint32_t tiempo_actual = HAL_GetTick(); // O el timer de microsegundos que prefieras
+		//float dt_real = (float)(tiempo_actual - ultimo_tiempo) / 1000.0f;
+	//	ultimo_tiempo = tiempo_actual;
 		// Para evitar picos locos en la primer lectura o desbordes:
-		if (dt_real > 0.1f) dt_real = 0.01f;
-
-
-		 dt_real = 0.01f;
-	// Actualizamos la matemática pura:
-
-
-		//float gyro_rate = -(((float)gy_filtrado / 65.5f) - gyro_bias_y);
+	//	if (dt_real > 0.1f) dt_real = 0.01f;
+		float dt_real = 0.01f;
 		float gyro_rate = -(((float)gy_filtrado - gyro_bias_y) / 65.5f);							//PITCH
 		float accel_angle = (atan2f((float)ax_filtrado, (float)az_filtrado) * 57.2957f) ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
 		accelx 	= ax_filtrado;
@@ -344,27 +331,23 @@ void calculoPID(void){
 	   switch(currentlySelectedFilter){
 		   default:
 		   case FILTRO_COMPLEMENTARIO:
-			angle_y = alpha * (angle_y + gyro_rate * dt_real) + (1.0f - alpha) * accel_angle;
-			break;
-		   case FILTRO_KALMAN:
-			angle_y = aplicarKalman(accel_angle, gyro_rate, dt_real);
-			break;
+				angle_y = alpha * (angle_y + gyro_rate * dt_real) + (1.0f - alpha) * accel_angle;
+				telemetria.data.gyro_pitch  	=	accel_angle;
+				telemetria.data.pitch_filtrado 	= 	angle_y;
+				break;
 		   case FILTRO_SOLO_ACCEL:
-			angle_y= accel_angle;
-			break;
+				angle_y= accel_angle;
+				break;
 		   }
-
 	   float error = angle_y - setpoint;
 	   //  if (error < 0.2f && error > -0.2f) error = 0;
 	   integral += error * dt_real;
 	   if(integral > 1000) integral = 1000;
 	   else if(integral < -1000) integral = -1000;
-
 	   float P = Kp * error;
 	   float I = Ki * integral;
 	   float D = Kd * gyro_rate; //  Kd * (error - last_error) / dt_real; //Kd * gyro_filtrado_ema; //float D = Kd * gyro_rate; //Kd * (error - last_error) / DT_PID;//
 	   float output = P + I + D ; // Funcion de transferencia
-
 	   last_error = error;
 	   //if ((angle_y > 7.0f || angle_y < - 7.0f)) {
 		   //Robot_Drive(0, 0);
@@ -374,34 +357,11 @@ void calculoPID(void){
 		  // if(motorsIsOn==0)		Robot_Drive(0, 0);
 		  // integral = 0;
 	//   }
-
 		   if(motorsIsOn){	   	Robot_Drive((int16_t)output, (int16_t)output);}
 		   if(motorsIsOn==0){	Robot_Drive(0, 0);}
-
 	   salida = output;
 }
-float aplicarKalman(float newAngle, float newRate, float dt) {
-    float rate = newRate - bias_kalman;
-    angle_kalman += dt * rate;
-    P_matrix[0][0] += dt * (dt * P_matrix[1][1] - P_matrix[0][1] - P_matrix[1][0] + Q_angle);
-    P_matrix[0][1] -= dt * P_matrix[1][1];
-    P_matrix[1][0] -= dt * P_matrix[1][1];
-    P_matrix[1][1] += Q_bias * dt;
-    float S = P_matrix[0][0] + R_measure;
-    float K[2]; // Ganancia de Kalman
-    K[0] = P_matrix[0][0] / S;
-    K[1] = P_matrix[1][0] / S;
-    float y = newAngle - angle_kalman;
-    angle_kalman += K[0] * y;
-    bias_kalman += K[1] * y;
-    float P00_temp = P_matrix[0][0];
-    float P01_temp = P_matrix[0][1];
-    P_matrix[0][0] -= K[0] * P00_temp;
-    P_matrix[0][1] -= K[0] * P01_temp;
-    P_matrix[1][0] -= K[1] * P00_temp;
-    P_matrix[1][1] -= K[1] * P01_temp;
-    return angle_kalman;
-}
+
 void sendCMD(uint8_t cmd, uint16_t param) {
     uint8_t frame[10];
     memcpy(&frame[0], "UNER", 4);     // [0-3] Header
@@ -419,32 +379,36 @@ void sendCMD(uint8_t cmd, uint16_t param) {
     HAL_UART_Transmit_DMA(&huart1, frame, 10);
 }
 void DataToQt(){
-	if (huart1.gState != HAL_UART_STATE_READY) 	        return; // El UART está ocupado, saltamos este turno para no corromper la memoria
-	flagSendUNER = 0;
-	telemetria.data.acc_x       = (int16_t)accelx;
-	telemetria.data.acc_y       = (int16_t)accely;
-	telemetria.data.acc_z       = (int16_t)accelz;
-	telemetria.data.gyro_pitch  = (int16_t)giro;
-	telemetria.data.gyro_yaw    = (int16_t)giro_z;
-	telemetria.data.pitch_angle = (float)accelGiro;
-	telemetria.data.pos_x       = 3.0f;
-	telemetria.data.pos_y       = 2.0f;
-	telemetria.data.velocidad   = 1.0f;
-	for(uint8_t i=0; i<8; i++) 		 telemetria.data.IR[i] = adc_buffer[i];
-	telemetria.data.modo = 0; 		//iddle
-	telemetria.data.infoAdicional = 1;
-	static uint8_t frame[52];	// static hace que no se borre al salir de la función
-	memcpy(&frame[0], "UNER", 4);
-	frame[4] = 46;                  // Length = CMD(1) + Payload(44) + CHK(1)
-	frame[5] = ':';                 // TOKEN
-	frame[6] = 18;                  // CMD_DATA
-	memcpy(&frame[7], telemetria.buffer, 44);
-	uint8_t checksum = 0;
-	for (int i = 0; i < 51; i++) {
-		checksum ^= frame[i];
-	}
-	frame[51] = checksum;
-	HAL_UART_Transmit_DMA(&huart1, frame, 52);
+    if (huart1.gState != HAL_UART_STATE_READY) return; // El UART está ocupado
+    flagSendUNER = 0;
+    telemetria.data.acc_x       = (int16_t)accelx;
+    telemetria.data.acc_y       = (int16_t)accely;
+    telemetria.data.acc_z       = (int16_t)accelz;
+    telemetria.data.gyro_yaw    = (int16_t)giro_z;
+    telemetria.data.yaw_filtrado= 1;
+    telemetria.data.pos_x       = 3.0f;
+    telemetria.data.pos_y       = 2.0f;
+    telemetria.data.velocidad   = 1.0f;
+    for(uint8_t i=0; i<8; i++)       telemetria.data.IR[i] = adc_buffer[i];
+    telemetria.data.modo = 0;
+    telemetria.data.infoAdicional = 1;
+
+    // --- CAMBIOS DE TAMAÑO EN EL FRAME ---
+    static uint8_t frame[56];       // TAMAÑO NUEVO: 56 bytes totales (antes 52)
+    memcpy(&frame[0], "UNER", 4);
+    frame[4] = 50;                  // Length = CMD(1) + Payload(48) + CHK(1) = 50
+    frame[5] = ':';                 // TOKEN
+    frame[6] = 18;                  // CMD_DATA
+
+    memcpy(&frame[7], telemetria.buffer, 48); // Copiamos los 48 bytes del payload
+
+    uint8_t checksum = 0;
+    for (int i = 0; i < 55; i++) {  // XOR de los primeros 55 bytes (índices 0 al 54)
+        checksum ^= frame[i];
+    }
+    frame[55] = checksum;           // Guardamos el checksum en el último byte (índice 55)
+
+    HAL_UART_Transmit_DMA(&huart1, frame, 56); // Transmitimos los 56 bytes
 }
 void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    if (speed_L > 0) speed_L += deadband_L;			// Aplicar Deadband (Zona muerta)
@@ -508,7 +472,6 @@ void MPU6050_Calibrate(void) {
             if (HAL_I2C_Mem_Read(&hi2c1, (0x68 << 1), 0x3B, 1, buffer, 14, 100) != HAL_OK) {
                 Error_Handler(); // O prendé un LED rojo para avisarte
             }
-
             // Acelerómetro
             axS += (int16_t)(buffer[0] << 8 | buffer[1]);
             ayS += (int16_t)(buffer[2] << 8 | buffer[3]);
@@ -543,7 +506,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         counter++;
         if(counter > delayHB){
             counter = 0;
-           // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
         }
     }
 }
@@ -561,6 +524,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 			gy_filtrado = (int16_t)(mpu_data[10] << 8 | mpu_data[11]);
 			gz_filtrado = (int16_t)(mpu_data[12] << 8 | mpu_data[13]);
 			flagNuevaMedicionMPU = 1;
+
 	        if (oled_update_requested) {
 				oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
 				SSD1306_UpdatePage_DMA(oled_current_page);
@@ -573,7 +537,6 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
     }
 }
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
-
 	if (hi2c->Instance == I2C1) {
     	//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED [cite: 46]
         if (oled_current_page == 0 && !oled_update_requested) {
@@ -582,83 +545,222 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
     }
 
 }
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
+    if (huart->Instance == USART1) {
+        if (esperando_digitos_ip == 1) {        // 1. ¿Estábamos esperando los números de la IP del paquete anterior?
+            uint16_t ip_len = Size;
+            if(ip_len > 15) ip_len = 15; // Protección
+            memset(ip_address, 0, sizeof(ip_address));
+            strncpy(ip_address, (char*)rx_buffer_uart, ip_len);          // aca copiamos desde el indice 0, porque la palabra "IP:" ya quedo en el pasado
+            for(int i = 0; i < 16; i++){ 					// Limpieza de \r y \n
+                if(ip_address[i] == '\r' || ip_address[i] == '\n'){
+                    ip_address[i] = '\0';
+                    break;
+                }
+            }
+            ip_received_flag = 1;      // Avisamos al main que ya tenemos la IP completa
+            esperando_digitos_ip = 0;  // Bajamos la bandera
+        }
+        else if (strncmp((char*)rx_buffer_uart, "IP:", 3) == 0) {        // 2. Si no estábamos esperando números, verificamos si llegó la cabecera "IP:"
+            if (Size == 3) {
+                // ¡El paquete se cortó justo en "IP:"!
+                // Levantamos la bandera para atrapar los números en el próximo DMA
+                esperando_digitos_ip = 1;
+            } else {
+                // Por si acaso el ESP-01 logró enviarlo todo junto de casualidad
+                uint16_t ip_len = Size - 3;
+                if(ip_len > 15) ip_len = 15;
+
+                memset(ip_address, 0, sizeof(ip_address));
+                strncpy(ip_address, (char*)(rx_buffer_uart + 3), ip_len);
+
+                for(int i = 0; i < 16; i++){
+                    if(ip_address[i] == '\r' || ip_address[i] == '\n'){
+                        ip_address[i] = '\0';
+                        break;
+                    }
+                }
+                ip_received_flag = 1;
+            }
+        }
+
+        else {
+        	for (int i = 0; i < (Size - 6); i++){
+        						if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' && rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
+        							uint8_t len   = rx_buffer_uart[i+4];
+        							uint8_t token = rx_buffer_uart[i+5];
+        							uint8_t cmd   = rx_buffer_uart[i+6];
+        							if (token != ':') continue;
+        							uint8_t pos_checksum = i + 5 + len;
+        							if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
+        							uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
+        							uint8_t checksum_calc = 0;
+        							for(int k = i; k < pos_checksum; k++){
+        								checksum_calc ^= rx_buffer_uart[k];
+        							}
+        							if (checksum_calc == checksum_recibido) {
+        								uint8_t *payload_ptr = &rx_buffer_uart[i+7];
+        								//float valor_recibido;
+        								switch(cmd) {
+        									case CMD_SET_HB:
+        										 delayHB = payload_ptr[0];
+        										break;
+        									case CMD_CALIBRATE:
+        										 Robot_Drive(0, 0);
+        										 calibration_ready=0;
+        										 break;
+        									default:
+        									case CMD_ALIVE:
+        										sendCMD(CMD_ACK, 0); // te devuelvo un alive
+        										break;
+        									case CMD_ACK:
+        										break;
+        									case CMD_ONOFFMOTORS:
+        										motorsIsOn = payload_ptr[0];
+        										break;
+        									case CMD_TCP_CONNECTED:
+        										if(payload_ptr[0]){	//conectado
+        											BS_tcpConnectSecuence();
+        											flagWIFI=1;
+        										}
+        										else if(payload_ptr[0]==0){				//desconectado
+        											BS_Error();
+        											flagWIFI=0;
+        										}
+        										break;
+        									case CMD_CHANGE_DEADLINE_LEFT:
+        										deadband_L = payload_ptr[0];
+        										break;
+        									case CMD_CHANGE_DEADLINE_RIGHT:
+        										deadband_R = payload_ptr[0];
+        										break;
+        									case CMD_CHANGE_OLED_SCREEN:
+        										flagOLED = payload_ptr[0];
+        										break;
+        									case CMD_PID_KP:
+        										Kp = (float)payload_ptr[0];
+        										//Kp = ((uint16_t)payload_ptr[1] | ((uint16_t)payload_ptr[0] << 8));
+        										break;
+        									case CMD_PID_KD:
+        										Kd = (float)payload_ptr[0];
+        										break;
+        									case CMD_PID_KI:
+        										Ki = (float)payload_ptr[0];
+        										break;
+        									case CMD_PID_SETPOINT:
+        										setpoint = (float)payload_ptr[0];
+        										break;
+        								}
+        								memset(rx_buffer_uart, 0, Size);
+        								break; // Salimos del for
+        							}
+        						}
+        					}
+        }
+
+        // --- ZONA DE RE-ARMADO ---
+        memset(rx_buffer_uart, 0, 256);
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+        __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+    }
+}
+/*
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart->Instance == USART1){
-    	for (int i = 0; i < (Size - 6); i++){
-			if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' && rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
-				uint8_t len   = rx_buffer_uart[i+4];
-				uint8_t token = rx_buffer_uart[i+5];
-				uint8_t cmd   = rx_buffer_uart[i+6];
-				if (token != ':') continue;
-				uint8_t pos_checksum = i + 5 + len;
-				if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
-				uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
-				uint8_t checksum_calc = 0;
-				for(int k = i; k < pos_checksum; k++){
-					checksum_calc ^= rx_buffer_uart[k];
-				}
-				if (checksum_calc == checksum_recibido) {
-					uint8_t *payload_ptr = &rx_buffer_uart[i+7];
-					//float valor_recibido;
-					switch(cmd) {
-						case CMD_SET_HB:
-							 delayHB = payload_ptr[0];
-							break;
-						case CMD_CALIBRATE:
-							 Robot_Drive(0, 0);
-							 calibration_ready=0;
-							 break;
-						default:
-						case CMD_ALIVE:
-							sendCMD(CMD_ACK, 0); // te devuelvo un alive
-							break;
-						case CMD_ACK:
-							break;
-						case CMD_ONOFFMOTORS:
-							motorsIsOn = payload_ptr[0];
-							break;
-						case CMD_TCP_CONNECTED:
-							if(payload_ptr[0]){	//conectado
-								BS_tcpConnectSecuence();
-								flagWIFI=1;
-							}
-							else if(payload_ptr[0]==0){				//desconectado
-								BS_Error();
-								flagWIFI=0;
-							}
-							break;
-						case CMD_CHANGE_DEADLINE_LEFT:
-							deadband_L = payload_ptr[0];
-							break;
-						case CMD_CHANGE_DEADLINE_RIGHT:
-							deadband_R = payload_ptr[0];
-							break;
-						case CMD_CHANGE_OLED_SCREEN:
-							flagOLED = payload_ptr[0];
-							break;
-						case CMD_PID_KP:
-							Kp = (float)payload_ptr[0];
-							//Kp = ((uint16_t)payload_ptr[1] | ((uint16_t)payload_ptr[0] << 8));
-							break;
-						case CMD_PID_KD:
-							Kd = (float)payload_ptr[0];
-							break;
-						case CMD_PID_KI:
-							Ki = (float)payload_ptr[0];
-							break;
-						case CMD_PID_SETPOINT:
-							setpoint = (float)payload_ptr[0];
-							break;
+			if (strncmp((char*)rx_buffer_uart, "IP:", 3) == 0) {// 1. Verificamos si el mensaje arranca con "IP:"
+				// Restamos los 3 caracteres de "IP:"
+				uint16_t ip_len = Size - 3;
+				if(ip_len > 15) ip_len = 15; // Protección contra desbordamiento
+				memset(ip_address, 0, sizeof(ip_address));
+				strncpy(ip_address, (char*)(rx_buffer_uart + 3), ip_len);
+				// 4. Limpieza crucial: Serial.println del ESP agrega \r y \n al final.
+				// Si mandás eso al display OLED, te puede imprimir basura o hacer saltos raros.
+				for(int i = 0; i < 16; i++){
+					if(ip_address[i] == '\r' || ip_address[i] == '\n'){
+						ip_address[i] = '\0'; // Terminador de string de C
+						break;
 					}
-					memset(rx_buffer_uart, 0, Size);
-					break; // Salimos del for
+				}
+				ip_received_flag = 1;
+			}
+			else {
+				for (int i = 0; i < (Size - 6); i++){
+					if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' && rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
+						uint8_t len   = rx_buffer_uart[i+4];
+						uint8_t token = rx_buffer_uart[i+5];
+						uint8_t cmd   = rx_buffer_uart[i+6];
+						if (token != ':') continue;
+						uint8_t pos_checksum = i + 5 + len;
+						if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
+						uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
+						uint8_t checksum_calc = 0;
+						for(int k = i; k < pos_checksum; k++){
+							checksum_calc ^= rx_buffer_uart[k];
+						}
+						if (checksum_calc == checksum_recibido) {
+							uint8_t *payload_ptr = &rx_buffer_uart[i+7];
+							//float valor_recibido;
+							switch(cmd) {
+								case CMD_SET_HB:
+									 delayHB = payload_ptr[0];
+									break;
+								case CMD_CALIBRATE:
+									 Robot_Drive(0, 0);
+									 calibration_ready=0;
+									 break;
+								default:
+								case CMD_ALIVE:
+									sendCMD(CMD_ACK, 0); // te devuelvo un alive
+									break;
+								case CMD_ACK:
+									break;
+								case CMD_ONOFFMOTORS:
+									motorsIsOn = payload_ptr[0];
+									break;
+								case CMD_TCP_CONNECTED:
+									if(payload_ptr[0]){	//conectado
+										BS_tcpConnectSecuence();
+										flagWIFI=1;
+									}
+									else if(payload_ptr[0]==0){				//desconectado
+										BS_Error();
+										flagWIFI=0;
+									}
+									break;
+								case CMD_CHANGE_DEADLINE_LEFT:
+									deadband_L = payload_ptr[0];
+									break;
+								case CMD_CHANGE_DEADLINE_RIGHT:
+									deadband_R = payload_ptr[0];
+									break;
+								case CMD_CHANGE_OLED_SCREEN:
+									flagOLED = payload_ptr[0];
+									break;
+								case CMD_PID_KP:
+									Kp = (float)payload_ptr[0];
+									//Kp = ((uint16_t)payload_ptr[1] | ((uint16_t)payload_ptr[0] << 8));
+									break;
+								case CMD_PID_KD:
+									Kd = (float)payload_ptr[0];
+									break;
+								case CMD_PID_KI:
+									Ki = (float)payload_ptr[0];
+									break;
+								case CMD_PID_SETPOINT:
+									setpoint = (float)payload_ptr[0];
+									break;
+							}
+							memset(rx_buffer_uart, 0, Size);
+							break; // Salimos del for
+						}
+					}
 				}
 			}
-		}
 		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+		__HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT); // Prevenimos falsos disparos a mitad de buffer
 	}
-}
+}*/
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     // Si hubo ruido o error de trama (común al arrancar el ESP)
@@ -706,7 +808,6 @@ int main(void)
   MX_USART1_UART_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-
         if (SSD1306_Init() != 1) {
         	Error_Handler();
         }
@@ -720,15 +821,12 @@ int main(void)
         if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 8) != HAL_OK) {
             Error_Handler();
         }
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);  // Preparamos la recepción DMA para la Comunicación Inalámbrica (ESP8266)[cite: 15].
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);  // Preparamos la recepción DMA para la Comunicación Inalámbrica (ESP01)
+        __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET); // (Asumo que es el Enable del TB6612FNG o un LED)
         HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
         HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
         HAL_TIM_Base_Start_IT(&htim4);
-
-
-
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -739,14 +837,14 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	if(flagNuevaMedicionMPU == 1 ) {
+	if(flagNuevaMedicionMPU) {
 	    flagNuevaMedicionMPU = 0;
 	    calculoPID();
 	}
 	if (HAL_GetTick() - lastTime0 > 100){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
 	   buzzerSecuence(&hBuzzer);
-	   DataToQt(); //llamada cada 50ms
+	   DataToQt();
 	   flagDisplay=1;
 	}
 	if(flagDisplay){	//DISPLAY DESACTIVADO
@@ -755,6 +853,17 @@ int main(void)
 			SSD1306_Fill(SSD1306_COLOR_BLACK);
 				switch(flagOLED){
 				case 0:
+					//if (ip_received_flag == 1) {
+					    //    ip_received_flag = 0; // Bajamos la bandera
+
+					        // ssd1306_Clear();
+					        // ssd1306_SetCursor(0, 0);
+					        // ssd1306_WriteString("Red Conectada!", Font_7x10, White);
+					        // ssd1306_SetCursor(0, 15);
+					        // ssd1306_WriteString(ip_address, Font_7x10, White);
+					        // ssd1306_UpdateScreen();
+
+					  //  }
 					sprintf(msg, "Kp:%.0f",Kp);
 					SSD1306_GotoXY(1, 0);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
@@ -770,9 +879,9 @@ int main(void)
 					sprintf(msg, "DBR: %d",deadband_R);
 					SSD1306_GotoXY(1, 40);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					sprintf(msg, "SP: %.1f", setpoint);
-					SSD1306_GotoXY(1, 50);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+					//sprintf(msg, "SP: %.1f", setpoint);
+					//SSD1306_GotoXY(1, 50);
+					//SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
 					sprintf(msg, "AY: %.2f", angle_y);
 					SSD1306_GotoXY(60, 0);
@@ -783,13 +892,19 @@ int main(void)
 
 					sprintf(msg, "GYB: %.2f", gyro_bias_y);
 					SSD1306_GotoXY(60, 30);
+
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					sprintf(msg, "AY:%.0d", ay_filtrado);
+					sprintf(msg, "PCF:%.1f", telemetria.data.pitch_filtrado);
 					SSD1306_GotoXY(60, 40);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					sprintf(msg, "GY:%.0d", gy_filtrado);
-					SSD1306_GotoXY(60, 50);
+					//sprintf(msg, "PSF:%.1d",  telemetria.data.gyro_pitch);
+					//SSD1306_GotoXY(60, 50);
+					//SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+					sprintf(msg, "IP: %s",ip_address);
+					SSD1306_GotoXY(1, 50);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
 //					sprintf(msg, "====================");
 //					SSD1306_GotoXY(2, 60);
 //					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
