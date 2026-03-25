@@ -1342,7 +1342,7 @@ Disassembly of section .text:
  800102e:	bf00      	nop
 
 08001030 <buzzerSecuence>:
-void MPU6050_Init(I2C_HandleTypeDef *hi2c);
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -1507,15 +1507,10 @@ void calculoPID(void){
  800112c:	b580      	push	{r7, lr}
  800112e:	b088      	sub	sp, #32
  8001130:	af00      	add	r7, sp, #0
-	//	uint32_t tiempo_actual = HAL_GetTick(); // O el timer de microsegundos que prefieras
-		//float dt_real = (float)(tiempo_actual - ultimo_tiempo) / 1000.0f;
-	//	ultimo_tiempo = tiempo_actual;
-		// Para evitar picos locos en la primer lectura o desbordes:
-	//	if (dt_real > 0.1f) dt_real = 0.01f;
-		float dt_real = 0.01f;
+	float dt_real = 0.01f;
  8001132:	4b89      	ldr	r3, [pc, #548]	@ (8001358 <calculoPID+0x22c>)
  8001134:	61fb      	str	r3, [r7, #28]
-		float gyro_rate = -(((float)gy_filtrado - gyro_bias_y) / 65.5f);							//PITCH
+	float gyro_rate = -(((float)gy_filtrado - gyro_bias_y) / 65.5f);					//este signo negativo esta bien
  8001136:	4b89      	ldr	r3, [pc, #548]	@ (800135c <calculoPID+0x230>)
  8001138:	f9b3 3000 	ldrsh.w	r3, [r3]
  800113c:	ee07 3a90 	vmov	s15, r3
@@ -1527,7 +1522,7 @@ void calculoPID(void){
  8001152:	eec7 7a26 	vdiv.f32	s15, s14, s13
  8001156:	eef1 7a67 	vneg.f32	s15, s15
  800115a:	edc7 7a06 	vstr	s15, [r7, #24]
-		float accel_angle = (atan2f((float)ax_filtrado, (float)az_filtrado) * 57.2957f) ; // el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
+	float accel_angle = (atan2f((float)ax_filtrado, (float)az_filtrado) * 57.2957f) ; 	// el 45.2f es un offset por que el robot esta desfazado 45 grados por alguna razon que ignoro
  800115e:	4b82      	ldr	r3, [pc, #520]	@ (8001368 <calculoPID+0x23c>)
  8001160:	f9b3 3000 	ldrsh.w	r3, [r3]
  8001164:	ee07 3a90 	vmov	s15, r3
@@ -1543,29 +1538,29 @@ void calculoPID(void){
  800118a:	ed9f 7a79 	vldr	s14, [pc, #484]	@ 8001370 <calculoPID+0x244>
  800118e:	ee67 7a87 	vmul.f32	s15, s15, s14
  8001192:	edc7 7a05 	vstr	s15, [r7, #20]
-		accelx 	= ax_filtrado;
+	accelx 	= ax_filtrado;
  8001196:	4b74      	ldr	r3, [pc, #464]	@ (8001368 <calculoPID+0x23c>)
  8001198:	f9b3 3000 	ldrsh.w	r3, [r3]
  800119c:	b29a      	uxth	r2, r3
  800119e:	4b75      	ldr	r3, [pc, #468]	@ (8001374 <calculoPID+0x248>)
  80011a0:	801a      	strh	r2, [r3, #0]
-		accely 	= ay_filtrado;
+	accely 	= ay_filtrado;
  80011a2:	4b75      	ldr	r3, [pc, #468]	@ (8001378 <calculoPID+0x24c>)
  80011a4:	f9b3 3000 	ldrsh.w	r3, [r3]
  80011a8:	b29a      	uxth	r2, r3
  80011aa:	4b74      	ldr	r3, [pc, #464]	@ (800137c <calculoPID+0x250>)
  80011ac:	801a      	strh	r2, [r3, #0]
-		accelz 	= az_filtrado;
+	accelz 	= az_filtrado;
  80011ae:	4b6f      	ldr	r3, [pc, #444]	@ (800136c <calculoPID+0x240>)
  80011b0:	f9b3 3000 	ldrsh.w	r3, [r3]
  80011b4:	b29a      	uxth	r2, r3
  80011b6:	4b72      	ldr	r3, [pc, #456]	@ (8001380 <calculoPID+0x254>)
  80011b8:	801a      	strh	r2, [r3, #0]
-		giro 	= gyro_rate;
+	giro 	= gyro_rate;
  80011ba:	4a72      	ldr	r2, [pc, #456]	@ (8001384 <calculoPID+0x258>)
  80011bc:	69bb      	ldr	r3, [r7, #24]
  80011be:	6013      	str	r3, [r2, #0]
-		giro_z 	= (float)gz_filtrado / 65.5f;
+	giro_z 	= (float)gz_filtrado / 65.5f;
  80011c0:	4b71      	ldr	r3, [pc, #452]	@ (8001388 <calculoPID+0x25c>)
  80011c2:	f9b3 3000 	ldrsh.w	r3, [r3]
  80011c6:	ee07 3a90 	vmov	s15, r3
@@ -1574,18 +1569,18 @@ void calculoPID(void){
  80011d2:	eec7 7a26 	vdiv.f32	s15, s14, s13
  80011d6:	4b6d      	ldr	r3, [pc, #436]	@ (800138c <calculoPID+0x260>)
  80011d8:	edc3 7a00 	vstr	s15, [r3]
-		accelGiro = accel_angle;
+	accelGiro = accel_angle;
  80011dc:	4a6c      	ldr	r2, [pc, #432]	@ (8001390 <calculoPID+0x264>)
  80011de:	697b      	ldr	r3, [r7, #20]
  80011e0:	6013      	str	r3, [r2, #0]
-	   switch(currentlySelectedFilter){
+	switch(currentlySelectedFilter){
  80011e2:	4b6c      	ldr	r3, [pc, #432]	@ (8001394 <calculoPID+0x268>)
  80011e4:	781b      	ldrb	r3, [r3, #0]
  80011e6:	2b02      	cmp	r3, #2
- 80011e8:	d02e      	beq.n	8001248 <calculoPID+0x11c>
-		   default:
-		   case FILTRO_COMPLEMENTARIO:
-				angle_y = alpha * (angle_y + gyro_rate * dt_real) + (1.0f - alpha) * accel_angle;
+ 80011e8:	d020      	beq.n	800122c <calculoPID+0x100>
+	   default:
+	   case FILTRO_COMPLEMENTARIO:
+			angle_y = alpha * (angle_y + gyro_rate * dt_real) + (1.0f - alpha) * accel_angle;
  80011ea:	ed97 7a06 	vldr	s14, [r7, #24]
  80011ee:	edd7 7a07 	vldr	s15, [r7, #28]
  80011f2:	ee27 7a27 	vmul.f32	s14, s14, s15
@@ -1604,37 +1599,37 @@ void calculoPID(void){
  8001220:	ee77 7a27 	vadd.f32	s15, s14, s15
  8001224:	4b5c      	ldr	r3, [pc, #368]	@ (8001398 <calculoPID+0x26c>)
  8001226:	edc3 7a00 	vstr	s15, [r3]
-				telemetria.data.gyro_pitch  	=	accel_angle;
- 800122a:	edd7 7a05 	vldr	s15, [r7, #20]
- 800122e:	eefd 7ae7 	vcvt.s32.f32	s15, s15
- 8001232:	ee17 3a90 	vmov	r3, s15
- 8001236:	b21a      	sxth	r2, r3
- 8001238:	4b59      	ldr	r3, [pc, #356]	@ (80013a0 <calculoPID+0x274>)
- 800123a:	80da      	strh	r2, [r3, #6]
-				telemetria.data.pitch_filtrado 	= 	angle_y;
- 800123c:	4b56      	ldr	r3, [pc, #344]	@ (8001398 <calculoPID+0x26c>)
- 800123e:	681a      	ldr	r2, [r3, #0]
- 8001240:	4b57      	ldr	r3, [pc, #348]	@ (80013a0 <calculoPID+0x274>)
- 8001242:	f8c3 200a 	str.w	r2, [r3, #10]
-				break;
- 8001246:	e003      	b.n	8001250 <calculoPID+0x124>
-		   case FILTRO_SOLO_ACCEL:
-				angle_y= accel_angle;
- 8001248:	4a53      	ldr	r2, [pc, #332]	@ (8001398 <calculoPID+0x26c>)
- 800124a:	697b      	ldr	r3, [r7, #20]
- 800124c:	6013      	str	r3, [r2, #0]
-				break;
- 800124e:	bf00      	nop
-		   }
-	   float error = angle_y - setpoint;
+			break;
+ 800122a:	e003      	b.n	8001234 <calculoPID+0x108>
+	   case FILTRO_SOLO_ACCEL:
+			angle_y= accel_angle;
+ 800122c:	4a5a      	ldr	r2, [pc, #360]	@ (8001398 <calculoPID+0x26c>)
+ 800122e:	697b      	ldr	r3, [r7, #20]
+ 8001230:	6013      	str	r3, [r2, #0]
+			break;
+ 8001232:	bf00      	nop
+	   }
+	telemetria.data.gyro_pitch  		=	accel_angle;
+ 8001234:	edd7 7a05 	vldr	s15, [r7, #20]
+ 8001238:	eefd 7ae7 	vcvt.s32.f32	s15, s15
+ 800123c:	ee17 3a90 	vmov	r3, s15
+ 8001240:	b21a      	sxth	r2, r3
+ 8001242:	4b57      	ldr	r3, [pc, #348]	@ (80013a0 <calculoPID+0x274>)
+ 8001244:	80da      	strh	r2, [r3, #6]
+	telemetria.data.pitch_filtrado 	= 	angle_y;
+ 8001246:	4b54      	ldr	r3, [pc, #336]	@ (8001398 <calculoPID+0x26c>)
+ 8001248:	681a      	ldr	r2, [r3, #0]
+ 800124a:	4b55      	ldr	r3, [pc, #340]	@ (80013a0 <calculoPID+0x274>)
+ 800124c:	f8c3 200a 	str.w	r2, [r3, #10]
+	float error = angle_y - setpoint;
  8001250:	4b51      	ldr	r3, [pc, #324]	@ (8001398 <calculoPID+0x26c>)
  8001252:	ed93 7a00 	vldr	s14, [r3]
  8001256:	4b53      	ldr	r3, [pc, #332]	@ (80013a4 <calculoPID+0x278>)
  8001258:	edd3 7a00 	vldr	s15, [r3]
  800125c:	ee77 7a67 	vsub.f32	s15, s14, s15
  8001260:	edc7 7a04 	vstr	s15, [r7, #16]
-	   //  if (error < 0.2f && error > -0.2f) error = 0;
-	   integral += error * dt_real;
+	//  if (error < 0.2f && error > -0.2f) error = 0;
+	integral += error * dt_real;
  8001264:	ed97 7a04 	vldr	s14, [r7, #16]
  8001268:	edd7 7a07 	vldr	s15, [r7, #28]
  800126c:	ee27 7a27 	vmul.f32	s14, s14, s15
@@ -1643,7 +1638,7 @@ void calculoPID(void){
  8001276:	ee77 7a27 	vadd.f32	s15, s14, s15
  800127a:	4b4b      	ldr	r3, [pc, #300]	@ (80013a8 <calculoPID+0x27c>)
  800127c:	edc3 7a00 	vstr	s15, [r3]
-	   if(integral > 1000) integral = 1000;
+	if(integral > 1000) integral = 1000;
  8001280:	4b49      	ldr	r3, [pc, #292]	@ (80013a8 <calculoPID+0x27c>)
  8001282:	edd3 7a00 	vldr	s15, [r3]
  8001286:	ed9f 7a49 	vldr	s14, [pc, #292]	@ 80013ac <calculoPID+0x280>
@@ -1654,7 +1649,7 @@ void calculoPID(void){
  8001296:	4a46      	ldr	r2, [pc, #280]	@ (80013b0 <calculoPID+0x284>)
  8001298:	601a      	str	r2, [r3, #0]
  800129a:	e00c      	b.n	80012b6 <calculoPID+0x18a>
-	   else if(integral < -1000) integral = -1000;
+	else if(integral < -1000) integral = -1000;
  800129c:	4b42      	ldr	r3, [pc, #264]	@ (80013a8 <calculoPID+0x27c>)
  800129e:	edd3 7a00 	vldr	s15, [r3]
  80012a2:	ed9f 7a44 	vldr	s14, [pc, #272]	@ 80013b4 <calculoPID+0x288>
@@ -1664,42 +1659,42 @@ void calculoPID(void){
  80012b0:	4b3d      	ldr	r3, [pc, #244]	@ (80013a8 <calculoPID+0x27c>)
  80012b2:	4a41      	ldr	r2, [pc, #260]	@ (80013b8 <calculoPID+0x28c>)
  80012b4:	601a      	str	r2, [r3, #0]
-	   float P = Kp * error;
+	float P = Kp * error;
  80012b6:	4b41      	ldr	r3, [pc, #260]	@ (80013bc <calculoPID+0x290>)
  80012b8:	edd3 7a00 	vldr	s15, [r3]
  80012bc:	ed97 7a04 	vldr	s14, [r7, #16]
  80012c0:	ee67 7a27 	vmul.f32	s15, s14, s15
  80012c4:	edc7 7a03 	vstr	s15, [r7, #12]
-	   float I = Ki * integral;
+	float I = Ki * integral;
  80012c8:	4b3d      	ldr	r3, [pc, #244]	@ (80013c0 <calculoPID+0x294>)
  80012ca:	ed93 7a00 	vldr	s14, [r3]
  80012ce:	4b36      	ldr	r3, [pc, #216]	@ (80013a8 <calculoPID+0x27c>)
  80012d0:	edd3 7a00 	vldr	s15, [r3]
  80012d4:	ee67 7a27 	vmul.f32	s15, s14, s15
  80012d8:	edc7 7a02 	vstr	s15, [r7, #8]
-	   float D = Kd * gyro_rate; //  Kd * (error - last_error) / dt_real; //Kd * gyro_filtrado_ema; //float D = Kd * gyro_rate; //Kd * (error - last_error) / DT_PID;//
+	float D = Kd * gyro_rate; //  Kd * (error - last_error) / dt_real; //Kd * gyro_filtrado_ema; //float D = Kd * gyro_rate; //Kd * (error - last_error) / DT_PID;//
  80012dc:	4b39      	ldr	r3, [pc, #228]	@ (80013c4 <calculoPID+0x298>)
  80012de:	edd3 7a00 	vldr	s15, [r3]
  80012e2:	ed97 7a06 	vldr	s14, [r7, #24]
  80012e6:	ee67 7a27 	vmul.f32	s15, s14, s15
  80012ea:	edc7 7a01 	vstr	s15, [r7, #4]
-	   float output = P + I + D ; // Funcion de transferencia
+	float output = P + I + D ; // Funcion de transferencia
  80012ee:	ed97 7a03 	vldr	s14, [r7, #12]
  80012f2:	edd7 7a02 	vldr	s15, [r7, #8]
  80012f6:	ee77 7a27 	vadd.f32	s15, s14, s15
  80012fa:	ed97 7a01 	vldr	s14, [r7, #4]
  80012fe:	ee77 7a27 	vadd.f32	s15, s14, s15
  8001302:	edc7 7a00 	vstr	s15, [r7]
-	   last_error = error;
+	last_error = error;
  8001306:	4a30      	ldr	r2, [pc, #192]	@ (80013c8 <calculoPID+0x29c>)
  8001308:	693b      	ldr	r3, [r7, #16]
  800130a:	6013      	str	r3, [r2, #0]
-		   //if(angle_y > 7.0f ) 		Robot_Drive(2549, 2599);
-		  // if(angle_y < -7.0f ) 	Robot_Drive(-2549, -2599);
-		  // if(motorsIsOn==0)		Robot_Drive(0, 0);
-		  // integral = 0;
+	   //if(angle_y > 7.0f ) 		Robot_Drive(2549, 2599);
+	  // if(angle_y < -7.0f ) 	Robot_Drive(-2549, -2599);
+	  // if(motorsIsOn==0)		Robot_Drive(0, 0);
+	  // integral = 0;
 	//   }
-		   if(motorsIsOn){	   	Robot_Drive((int16_t)output, (int16_t)output);}
+	   if(motorsIsOn){	   	Robot_Drive((int16_t)output, (int16_t)output);}
  800130c:	4b2f      	ldr	r3, [pc, #188]	@ (80013cc <calculoPID+0x2a0>)
  800130e:	781b      	ldrb	r3, [r3, #0]
  8001310:	2b00      	cmp	r3, #0
@@ -1715,7 +1710,7 @@ void calculoPID(void){
  8001330:	4611      	mov	r1, r2
  8001332:	4618      	mov	r0, r3
  8001334:	f000 f940 	bl	80015b8 <Robot_Drive>
-		   if(motorsIsOn==0){	Robot_Drive(0, 0);}
+	   if(motorsIsOn==0){	Robot_Drive(0, 0);}
  8001338:	4b24      	ldr	r3, [pc, #144]	@ (80013cc <calculoPID+0x2a0>)
  800133a:	781b      	ldrb	r3, [r3, #0]
  800133c:	2b00      	cmp	r3, #0
@@ -1723,7 +1718,7 @@ void calculoPID(void){
  8001340:	2100      	movs	r1, #0
  8001342:	2000      	movs	r0, #0
  8001344:	f000 f938 	bl	80015b8 <Robot_Drive>
-	   salida = output;
+	salida = output;
  8001348:	4a21      	ldr	r2, [pc, #132]	@ (80013d0 <calculoPID+0x2a4>)
  800134a:	683b      	ldr	r3, [r7, #0]
  800134c:	6013      	str	r3, [r2, #0]
@@ -1766,7 +1761,6 @@ void calculoPID(void){
  80013d0:	200003b8 	.word	0x200003b8
 
 080013d4 <sendCMD>:
-
 void sendCMD(uint8_t cmd, uint16_t param) {
  80013d4:	b580      	push	{r7, lr}
  80013d6:	b088      	sub	sp, #32
@@ -1932,9 +1926,7 @@ void DataToQt(){
  8001500:	4b25      	ldr	r3, [pc, #148]	@ (8001598 <DataToQt+0x140>)
  8001502:	2201      	movs	r2, #1
  8001504:	f883 202f 	strb.w	r2, [r3, #47]	@ 0x2f
-
-    // --- CAMBIOS DE TAMAÑO EN EL FRAME ---
-    static uint8_t frame[56];       // TAMAÑO NUEVO: 56 bytes totales (antes 52)
+    static uint8_t frame[56];
     memcpy(&frame[0], "UNER", 4);
  8001508:	2204      	movs	r2, #4
  800150a:	4929      	ldr	r1, [pc, #164]	@ (80015b0 <DataToQt+0x158>)
@@ -1952,7 +1944,6 @@ void DataToQt(){
  800151e:	4b25      	ldr	r3, [pc, #148]	@ (80015b4 <DataToQt+0x15c>)
  8001520:	2212      	movs	r2, #18
  8001522:	719a      	strb	r2, [r3, #6]
-
     memcpy(&frame[7], telemetria.buffer, 48); // Copiamos los 48 bytes del payload
  8001524:	4b23      	ldr	r3, [pc, #140]	@ (80015b4 <DataToQt+0x15c>)
  8001526:	4a1c      	ldr	r2, [pc, #112]	@ (8001598 <DataToQt+0x140>)
@@ -1970,7 +1961,6 @@ void DataToQt(){
  8001542:	f10c 0c10 	add.w	ip, ip, #16
  8001546:	4574      	cmp	r4, lr
  8001548:	d1f3      	bne.n	8001532 <DataToQt+0xda>
-
     uint8_t checksum = 0;
  800154a:	2300      	movs	r3, #0
  800154c:	71bb      	strb	r3, [r7, #6]
@@ -1998,7 +1988,6 @@ void DataToQt(){
  800156e:	4a11      	ldr	r2, [pc, #68]	@ (80015b4 <DataToQt+0x15c>)
  8001570:	79bb      	ldrb	r3, [r7, #6]
  8001572:	f882 3037 	strb.w	r3, [r2, #55]	@ 0x37
-
     HAL_UART_Transmit_DMA(&huart1, frame, 56); // Transmitimos los 56 bytes
  8001576:	2238      	movs	r2, #56	@ 0x38
  8001578:	490e      	ldr	r1, [pc, #56]	@ (80015b4 <DataToQt+0x15c>)
@@ -2205,8 +2194,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
  8001728:	af04      	add	r7, sp, #16
  800172a:	6078      	str	r0, [r7, #4]
     uint8_t check, data;
-    // 1. Verificamos si el sensor responde (Who Am I)
-    HAL_I2C_Mem_Read(hi2c, MPU6050_ADDR, 0x75, 1, &check, 1, 100);
+    HAL_I2C_Mem_Read(hi2c, MPU6050_ADDR, 0x75, 1, &check, 1, 100);		//verificamos si el sensor responde (Who Am I)
  800172c:	2364      	movs	r3, #100	@ 0x64
  800172e:	9302      	str	r3, [sp, #8]
  8001730:	2301      	movs	r3, #1
@@ -2218,12 +2206,11 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
  800173e:	21d0      	movs	r1, #208	@ 0xd0
  8001740:	6878      	ldr	r0, [r7, #4]
  8001742:	f004 fcb3 	bl	80060ac <HAL_I2C_Mem_Read>
-    if (check == 0x68) { // El valor por defecto del registro WHO_AM_I es 0x68
+    if (check == 0x68) { 		// El valor por defecto del registro WHO_AM_I es 0x68
  8001746:	7bfb      	ldrb	r3, [r7, #15]
  8001748:	2b68      	cmp	r3, #104	@ 0x68
  800174a:	d14a      	bne.n	80017e2 <MPU6050_Init+0xbe>
-        // 2. Power Management: Salir de Sleep Mode
-        data = 0x00;
+        data = 0x00;	  		//Power Management: Salir de Sleep Mode
  800174c:	2300      	movs	r3, #0
  800174e:	73bb      	strb	r3, [r7, #14]
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x6B, 1, &data, 1, 100);
@@ -2238,8 +2225,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
  8001762:	21d0      	movs	r1, #208	@ 0xd0
  8001764:	6878      	ldr	r0, [r7, #4]
  8001766:	f004 fba7 	bl	8005eb8 <HAL_I2C_Mem_Write>
-        // 3. Configurar Acelerómetro (+/- 2g)
-        data = 0x00;
+        data = 0x00;			// configuramos el  acelerómetro en +/- 2 [g] con el valor 0x00
  800176a:	2300      	movs	r3, #0
  800176c:	73bb      	strb	r3, [r7, #14]
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1C, 1, &data, 1, 100);
@@ -2254,8 +2240,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
  8001780:	21d0      	movs	r1, #208	@ 0xd0
  8001782:	6878      	ldr	r0, [r7, #4]
  8001784:	f004 fb98 	bl	8005eb8 <HAL_I2C_Mem_Write>
-        // 4. Configurar Giroscopio (+/- 500 dps)
-        data = 0x08;
+        data = 0x08;			// configuramos el giroscopio en +/- 500 [dps] con el valor 0x08
  8001788:	2308      	movs	r3, #8
  800178a:	73bb      	strb	r3, [r7, #14]
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1B, 1, &data, 1, 100);
@@ -2270,7 +2255,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
  800179e:	21d0      	movs	r1, #208	@ 0xd0
  80017a0:	6878      	ldr	r0, [r7, #4]
  80017a2:	f004 fb89 	bl	8005eb8 <HAL_I2C_Mem_Write>
-        data = 0x01; // Filtro de ~42Hz. Limpia basura del sensor. 0x02 agrega un retardo de 2 ms a la medicion el cual se suma al retardo de la lectura
+        data = 0x01; 			// configuramos el filtro de ~42Hz para limpia basura del sensor. 0x02 agrega un retardo de 2 ms a la medicion el cual se suma al retardo de la lectura
  80017a6:	2301      	movs	r3, #1
  80017a8:	73bb      	strb	r3, [r7, #14]
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1A, 1, &data, 1, 100);
@@ -2285,9 +2270,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
  80017bc:	21d0      	movs	r1, #208	@ 0xd0
  80017be:	6878      	ldr	r0, [r7, #4]
  80017c0:	f004 fb7a 	bl	8005eb8 <HAL_I2C_Mem_Write>
-        // 5. Configurar Sample Rate a 100 Hz (10 ms)
-        // Frecuencia = 1kHz / (1 + SMPLRT_DIV) -> 1000 / (1 + 9) = 100 Hz
-        data = 0x09;
+        data = 0x09;// 5. Configurar Sample Rate a 100 Hz (10 ms)// Frecuencia = 1kHz / (1 + SMPLRT_DIV) -> 1000 / (1 + 9) = 100 Hz
  80017c4:	2309      	movs	r3, #9
  80017c6:	73bb      	strb	r3, [r7, #14]
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x19, 1, &data, 1, 100);
@@ -2767,7 +2750,7 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
  8001b60:	4a0a      	ldr	r2, [pc, #40]	@ (8001b8c <HAL_I2C_MasterTxCpltCallback+0x38>)
  8001b62:	4293      	cmp	r3, r2
  8001b64:	d10c      	bne.n	8001b80 <HAL_I2C_MasterTxCpltCallback+0x2c>
-    	//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED [cite: 46]
+
         if (oled_current_page == 0 && !oled_update_requested) {
  8001b66:	4b0a      	ldr	r3, [pc, #40]	@ (8001b90 <HAL_I2C_MasterTxCpltCallback+0x3c>)
  8001b68:	781b      	ldrb	r3, [r3, #0]
@@ -2965,13 +2948,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
  8001ca4:	e139      	b.n	8001f1a <HAL_UARTEx_RxEventCallback+0x37e>
             }
         }
-
-        else {
+        else {// Si no es nada de la IP, pasamos a procesar el protocolo UNER
         	for (int i = 0; i < (Size - 6); i++){
  8001ca6:	2300      	movs	r3, #0
  8001ca8:	61fb      	str	r3, [r7, #28]
  8001caa:	e12e      	b.n	8001f0a <HAL_UARTEx_RxEventCallback+0x36e>
-        						if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' && rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
+				if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' && rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
  8001cac:	4a6b      	ldr	r2, [pc, #428]	@ (8001e5c <HAL_UARTEx_RxEventCallback+0x2c0>)
  8001cae:	69fb      	ldr	r3, [r7, #28]
  8001cb0:	4413      	add	r3, r2
@@ -2996,29 +2978,29 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
  8001cdc:	5cd3      	ldrb	r3, [r2, r3]
  8001cde:	2b52      	cmp	r3, #82	@ 0x52
  8001ce0:	f040 8110 	bne.w	8001f04 <HAL_UARTEx_RxEventCallback+0x368>
-        							uint8_t len   = rx_buffer_uart[i+4];
+					uint8_t len   = rx_buffer_uart[i+4];
  8001ce4:	69fb      	ldr	r3, [r7, #28]
  8001ce6:	3304      	adds	r3, #4
  8001ce8:	4a5c      	ldr	r2, [pc, #368]	@ (8001e5c <HAL_UARTEx_RxEventCallback+0x2c0>)
  8001cea:	5cd3      	ldrb	r3, [r2, r3]
  8001cec:	74fb      	strb	r3, [r7, #19]
-        							uint8_t token = rx_buffer_uart[i+5];
+					uint8_t token = rx_buffer_uart[i+5];
  8001cee:	69fb      	ldr	r3, [r7, #28]
  8001cf0:	3305      	adds	r3, #5
  8001cf2:	4a5a      	ldr	r2, [pc, #360]	@ (8001e5c <HAL_UARTEx_RxEventCallback+0x2c0>)
  8001cf4:	5cd3      	ldrb	r3, [r2, r3]
  8001cf6:	74bb      	strb	r3, [r7, #18]
-        							uint8_t cmd   = rx_buffer_uart[i+6];
+					uint8_t cmd   = rx_buffer_uart[i+6];
  8001cf8:	69fb      	ldr	r3, [r7, #28]
  8001cfa:	3306      	adds	r3, #6
  8001cfc:	4a57      	ldr	r2, [pc, #348]	@ (8001e5c <HAL_UARTEx_RxEventCallback+0x2c0>)
  8001cfe:	5cd3      	ldrb	r3, [r2, r3]
  8001d00:	747b      	strb	r3, [r7, #17]
-        							if (token != ':') continue;
+					if (token != ':') continue;
  8001d02:	7cbb      	ldrb	r3, [r7, #18]
  8001d04:	2b3a      	cmp	r3, #58	@ 0x3a
  8001d06:	f040 80fc 	bne.w	8001f02 <HAL_UARTEx_RxEventCallback+0x366>
-        							uint8_t pos_checksum = i + 5 + len;
+					uint8_t pos_checksum = i + 5 + len;
  8001d0a:	69fb      	ldr	r3, [r7, #28]
  8001d0c:	b2da      	uxtb	r2, r3
  8001d0e:	7cfb      	ldrb	r3, [r7, #19]
@@ -3026,25 +3008,25 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
  8001d12:	b2db      	uxtb	r3, r3
  8001d14:	3305      	adds	r3, #5
  8001d16:	743b      	strb	r3, [r7, #16]
-        							if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
+					if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
  8001d18:	7c3b      	ldrb	r3, [r7, #16]
  8001d1a:	b29b      	uxth	r3, r3
  8001d1c:	887a      	ldrh	r2, [r7, #2]
  8001d1e:	429a      	cmp	r2, r3
  8001d20:	f240 80fa 	bls.w	8001f18 <HAL_UARTEx_RxEventCallback+0x37c>
-        							uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
+					uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
  8001d24:	7c3b      	ldrb	r3, [r7, #16]
  8001d26:	4a4d      	ldr	r2, [pc, #308]	@ (8001e5c <HAL_UARTEx_RxEventCallback+0x2c0>)
  8001d28:	5cd3      	ldrb	r3, [r2, r3]
  8001d2a:	73fb      	strb	r3, [r7, #15]
-        							uint8_t checksum_calc = 0;
+					uint8_t checksum_calc = 0;
  8001d2c:	2300      	movs	r3, #0
  8001d2e:	76fb      	strb	r3, [r7, #27]
-        							for(int k = i; k < pos_checksum; k++){
+					for(int k = i; k < pos_checksum; k++){
  8001d30:	69fb      	ldr	r3, [r7, #28]
  8001d32:	617b      	str	r3, [r7, #20]
  8001d34:	e009      	b.n	8001d4a <HAL_UARTEx_RxEventCallback+0x1ae>
-        								checksum_calc ^= rx_buffer_uart[k];
+						checksum_calc ^= rx_buffer_uart[k];
  8001d36:	4a49      	ldr	r2, [pc, #292]	@ (8001e5c <HAL_UARTEx_RxEventCallback+0x2c0>)
  8001d38:	697b      	ldr	r3, [r7, #20]
  8001d3a:	4413      	add	r3, r2
@@ -3052,7 +3034,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
  8001d3e:	7efb      	ldrb	r3, [r7, #27]
  8001d40:	4053      	eors	r3, r2
  8001d42:	76fb      	strb	r3, [r7, #27]
-        							for(int k = i; k < pos_checksum; k++){
+					for(int k = i; k < pos_checksum; k++){
  8001d44:	697b      	ldr	r3, [r7, #20]
  8001d46:	3301      	adds	r3, #1
  8001d48:	617b      	str	r3, [r7, #20]
@@ -3060,20 +3042,20 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
  8001d4c:	697a      	ldr	r2, [r7, #20]
  8001d4e:	429a      	cmp	r2, r3
  8001d50:	dbf1      	blt.n	8001d36 <HAL_UARTEx_RxEventCallback+0x19a>
-        							}
-        							if (checksum_calc == checksum_recibido) {
+					}
+					if (checksum_calc == checksum_recibido) {
  8001d52:	7efa      	ldrb	r2, [r7, #27]
  8001d54:	7bfb      	ldrb	r3, [r7, #15]
  8001d56:	429a      	cmp	r2, r3
  8001d58:	f040 80d4 	bne.w	8001f04 <HAL_UARTEx_RxEventCallback+0x368>
-        								uint8_t *payload_ptr = &rx_buffer_uart[i+7];
+						uint8_t *payload_ptr = &rx_buffer_uart[i+7];
  8001d5c:	69fb      	ldr	r3, [r7, #28]
  8001d5e:	3307      	adds	r3, #7
  8001d60:	4a3e      	ldr	r2, [pc, #248]	@ (8001e5c <HAL_UARTEx_RxEventCallback+0x2c0>)
  8001d62:	4413      	add	r3, r2
  8001d64:	60bb      	str	r3, [r7, #8]
-        								//float valor_recibido;
-        								switch(cmd) {
+						//float valor_recibido;
+						switch(cmd) {
  8001d66:	7c7b      	ldrb	r3, [r7, #17]
  8001d68:	3b01      	subs	r3, #1
  8001d6a:	2b20      	cmp	r3, #32
@@ -3113,75 +3095,75 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
  8001dec:	08001ec7 	.word	0x08001ec7
  8001df0:	08001eb3 	.word	0x08001eb3
  8001df4:	08001edb 	.word	0x08001edb
-        									case CMD_SET_HB:
-        										 delayHB = payload_ptr[0];
+							case CMD_SET_HB:
+								 delayHB = payload_ptr[0];
  8001df8:	68bb      	ldr	r3, [r7, #8]
  8001dfa:	781b      	ldrb	r3, [r3, #0]
  8001dfc:	461a      	mov	r2, r3
  8001dfe:	4b1b      	ldr	r3, [pc, #108]	@ (8001e6c <HAL_UARTEx_RxEventCallback+0x2d0>)
  8001e00:	801a      	strh	r2, [r3, #0]
-        										break;
+								break;
  8001e02:	e077      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        									case CMD_CALIBRATE:
-        										 Robot_Drive(0, 0);
+							case CMD_CALIBRATE:
+								 Robot_Drive(0, 0);
  8001e04:	2100      	movs	r1, #0
  8001e06:	2000      	movs	r0, #0
  8001e08:	f7ff fbd6 	bl	80015b8 <Robot_Drive>
-        										 calibration_ready=0;
+								 calibration_ready=0;
  8001e0c:	4b18      	ldr	r3, [pc, #96]	@ (8001e70 <HAL_UARTEx_RxEventCallback+0x2d4>)
  8001e0e:	2200      	movs	r2, #0
  8001e10:	701a      	strb	r2, [r3, #0]
-        										 break;
+								 break;
  8001e12:	e06f      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        									default:
-        									case CMD_ALIVE:
-        										sendCMD(CMD_ACK, 0); // te devuelvo un alive
+							default:
+							case CMD_ALIVE:
+								sendCMD(CMD_ACK, 0); // te devuelvo un alive
  8001e14:	2100      	movs	r1, #0
  8001e16:	2001      	movs	r0, #1
  8001e18:	f7ff fadc 	bl	80013d4 <sendCMD>
-        										break;
+								break;
  8001e1c:	e06a      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        									case CMD_ACK:
-        										break;
-        									case CMD_ONOFFMOTORS:
-        										motorsIsOn = payload_ptr[0];
+							case CMD_ACK:
+								break;
+							case CMD_ONOFFMOTORS:
+								motorsIsOn = payload_ptr[0];
  8001e1e:	68bb      	ldr	r3, [r7, #8]
  8001e20:	781a      	ldrb	r2, [r3, #0]
  8001e22:	4b14      	ldr	r3, [pc, #80]	@ (8001e74 <HAL_UARTEx_RxEventCallback+0x2d8>)
  8001e24:	701a      	strb	r2, [r3, #0]
-        										break;
+								break;
  8001e26:	e065      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        									case CMD_TCP_CONNECTED:
-        										if(payload_ptr[0]){	//conectado
+							case CMD_TCP_CONNECTED:
+								if(payload_ptr[0]){	//conectado
  8001e28:	68bb      	ldr	r3, [r7, #8]
  8001e2a:	781b      	ldrb	r3, [r3, #0]
  8001e2c:	2b00      	cmp	r3, #0
  8001e2e:	d005      	beq.n	8001e3c <HAL_UARTEx_RxEventCallback+0x2a0>
-        											BS_tcpConnectSecuence();
+									BS_tcpConnectSecuence();
  8001e30:	f7ff f94c 	bl	80010cc <BS_tcpConnectSecuence>
-        											flagWIFI=1;
+									flagWIFI=1;
  8001e34:	4b10      	ldr	r3, [pc, #64]	@ (8001e78 <HAL_UARTEx_RxEventCallback+0x2dc>)
  8001e36:	2201      	movs	r2, #1
  8001e38:	701a      	strb	r2, [r3, #0]
-        										}
-        										else if(payload_ptr[0]==0){				//desconectado
-        											BS_Error();
-        											flagWIFI=0;
-        										}
-        										break;
+								}
+								else if(payload_ptr[0]==0){				//desconectado
+									BS_Error();
+									flagWIFI=0;
+								}
+								break;
  8001e3a:	e05a      	b.n	8001ef2 <HAL_UARTEx_RxEventCallback+0x356>
-        										else if(payload_ptr[0]==0){				//desconectado
+								else if(payload_ptr[0]==0){				//desconectado
  8001e3c:	68bb      	ldr	r3, [r7, #8]
  8001e3e:	781b      	ldrb	r3, [r3, #0]
  8001e40:	2b00      	cmp	r3, #0
  8001e42:	d156      	bne.n	8001ef2 <HAL_UARTEx_RxEventCallback+0x356>
-        											BS_Error();
+									BS_Error();
  8001e44:	f7ff f95a 	bl	80010fc <BS_Error>
-        											flagWIFI=0;
+									flagWIFI=0;
  8001e48:	4b0b      	ldr	r3, [pc, #44]	@ (8001e78 <HAL_UARTEx_RxEventCallback+0x2dc>)
  8001e4a:	2200      	movs	r2, #0
  8001e4c:	701a      	strb	r2, [r3, #0]
-        										break;
+								break;
  8001e4e:	e050      	b.n	8001ef2 <HAL_UARTEx_RxEventCallback+0x356>
  8001e50:	40011000 	.word	0x40011000
  8001e54:	200005f1 	.word	0x200005f1
@@ -3194,88 +3176,88 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
  8001e70:	20000348 	.word	0x20000348
  8001e74:	20000349 	.word	0x20000349
  8001e78:	20000346 	.word	0x20000346
-        									case CMD_CHANGE_DEADLINE_LEFT:
-        										deadband_L = payload_ptr[0];
+							case CMD_CHANGE_DEADLINE_LEFT:
+								deadband_L = payload_ptr[0];
  8001e7c:	68bb      	ldr	r3, [r7, #8]
  8001e7e:	781b      	ldrb	r3, [r3, #0]
  8001e80:	b21a      	sxth	r2, r3
  8001e82:	4b32      	ldr	r3, [pc, #200]	@ (8001f4c <HAL_UARTEx_RxEventCallback+0x3b0>)
  8001e84:	801a      	strh	r2, [r3, #0]
-        										break;
+								break;
  8001e86:	e035      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        									case CMD_CHANGE_DEADLINE_RIGHT:
-        										deadband_R = payload_ptr[0];
+							case CMD_CHANGE_DEADLINE_RIGHT:
+								deadband_R = payload_ptr[0];
  8001e88:	68bb      	ldr	r3, [r7, #8]
  8001e8a:	781b      	ldrb	r3, [r3, #0]
  8001e8c:	b21a      	sxth	r2, r3
  8001e8e:	4b30      	ldr	r3, [pc, #192]	@ (8001f50 <HAL_UARTEx_RxEventCallback+0x3b4>)
  8001e90:	801a      	strh	r2, [r3, #0]
-        										break;
+								break;
  8001e92:	e02f      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        									case CMD_CHANGE_OLED_SCREEN:
-        										flagOLED = payload_ptr[0];
+							case CMD_CHANGE_OLED_SCREEN:
+								flagOLED = payload_ptr[0];
  8001e94:	68bb      	ldr	r3, [r7, #8]
  8001e96:	781a      	ldrb	r2, [r3, #0]
  8001e98:	4b2e      	ldr	r3, [pc, #184]	@ (8001f54 <HAL_UARTEx_RxEventCallback+0x3b8>)
  8001e9a:	701a      	strb	r2, [r3, #0]
-        										break;
+								break;
  8001e9c:	e02a      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        									case CMD_PID_KP:
-        										Kp = (float)payload_ptr[0];
+							case CMD_PID_KP:
+								Kp = (float)payload_ptr[0];
  8001e9e:	68bb      	ldr	r3, [r7, #8]
  8001ea0:	781b      	ldrb	r3, [r3, #0]
  8001ea2:	ee07 3a90 	vmov	s15, r3
  8001ea6:	eef8 7a67 	vcvt.f32.u32	s15, s15
  8001eaa:	4b2b      	ldr	r3, [pc, #172]	@ (8001f58 <HAL_UARTEx_RxEventCallback+0x3bc>)
  8001eac:	edc3 7a00 	vstr	s15, [r3]
-        										//Kp = ((uint16_t)payload_ptr[1] | ((uint16_t)payload_ptr[0] << 8));
-        										break;
+								//Kp = ((uint16_t)payload_ptr[1] | ((uint16_t)payload_ptr[0] << 8));
+								break;
  8001eb0:	e020      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        									case CMD_PID_KD:
-        										Kd = (float)payload_ptr[0];
+							case CMD_PID_KD:
+								Kd = (float)payload_ptr[0];
  8001eb2:	68bb      	ldr	r3, [r7, #8]
  8001eb4:	781b      	ldrb	r3, [r3, #0]
  8001eb6:	ee07 3a90 	vmov	s15, r3
  8001eba:	eef8 7a67 	vcvt.f32.u32	s15, s15
  8001ebe:	4b27      	ldr	r3, [pc, #156]	@ (8001f5c <HAL_UARTEx_RxEventCallback+0x3c0>)
  8001ec0:	edc3 7a00 	vstr	s15, [r3]
-        										break;
+								break;
  8001ec4:	e016      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        									case CMD_PID_KI:
-        										Ki = (float)payload_ptr[0];
+							case CMD_PID_KI:
+								Ki = (float)payload_ptr[0];
  8001ec6:	68bb      	ldr	r3, [r7, #8]
  8001ec8:	781b      	ldrb	r3, [r3, #0]
  8001eca:	ee07 3a90 	vmov	s15, r3
  8001ece:	eef8 7a67 	vcvt.f32.u32	s15, s15
  8001ed2:	4b23      	ldr	r3, [pc, #140]	@ (8001f60 <HAL_UARTEx_RxEventCallback+0x3c4>)
  8001ed4:	edc3 7a00 	vstr	s15, [r3]
-        										break;
+								break;
  8001ed8:	e00c      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        									case CMD_PID_SETPOINT:
-        										setpoint = (float)payload_ptr[0];
+							case CMD_PID_SETPOINT:
+								setpoint = (float)payload_ptr[0];
  8001eda:	68bb      	ldr	r3, [r7, #8]
  8001edc:	781b      	ldrb	r3, [r3, #0]
  8001ede:	ee07 3a90 	vmov	s15, r3
  8001ee2:	eef8 7a67 	vcvt.f32.u32	s15, s15
  8001ee6:	4b1f      	ldr	r3, [pc, #124]	@ (8001f64 <HAL_UARTEx_RxEventCallback+0x3c8>)
  8001ee8:	edc3 7a00 	vstr	s15, [r3]
-        										break;
+								break;
  8001eec:	e002      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        										break;
+								break;
  8001eee:	bf00      	nop
  8001ef0:	e000      	b.n	8001ef4 <HAL_UARTEx_RxEventCallback+0x358>
-        										break;
+								break;
  8001ef2:	bf00      	nop
-        								}
-        								memset(rx_buffer_uart, 0, Size);
+						}
+						memset(rx_buffer_uart, 0, Size);
  8001ef4:	887b      	ldrh	r3, [r7, #2]
  8001ef6:	461a      	mov	r2, r3
  8001ef8:	2100      	movs	r1, #0
  8001efa:	481b      	ldr	r0, [pc, #108]	@ (8001f68 <HAL_UARTEx_RxEventCallback+0x3cc>)
  8001efc:	f010 ff2b 	bl	8012d56 <memset>
-        								break; // Salimos del for
+						break; // Salimos del for
  8001f00:	e00b      	b.n	8001f1a <HAL_UARTEx_RxEventCallback+0x37e>
-        							if (token != ':') continue;
+					if (token != ':') continue;
  8001f02:	bf00      	nop
         	for (int i = 0; i < (Size - 6); i++){
  8001f04:	69fb      	ldr	r3, [r7, #28]
@@ -3287,10 +3269,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
  8001f10:	429a      	cmp	r2, r3
  8001f12:	f6ff aecb 	blt.w	8001cac <HAL_UARTEx_RxEventCallback+0x110>
  8001f16:	e000      	b.n	8001f1a <HAL_UARTEx_RxEventCallback+0x37e>
-        							if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
+					if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
  8001f18:	bf00      	nop
-        						}
-        					}
+				}
+			}
         }
 
         // --- ZONA DE RE-ARMADO ---
@@ -3331,18 +3313,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
  8001f70:	200008d0 	.word	0x200008d0
 
 08001f74 <HAL_UART_ErrorCallback>:
-		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
-		__HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT); // Prevenimos falsos disparos a mitad de buffer
-	}
-}*/
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
  8001f74:	b580      	push	{r7, lr}
  8001f76:	b082      	sub	sp, #8
  8001f78:	af00      	add	r7, sp, #0
  8001f7a:	6078      	str	r0, [r7, #4]
-    // Si hubo ruido o error de trama (común al arrancar el ESP)
-    if (huart->Instance == USART1){
+    if (huart->Instance == USART1){// Si hubo ruido o error de trama (común al arrancar el ESP)
  8001f7c:	687b      	ldr	r3, [r7, #4]
  8001f7e:	681b      	ldr	r3, [r3, #0]
  8001f80:	4a06      	ldr	r2, [pc, #24]	@ (8001f9c <HAL_UART_ErrorCallback+0x28>)
