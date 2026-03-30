@@ -174,14 +174,15 @@ volatile 	uint32_t 		counter=0;				/*!< Utilizado en la interrupción del Timer 
 			uint8_t 		rx_index = 0;
 			uint8_t 		rx_data;
 // Nuevas variables para compensar la diferencia entre motores
-			int16_t 		deadband_L = 55;			/*!< Zona Muerta del PWM para el motor 1*/
-			int16_t 		deadband_R = 2; 			/*!< Zona Muerta del PWM para el motor 2*/
+			int16_t 		deadband_L = 65;			/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_R = 1; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
-			float 			Kp = 145.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 2000.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 2.0f;					/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 0.0; // 4.0f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
-			float 			integral = 0, last_error = 0;
+			float 			Kp = 155.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 1700.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 4.0f;					/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = 6.0f; // 4.0f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
+			float 			integral = 0;
+			float 			last_error = 0;
 			float           ALPHA_PID = 0.98f;
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y = 0;
@@ -371,19 +372,34 @@ void BS_tcpConnectSecuence() {
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
 }
-void BS_Error() {
+void BS_Error()
+	{
     hBuzzer.duration = 500;  // Beep largo de 800ms
     hBuzzer.interval = 100;
     hBuzzer.repeat = 1;      //bip
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
-}
+	}
 void BS_ACK_NOT_FOUND(){
 	hBuzzer.duration = 200;  // Beep largo de 800ms
 	hBuzzer.interval = 50;
 	hBuzzer.repeat = 3;
 	hBuzzer.state = 0;
 	hBuzzer.last_tick = HAL_GetTick();
+}
+void BS_NEWPARAM_OK() {
+    hBuzzer.duration = 80;  // Beep corto de 100ms
+    hBuzzer.interval = 50;   // Silencio de 50ms
+    hBuzzer.repeat = 1;      // bip bip
+    hBuzzer.state = 0;
+    hBuzzer.last_tick = HAL_GetTick();
+}
+void BS_NEWPARAM_ISNOTOK() {
+    hBuzzer.duration = 800;  // Beep corto de 100ms
+    hBuzzer.interval = 1;   // Silencio de 50ms
+    hBuzzer.repeat = 1;      // bip bip
+    hBuzzer.state = 0;
+    hBuzzer.last_tick = HAL_GetTick();
 }
 void calculoPID(void){
 		float gyro_rate = -(((float)gyPitchRaw / 131.0f)); // 65.5f));
@@ -397,16 +413,15 @@ void calculoPID(void){
 			accelz 	= azRaw;
 	   float error = angle_y - setpoint;
 	   integral += error * DT_PID;
-	   if(integral > 1000) integral = 2000;
-	   else if(integral < -1000) integral = -2000;
+	   if(integral > 2000) integral = 2000;
+	   else if(integral < -2000) integral = -2000;
 	   float P =  Kp * error;
 	   float I =  Ki * integral;
 	   float D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //Kd * (error - last_error) / DT_PID;//float D =  Kd * gyro_rate; //
 	   float output = P + I + D ; // Funcion de transferencia
 	   last_error = error;
-	   if(flagMotorsAreOn){	   	Robot_Drive((int16_t)output, (int16_t)output);}
-	   if(flagMotorsAreOn==0){	Robot_Drive(0, 0);}
-	   salida = output;
+	   if(flagMotorsAreOn)									   Robot_Drive((int16_t)output, (int16_t)output);
+	   if(flagMotorsAreOn==0||angle_y > 50||angle_y < -50)	   Robot_Drive(0, 0);
 }
 void sendCMD(uint8_t cmd, uint16_t param) {
     uint8_t frame[10];
@@ -542,8 +557,9 @@ void MPU6050_Calibrate(void) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	/*
 	 * Frecuencia del Timer: 72MHz
-	 * Conteo hasta el periodo (ARR): 19999
-	 * Resultado: interrupcion cada 20ms
+	 * Conteo hasta el periodo (ARR): 999
+	 * Prescaler : 719
+	 * Resultado: interrupcion cada 10ms
 	 * */
     if (htim->Instance == TIM4) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
@@ -619,46 +635,60 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 						case CMD_ACK:
 							break;
 						case CMD_ONOFFMOTORS:
-							flagMotorsAreOn = payload_ptr[0];
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							BS_NEWPARAM_OK();
+							flagMotorsAreOn = payloadInt16;
 							break;
 						case CMD_TCP_CONNECTED:
-							if(payload_ptr[0]){	//conectado
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							if(payloadInt16){	//conectado
 								BS_tcpConnectSecuence();
 								flagWIFI=1;
 							}
-							else if(payload_ptr[0]==0){				//desconectado
+							else if(payloadInt16 ==0){				//desconectado
 								BS_Error();
 								flagWIFI=0;
 							}
 							break;
 						case CMD_CHANGE_DEADLINE_LEFT:
-							deadband_L = payload_ptr[0];
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							deadband_L = payloadInt16;
+							BS_NEWPARAM_OK();
 							break;
 						case CMD_CHANGE_DEADLINE_RIGHT:
-							deadband_R = payload_ptr[0];
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							deadband_R = payloadInt16;
+							BS_NEWPARAM_OK();
 							break;
 						case CMD_CHANGE_OLED_SCREEN:
-							flagOLED = payload_ptr[0];
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							flagOLED = payloadInt16;
+							BS_NEWPARAM_OK();
 							break;
 						case CMD_PID_KP:
 							memcpy(&payloadFloat, payload_ptr, sizeof(float));
 							Kp = payloadFloat;
+							BS_NEWPARAM_OK();
 							break;
 						case CMD_PID_KD:
 							memcpy(&payloadFloat, payload_ptr, sizeof(float));
 							Kd = payloadFloat;
+							BS_NEWPARAM_OK();
 							break;
 						case CMD_PID_KI:
 							memcpy(&payloadFloat, payload_ptr, sizeof(float));
 							Ki = payloadFloat;
+							BS_NEWPARAM_OK();
 							break;
 						case CMD_PID_SETPOINT:
 							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
 							setpoint = payloadInt16;
+							BS_NEWPARAM_OK();
 							break;
 						case CMD_PID_ALPHA:
 							memcpy(&payloadFloat, payload_ptr, sizeof(float));
 							ALPHA_PID = payloadFloat;
+							BS_NEWPARAM_ISNOTOK();
 							break;
 					}
 					memset(rx_buffer_uart, 0, Size);
@@ -716,7 +746,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-	//if (SSD1306_Init() != 1) 		Error_Handler();
+	if (SSD1306_Init() != 1) 		Error_Handler();
 	SSD1306_Fill(SSD1306_COLOR_BLACK);
 	SSD1306_UpdateScreen();
 	HAL_Delay(100);
@@ -742,7 +772,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
+	buzzerSecuence(&hBuzzer);
 	if(flagPID == 1 ) {
 	    flagPID = 0;
 	    uint32_t tiempo_actual = HAL_GetTick();
@@ -752,11 +782,10 @@ int main(void)
 	}
 	if (HAL_GetTick() - lastTime0 > 100){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
-	   //buzzerSecuence(&hBuzzer);
-	  // DataToQt(); //llamada cada 50ms
+	   DataToQt(); //llamada cada 50ms
 	   flagDisplay=1;
 	}
-	if(flagDisplay==777){	//DISPLAY DESACTIVADO
+	if(flagDisplay){	//DISPLAY DESACTIVADO
 		flagDisplay=0;
 		if (!oled_is_busy) {
 			SSD1306_Fill(SSD1306_COLOR_BLACK);
