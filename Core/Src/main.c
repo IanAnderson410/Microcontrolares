@@ -162,7 +162,7 @@ volatile 	uint8_t 		flagDisplay				=	0;
 			uint8_t 		flagSendUNER 			= 	0;
 			uint8_t			flagWIFI				=   0;
 volatile	uint8_t 		flagOLED 				= 	0;
-volatile	uint8_t			flagMotorsAreOn 		=	1;
+volatile	uint8_t			flagMotorsAreOn 		=	0;
 			uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 
 // ================= [ Counters ] ================= //
@@ -475,7 +475,6 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    if (speed_L < -3599) speed_L = -3599;
 	    if (speed_R > 3599) speed_R = 3599;
 	    if (speed_R < -3599) speed_R = -3599;
-
 	if (speed_L == 0) { // Motor 1 (PA8, PA9, PB4)
 		HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin, GPIO_PIN_RESET);
@@ -780,7 +779,7 @@ int main(void)
 		tiempo_anterior_pid = tiempo_actual;
 	    calculoPID();
 	}
-	if (HAL_GetTick() - lastTime0 > 100){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
+	if (HAL_GetTick() - lastTime0 > 90){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
 	   DataToQt(); //llamada cada 50ms
 	   flagDisplay=1;
@@ -864,7 +863,7 @@ int main(void)
 						SSD1306_Puts("X", &Font_7x10, SSD1306_COLOR_WHITE);
 						SSD1306_DrawLine(105, 2, 120, 12, SSD1306_COLOR_WHITE); // Tachado
 					}
-					//oled_update_requested = 1;// NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
+					oled_update_requested = 1;// NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
 					break;
 				case 2:
 					for (int i = 0; i < 8; i++) {
@@ -881,7 +880,7 @@ int main(void)
 					        SSD1306_DrawRectangle(25, yPos, 50, 5, SSD1306_COLOR_WHITE);
 					        SSD1306_DrawFilledRectangle(25, yPos, barWidth, 5, SSD1306_COLOR_WHITE);
 					    }
-					    //oled_update_requested = 1; // Le avisamos al scheduler que mande los datos al OLED
+					    oled_update_requested = 1; // Le avisamos al scheduler que mande los datos al OLED
 					break;
 				}
 
