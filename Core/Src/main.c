@@ -83,7 +83,6 @@ typedef union {
     uint8_t 		buffer[sizeof(PayloadData_t)]; // 27 bytes totales
 } PayloadUNER_t;
 
-
 typedef struct {
     uint8_t header[4];      // "UNER"
     uint8_t length;         // CMD + N_Payload + Checksum
@@ -126,8 +125,6 @@ typedef enum {
     FILTRO_SOLO_ACCEL = 2 		/*!< Desactivar filtro */
 } FiltroTipo_t;
 
-
-
 typedef struct {
     uint16_t duration;  // Cuánto tiempo suena (ms)
     uint16_t interval;  // Cuánto tiempo de silencio entre beeps (ms)
@@ -135,30 +132,14 @@ typedef struct {
     uint32_t last_tick; // Auxiliar para el tiempo
     uint8_t state;      // 0 = Silencio, 1 = Sonando
 } Buzzer_Seq_t;
-
-Buzzer_Seq_t hBuzzer = {0}; // Inicializamos en cero
-
-
-typedef struct {
-    float Q_angle;   // Varianza del ruido de proceso del acelerómetro
-    float Q_bias;    // Varianza del ruido de proceso del giroscopio (bias)
-    float R_measure; // Varianza del ruido de medición (ruido del acelerómetro)
-
-    float angle;     // El ángulo calculado por el filtro
-    float bias;      // El bias del giroscopio calculado por el filtro
-    float rate;      // La velocidad angular sin bias
-
-    float P[2][2];   // Matriz de covarianza de error
-} Kalman_t;
-Kalman_t kalman_pitch;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
 // ================= [ PID ] ================= //
-#define 	ALPHA_ACCEL 		0.5f    // Suaviza las vibraciones del acelerómetro
-#define 	DT_PID 				0.02f
+//#define 	ALPHA_PID 			0.98f    // Suaviza las vibraciones del acelerómetro
+#define 	DT_PID 				0.01f
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		64          // Suficiente para la IP y futuros comandos UNER
 #define 	UNER_HEADER_STR 	"UNER"
@@ -169,19 +150,25 @@ Kalman_t kalman_pitch;
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+// ================= [ Typedef ] ================= //
+			PayloadUNER_t telemetria;
+			Buzzer_Seq_t 	hBuzzer = {0}; // Inicializamos en cero
+			FiltroTipo_t 	currentlySelectedFilter = 	FILTRO_COMPLEMENTARIO; //FILTRO_COMPLEMENTARIO;
+// ================= [ Variables generales ] ================= //
+			uint16_t 		delayHB= 90; //ENTRE 1 Y 200
 // ================= [ Flags ] ================= //
 volatile 	uint8_t 		flagPID 				= 	0;
 volatile 	uint8_t 		flagDisplay				=	0;
 			uint8_t 		flagSendUNER 			= 	0;
 			uint8_t			flagWIFI				=   0;
-			uint8_t 		flagOLED 				= 	0;
-			uint8_t			flagMotorsAreOn 		=	1;
+volatile	uint8_t 		flagOLED 				= 	0;
+volatile	uint8_t			flagMotorsAreOn 		=	1;
 			uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
-			FiltroTipo_t 	currentlySelectedFilter = 	FILTRO_COMPLEMENTARIO; //FILTRO_COMPLEMENTARIO;
+
 // ================= [ Counters ] ================= //
 			uint16_t 		contador = 0;
-volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4. Es volatile por que se usan en interrupciones*/
-			uint8_t  		counter1=0;			/*!< Utilizado para refrezcar la pantalla OLED*/
+volatile 	uint32_t 		counter=0;				/*!< Utilizado en la interrupción del Timer 4. Es volatile por que se usan en interrupciones*/
+			uint8_t  		counter1=0;				/*!< Utilizado para refrezcar la pantalla OLED*/
 //RECEPCION DE DATOS
 			char 			rx_buffer[20];
 			uint8_t 		rx_index = 0;
@@ -190,28 +177,24 @@ volatile 	uint32_t 		counter=0;		/*!< Utilizado en la interrupción del Timer 4.
 			int16_t 		deadband_L = 55;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 2; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
-			float 			Kp = 210.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kp = 145.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 2000.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
 			float 			Kd = 2.0f;					/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float 			setpoint = 0.0; // 4.0f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0, last_error = 0;
+			float           ALPHA_PID = 0.98f;
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y = 0;
-			float 			alpha = 0.98f; // Factor del filtro complementario
 			uint32_t 		last_time = 0;
 			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
 // =================[ Variables de Calibración ] =================//
-			//float 			gyro_bias = 0;
-			float accel_bias_x;
-			float accel_bias_y ;
-			// En el eje Z, restamos la gravedad esperada (ej: 16384 para +/- 2g)
-			// para que el bias sea solo el error del sensor.
-			float accel_bias_z ;
-			float gyro_bias_x ;
-			float gyro_bias_y ;
-			float gyro_bias_z ;
+			float 			accel_bias_x;
+			float 			accel_bias_y ;
+			float 			accel_bias_z ;
+			float 			gyro_bias_x ;
+			float 			gyro_bias_y ;
+			float 			gyro_bias_z ;
 // =================[ Protocolo UNER ] =================//
-
 volatile 	uint16_t 		accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
 volatile 	uint16_t 		accely=0;
 volatile 	uint16_t		accelz=0;
@@ -220,37 +203,27 @@ volatile 	float			giro_z=0;
 volatile 	float			accelGiro=0;
 volatile 	float			salida=0;
 // =================[ I2C Scheduler ] =================//
-volatile uint8_t oled_update_requested = 0;
-volatile uint8_t oled_current_page = 0;
-volatile uint8_t oled_is_busy = 0; // Para saber si el display está ocupado
-
+volatile 	uint8_t 		oled_update_requested = 0;
+volatile 	uint8_t 		oled_current_page = 0;
+volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
 uint32_t lastTime0 = 0;
-PayloadUNER_t telemetria;
+
 // recibidos desde el qt
 uint8_t rx_buffer_uart[256];
-uint16_t delayHB= 200; //ENTRE 1 Y 200
-
 uint16_t adc_buffer[8]; // El buffer que llena el DMA
 char msg[20];
 uint8_t BS=0;
-
 // Banderas y contadores
-
-int16_t axRaw, ayRaw, azRaw, gyPitchRaw, gzYawRaw;
- float gyro_filtrado_ema = 0.0f;
-//volatile int32_t axSum = 0, aySum = 0, azSum = 0, gySum = 0, gzSum = 0;
-uint8_t indexMediaMovil = 0;
-
-
+volatile int16_t axRaw, ayRaw, azRaw, gyPitchRaw, gzYawRaw;
 // --- Variables para los Filtros IIR ---
 float ax_lpf = 0.0f;
 float az_lpf = 0.0f;
 float gy_hpf = 0.0f;
 float gy_prev_raw = 0.0f;
-
 // --- Constantes de Sintonía ---
 volatile uint32_t tiempo_anterior_pid = 0;
 volatile uint32_t delta_t_medido = 0;
+volatile int16_t axRaw, ayRaw, azRaw, gyPitchRaw, gzYawRaw;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -372,6 +345,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+// Función pura para el filtro
 void buzzerSecuence(Buzzer_Seq_t *seq) {
     if (seq->repeat == 0) {
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET); // Asegurar apagado
@@ -411,92 +385,29 @@ void BS_ACK_NOT_FOUND(){
 	hBuzzer.state = 0;
 	hBuzzer.last_tick = HAL_GetTick();
 }
-
-void Kalman_Init(Kalman_t *klm) {
-    klm->Q_angle = 0.001f;
-    klm->Q_bias = 0.003f;
-    klm->R_measure = 0.03f; // Si el robot vibra mucho, aumenta este valor (ej. 0.1f)
-
-    klm->angle = 0.0f;
-    klm->bias = 0.0f;
-
-    klm->P[0][0] = 0.0f;
-    klm->P[0][1] = 0.0f;
-    klm->P[1][0] = 0.0f;
-    klm->P[1][1] = 0.0f;
-}
-
-// Función principal de cálculo del Filtro de Kalman
-float Kalman_GetAngle(Kalman_t *klm, float newAngle, float newRate, float dt) {
-    // 1. Predicción
-    klm->rate = newRate - klm->bias;
-    klm->angle += dt * klm->rate;
-
-    klm->P[0][0] += dt * (dt * klm->P[1][1] - klm->P[0][1] - klm->P[1][0] + klm->Q_angle);
-    klm->P[0][1] -= dt * klm->P[1][1];
-    klm->P[1][0] -= dt * klm->P[1][1];
-    klm->P[1][1] += klm->Q_bias * dt;
-
-    // 2. Corrección
-    float S = klm->P[0][0] + klm->R_measure;
-    float K[2]; // Ganancia de Kalman
-    K[0] = klm->P[0][0] / S;
-    K[1] = klm->P[1][0] / S;
-
-    float y = newAngle - klm->angle; // Error entre medición de acelerómetro y predicción
-    klm->angle += K[0] * y;
-    klm->bias += K[1] * y;
-
-    // Actualizar matriz de covarianza
-    float P00_temp = klm->P[0][0];
-    float P01_temp = klm->P[0][1];
-
-    klm->P[0][0] -= K[0] * P00_temp;
-    klm->P[0][1] -= K[0] * P01_temp;
-    klm->P[1][0] -= K[1] * P00_temp;
-    klm->P[1][1] -= K[1] * P01_temp;
-
-    return klm->angle;
-}
 void calculoPID(void){
-		float gyro_rate = -(((float)gyPitchRaw / 65.5f));
-	//	float gyro_rate = -(((float)gyPitchRaw - gyro_bias_y) /  131.0f);//131);//32.8f);//							//PITCH
+		float gyro_rate = -(((float)gyPitchRaw / 131.0f)); // 65.5f));
 		float accel_angle = (atan2f((float)axRaw , (float)azRaw ) * 57.2957f) ;
 		giro 	= gyro_rate;
 		accelGiro = accel_angle;
-		angle_y = alpha * (angle_y + gyro_rate * DT_PID) + (1.0f - alpha) * accel_angle;
-		//angle_y = Kalman_GetAngle(&kalman_pitch, accel_angle, gyro_rate, DT_PID);
-		//angle_y = alpha * (angle_y + gyro_rate * DT_PID) + (DT_PID * accel_angle);
-			telemetria.data.gyro_pitch  	=	accel_angle;	//estos datos son para mandar al Qt
+		angle_y = ALPHA_PID * (angle_y + gyro_rate * DT_PID) + (1.0f - ALPHA_PID) * accel_angle;
 			telemetria.data.pitch_filtrado 	= 	angle_y;
 			accelx 	= axRaw;
 			accely 	= ayRaw;
 			accelz 	= azRaw;
 	   float error = angle_y - setpoint;
-//	   float error = accel_angle - setpoint;
-	   //  if (error < 0.2f && error > -0.2f) error = 0;
 	   integral += error * DT_PID;
-	   if(integral > 1000) integral = 1000;
-	   else if(integral < -1000) integral = -1000;
-/*
-	   if ((angle_y > 7.0f || angle_y < - 7.0f)) {
-		   if (angle_y > 7.0f ){  setpoint = -17;   }
-		   if (angle_y < - 7.0f){ setpoint = 17;	   }
-	   	   }
-	   else{
-		   setpoint = 0;
-	   }
-*/
-	   float P = Kp * error;
-	   float I = 0;// Ki * integral;
-	   float D = Kd * gyro_rate; //float D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //Kd * (error - last_error) / DT_PID;//
+	   if(integral > 1000) integral = 2000;
+	   else if(integral < -1000) integral = -2000;
+	   float P =  Kp * error;
+	   float I =  Ki * integral;
+	   float D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //Kd * (error - last_error) / DT_PID;//float D =  Kd * gyro_rate; //
 	   float output = P + I + D ; // Funcion de transferencia
 	   last_error = error;
 	   if(flagMotorsAreOn){	   	Robot_Drive((int16_t)output, (int16_t)output);}
 	   if(flagMotorsAreOn==0){	Robot_Drive(0, 0);}
 	   salida = output;
 }
-
 void sendCMD(uint8_t cmd, uint16_t param) {
     uint8_t frame[10];
     memcpy(&frame[0], "UNER", 4);     // [0-3] Header
@@ -665,37 +576,37 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
     }
 }
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
-
 	if (hi2c->Instance == I2C1) {
-    	//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED [cite: 46]
         if (oled_current_page == 0 && !oled_update_requested) {
             oled_is_busy = 0; // Liberamos para que el while(1) pueda armar el siguiente frame
         }
     }
 
 }
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-    if (huart->Instance == USART1){
-    	for (int i = 0; i < (Size - 6); i++){
-			if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' && rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
-				uint8_t len   = rx_buffer_uart[i+4];
-				uint8_t token = rx_buffer_uart[i+5];
-				uint8_t cmd   = rx_buffer_uart[i+6];
-				if (token != ':') continue;
-				uint8_t pos_checksum = i + 5 + len;
-				if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
-				uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
-				uint8_t checksum_calc = 0;
-				for(int k = i; k < pos_checksum; k++){
-					checksum_calc ^= rx_buffer_uart[k];
-				}
-				if (checksum_calc == checksum_recibido) {
-					uint8_t *payload_ptr = &rx_buffer_uart[i+7];
-					//float valor_recibido;
-					switch(cmd) {
-						case CMD_SET_HB:
-							 delayHB = payload_ptr[0];
+	void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+	{
+		if (huart->Instance == USART1){
+			for (int i = 0; i < (Size - 6); i++){
+				if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' && rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
+					uint8_t len   = rx_buffer_uart[i+4];
+					uint8_t token = rx_buffer_uart[i+5];
+					uint8_t cmd   = rx_buffer_uart[i+6];
+					if (token != ':') continue;
+					uint8_t pos_checksum = i + 5 + len;
+					if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
+					uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
+					uint8_t checksum_calc = 0;
+					for(int k = i; k < pos_checksum; k++){
+						checksum_calc ^= rx_buffer_uart[k];
+					}
+					if (checksum_calc == checksum_recibido) {
+						uint8_t *payload_ptr = &rx_buffer_uart[i+7];
+						int16_t payloadInt16=0;
+						float 	payloadFloat=0;
+
+						switch(cmd) {
+							case CMD_SET_HB:
+								 delayHB = payload_ptr[0];
 							break;
 						case CMD_CALIBRATE:
 							 Robot_Drive(0, 0);
@@ -730,17 +641,24 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 							flagOLED = payload_ptr[0];
 							break;
 						case CMD_PID_KP:
-							Kp = (float)payload_ptr[0];
-							//Kp = ((uint16_t)payload_ptr[1] | ((uint16_t)payload_ptr[0] << 8));
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							Kp = payloadFloat;
 							break;
 						case CMD_PID_KD:
-							Kd = (float)payload_ptr[0];
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							Kd = payloadFloat;
 							break;
 						case CMD_PID_KI:
-							Ki = (float)payload_ptr[0];
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							Ki = payloadFloat;
 							break;
 						case CMD_PID_SETPOINT:
-							setpoint = (float)payload_ptr[0];
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							setpoint = payloadInt16;
+							break;
+						case CMD_PID_ALPHA:
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							ALPHA_PID = payloadFloat;
 							break;
 					}
 					memset(rx_buffer_uart, 0, Size);
@@ -798,7 +716,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-	if (SSD1306_Init() != 1) 		Error_Handler();
+	//if (SSD1306_Init() != 1) 		Error_Handler();
 	SSD1306_Fill(SSD1306_COLOR_BLACK);
 	SSD1306_UpdateScreen();
 	HAL_Delay(100);
@@ -835,30 +753,33 @@ int main(void)
 	if (HAL_GetTick() - lastTime0 > 100){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
 	   //buzzerSecuence(&hBuzzer);
-	//   DataToQt(); //llamada cada 50ms
+	  // DataToQt(); //llamada cada 50ms
 	   flagDisplay=1;
 	}
-	if(flagDisplay){	//DISPLAY DESACTIVADO
+	if(flagDisplay==777){	//DISPLAY DESACTIVADO
 		flagDisplay=0;
 		if (!oled_is_busy) {
 			SSD1306_Fill(SSD1306_COLOR_BLACK);
 				switch(flagOLED){
 				case 0:
-					sprintf(msg, "Kp:%.0f",Kp);
+					sprintf(msg, "Kp:%.2f",Kp);
 					SSD1306_GotoXY(1, 0);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					sprintf(msg, "Kd: %.2f",Kd);
+
+					sprintf(msg, "Kd:%.2f",Kd);
 					SSD1306_GotoXY(1, 10);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					sprintf(msg, "Ki: %.2f",Ki);
 
-
-
-
-					SSD1306_GotoXY(1, 40);
+					sprintf(msg, "Ki:%.2f",Ki);
+					SSD1306_GotoXY(1, 20);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					sprintf(msg, "SP: %.1f", setpoint);
-					SSD1306_GotoXY(1, 50);
+
+					sprintf(msg, "SP:%.1f", setpoint);
+					SSD1306_GotoXY(1, 30);
+					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+					sprintf(msg, "AP:%.3f", ALPHA_PID);
+					SSD1306_GotoXY(1, 40);
 					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
 
@@ -1262,9 +1183,9 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 71;
+  htim4.Init.Prescaler = 719;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 19999;
+  htim4.Init.Period = 999;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
