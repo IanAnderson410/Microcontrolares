@@ -46,7 +46,9 @@
   *		3. La inicialización del MPU no genera problemas. El retardo generado por el filtro pasabajos es menor al tiempo entre muestra y la escala de giroscopio y acelerómetro esta bien
   *		4. el problema no esta en la función Robot_Drive
   *		.
-  *   Inm
+  *
+  *
+  *  El sistema de navegación para el modo follow line utiliza una barra de 4 sensores TCRT5000 digitalizados mediante umbrales individuales calibrados en el arranque (punto medio entre blanco y negro), asignando pesos simétricos de -3, -1, 1 y 3 a cada sensor para calcular un error de posición mediante el promedio ponderado de los sensores que detectan la línea; este error alimenta un PID de Yaw independiente donde el término proporcional ($P$) busca centrar la línea y el término derivativo ($D$) utiliza la velocidad angular real del Giroscopio en Z como amortiguador para suavizar los giros, resultando en un valor de steering que se suma al output de equilibrio en el motor izquierdo y se resta en el derecho, permitiendo que el robot avance con un setpoint de inclinación constante (1° o 2°) mientras corrige su trayectoria diferencialmente sin necesidad de encoders.
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -101,23 +103,28 @@ enum {
     CMD_STOP        			= 7, 		/*!< Parada de emergencia / Motores a 0			*/
 	CMD_TCP_CONNECTED			= 8,		/*!< Comando utilizado en la conexión del TCP y el robot. 1 conectado, 0 desconectado*/
 	CMD_CHANGE_OLED_SCREEN  	= 9,		/*!< Cambia o apaga la pantalla OLED			*/
-    CMD_MOVE_RC     			= 10, 		/*!< Movimiento manual (adelante, atrás, giro)	*/
-   // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
-   // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
-	CMD_CHANGE_DEADLINE_LEFT 	= 14,
-	CMD_CHANGE_DEADLINE_RIGHT 	= 15,
-	CMD_CHANGE_FILTER_MPU 		= 16,
-	CMD_ONOFFMOTORS 			= 17, 		/*!< Prender y apagar motores*/
-	CMD_DATA 					= 18,		/*!< El robot manda datos de la unidad Sensitiva*/
-
-	CMD_PID_KP      			= 30, 		/*!< Ajustar Término Proporcional*/
-	CMD_PID_KI      			= 31, 		/*!< Ajustar Término Integral*/
-	CMD_PID_KD      			= 32, 		/*!< Ajustar Término Derivativa*/
-	CMD_PID_SETPOINT 			= 33, 		/*!< Ajustar  Offset*/
-	CMD_PID_ALPHA 				= 34, 		/*!< Ajustar  Alpha*/
-
-	CMD_NETWORK_CHANGE_SSID		= 40,
-	CMD_NETWORK_CHANGE_PASSWORD	= 41
+	//RADIO CONTROL
+    CMD_RC    					= 10, 		/*!< Movimiento manual (adelante, atrás, giros derecha e izquierda)	*/
+	//MOTORES GENERAL
+	CMD_CHANGE_DEADLINE_LEFT 	= 12,		/*!< Ajustar  Deadband del motor izquierdo*/
+	CMD_CHANGE_DEADLINE_RIGHT 	= 13,		/*!< Ajustar  Deadband del motor derecho*/
+	CMD_CHANGE_SETPOINT 		= 14, 		/*!< Ajustar  Setpoint de los motores*/
+	CMD_ONOFFMOTORS 			= 15, 		/*!< Prender y apagar motores*/
+	CMD_DATA 					= 16,		/*!< El robot manda datos de la unidad Sensitiva*/
+	//PID SISTEMA BALANCEO
+	CMD_PID_PITCH_KP      		= 20, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Pitch*/
+	CMD_PID_PITCH_KI      		= 21, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
+	CMD_PID_PITCH_KD      		= 22, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Pitch*/
+	CMD_PID_ALPHA 				= 23, 		/*!< Ajustar  Alpha del del filtro complementario utilizado en el PID basado en grado de libertad Pitch*/
+	//PID SISTEMA DE GIRO
+	CMD_PID_YAW_KP      		= 24, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
+	CMD_PID_YAW_KI      		= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
+	CMD_PID_YAW_KD      		= 26, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Yaw*/
+	//NETWORK
+	CMD_NETWORK_CHANGE_SSID		= 30,
+	CMD_NETWORK_CHANGE_PASSWORD	= 31
+	   // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
+	   // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
 };
 typedef enum {
     FILTRO_COMPLEMENTARIO = 0,	/*!< Predeterminado */
@@ -159,12 +166,12 @@ typedef struct {
 // ================= [ Flags ] ================= //
 volatile 	uint8_t 		flagPID 				= 	0;
 volatile 	uint8_t 		flagDisplay				=	0;
-			uint8_t 		flagSendUNER 			= 	0;
-			uint8_t			flagWIFI				=   0;
+volatile	uint8_t			flagSendUNER 			= 	0;
+volatile	uint8_t			flagWIFI				=   0;
 volatile	uint8_t 		flagOLED 				= 	0;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
-			uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
-
+volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
+volatile	uint8_t			flag_RC_active			=	0;
 // ================= [ Counters ] ================= //
 			uint16_t 		contador = 0;
 volatile 	uint32_t 		counter=0;				/*!< Utilizado en la interrupción del Timer 4. Es volatile por que se usan en interrupciones*/
@@ -174,7 +181,7 @@ volatile 	uint32_t 		counter=0;				/*!< Utilizado en la interrupción del Timer 
 			uint8_t 		rx_index = 0;
 			uint8_t 		rx_data;
 // Nuevas variables para compensar la diferencia entre motores
-			int16_t 		deadband_L = 65;			/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_L = 55;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 1; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID ] ================= //
 			float 			Kp = 155.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
@@ -195,6 +202,11 @@ volatile 	uint32_t 		counter=0;				/*!< Utilizado en la interrupción del Timer 
 			float 			gyro_bias_x ;
 			float 			gyro_bias_y ;
 			float 			gyro_bias_z ;
+// =================[ Modo Radio Control ] =================//
+volatile 	float 			RC_setpoint = 0;
+volatile 	float 			RC_slow_setpoint = 0;
+volatile 	int16_t   		RC_steering = 0;
+float 		paso = 0.1f; // Velocidad de inclinación
 // =================[ Protocolo UNER ] =================//
 volatile 	uint16_t 		accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
 volatile 	uint16_t 		accely=0;
@@ -225,6 +237,9 @@ float gy_prev_raw = 0.0f;
 volatile uint32_t tiempo_anterior_pid = 0;
 volatile uint32_t delta_t_medido = 0;
 volatile int16_t axRaw, ayRaw, azRaw, gyPitchRaw, gzYawRaw;
+
+volatile uint32_t timeout_rc=0;
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -411,7 +426,13 @@ void calculoPID(void){
 			accelx 	= axRaw;
 			accely 	= ayRaw;
 			accelz 	= azRaw;
-	   float error = angle_y - setpoint;
+
+
+	   if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
+	   if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
+
+	   float error = angle_y - (setpoint + RC_slow_setpoint);
+	//   float error = angle_y - (setpoint + RC_setpoint);//	   float error = angle_y - setpoint;
 	   integral += error * DT_PID;
 	   if(integral > 2000) integral = 2000;
 	   else if(integral < -2000) integral = -2000;
@@ -420,7 +441,12 @@ void calculoPID(void){
 	   float D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //Kd * (error - last_error) / DT_PID;//float D =  Kd * gyro_rate; //
 	   float output = P + I + D ; // Funcion de transferencia
 	   last_error = error;
-	   if(flagMotorsAreOn)									   Robot_Drive((int16_t)output, (int16_t)output);
+	   if(flagMotorsAreOn){
+		   int16_t outputLeft = (int16_t)output + RC_steering;
+		   int16_t outputRigth = (int16_t)output - RC_steering;
+		   Robot_Drive(outputLeft, outputRigth);
+		//   Robot_Drive((int16_t)output, (int16_t)output);
+	   }
 	   if(flagMotorsAreOn==0||angle_y > 50||angle_y < -50)	   Robot_Drive(0, 0);
 }
 void sendCMD(uint8_t cmd, uint16_t param) {
@@ -564,6 +590,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
     		HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14); // los datos tardan 0.38ms en ser leidos + 2ms retardo. Son 153 bits a 400k bits/s
     	}
+    	 if (flag_RC_active) {
+    		       timeout_rc++;
+    		       if (timeout_rc > 10) { // 1 segundo de gracia
+    		           flag_RC_active = 0;
+    		           RC_setpoint = 0;
+    		           RC_steering = 0;
+    		       }
+    		   }
         counter++;
         if(counter > delayHB){
             counter = 0;
@@ -598,8 +632,125 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
     }
 
 }
-	void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-	{
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+    if (huart->Instance == USART1) {
+        // Recorremos el buffer buscando cabeceras "UNER"
+        for (int i = 0; i <= (Size - 7); ) {
+            if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' &&
+                rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
+
+                uint8_t len = rx_buffer_uart[i+4];
+                uint8_t pos_checksum = i + 5 + len;
+
+                // 1. Validar que el paquete completo esté dentro de lo recibido
+                if (pos_checksum < Size) {
+                    uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
+                    uint8_t checksum_calc = 0;
+
+                    for(int k = i; k < pos_checksum; k++) {
+                        checksum_calc ^= rx_buffer_uart[k];
+                    }
+
+                    if (checksum_calc == checksum_recibido) {
+                        uint8_t cmd = rx_buffer_uart[i+6];
+                        uint8_t *payload_ptr = &rx_buffer_uart[i+7];
+                    	int16_t payloadInt16=0;
+                    	float 	payloadFloat=0;
+                        switch(cmd){
+						case CMD_SET_HB:
+							 delayHB = payload_ptr[0];
+							 break;
+						case CMD_CALIBRATE:
+							 Robot_Drive(0, 0);
+							 flagCalibrationIsReady=0;
+							 break;
+						default:
+						case CMD_ALIVE:
+							sendCMD(CMD_ACK, 0); // te devuelvo un alive
+							break;
+						case CMD_ACK:
+							break;
+						case CMD_ONOFFMOTORS:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							BS_NEWPARAM_OK();
+							flagMotorsAreOn = payloadInt16;
+							break;
+						case CMD_TCP_CONNECTED:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							if(payloadInt16){	//conectado
+								BS_tcpConnectSecuence();
+								flagWIFI=1;
+							}
+							else if(payloadInt16 ==0){				//desconectado
+								BS_Error();
+								flagWIFI=0;
+							}
+							break;
+						case CMD_CHANGE_DEADLINE_LEFT:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							deadband_L = payloadInt16;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_CHANGE_DEADLINE_RIGHT:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							deadband_R = payloadInt16;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_CHANGE_OLED_SCREEN:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							flagOLED = payloadInt16;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_PID_PITCH_KP:
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							Kp = payloadFloat;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_PID_PITCH_KD:
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							Kd = payloadFloat;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_PID_PITCH_KI:
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							Ki = payloadFloat;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_CHANGE_SETPOINT:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							setpoint = payloadInt16;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_PID_ALPHA:
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							ALPHA_PID = payloadFloat;
+							BS_NEWPARAM_ISNOTOK();
+							break;
+						case CMD_RC:
+							flag_RC_active =  payload_ptr[0];
+							if (flag_RC_active) {
+								RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
+								RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
+						  //      timeout_rc = 0; // Reset del watchdog
+							} else {
+								RC_setpoint = 0;
+								RC_steering = 0;
+							}
+							break;
+					}
+							i = pos_checksum + 1;
+							continue;
+						}
+                }
+            }
+            i++;
+        }
+    }
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+}
+/*
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)	{
 		if (huart->Instance == USART1){
 			for (int i = 0; i < (Size - 6); i++){
 				if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' && rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
@@ -664,22 +815,22 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 							flagOLED = payloadInt16;
 							BS_NEWPARAM_OK();
 							break;
-						case CMD_PID_KP:
+						case CMD_PID_PITCH_KP:
 							memcpy(&payloadFloat, payload_ptr, sizeof(float));
 							Kp = payloadFloat;
 							BS_NEWPARAM_OK();
 							break;
-						case CMD_PID_KD:
+						case CMD_PID_PITCH_KD:
 							memcpy(&payloadFloat, payload_ptr, sizeof(float));
 							Kd = payloadFloat;
 							BS_NEWPARAM_OK();
 							break;
-						case CMD_PID_KI:
+						case CMD_PID_PITCH_KI:
 							memcpy(&payloadFloat, payload_ptr, sizeof(float));
 							Ki = payloadFloat;
 							BS_NEWPARAM_OK();
 							break;
-						case CMD_PID_SETPOINT:
+						case CMD_CHANGE_SETPOINT:
 							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
 							setpoint = payloadInt16;
 							BS_NEWPARAM_OK();
@@ -689,6 +840,17 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 							ALPHA_PID = payloadFloat;
 							BS_NEWPARAM_ISNOTOK();
 							break;
+						case CMD_RC:
+						    flag_RC_active =  payload_ptr[0];
+						    if (flag_RC_active) {
+						        RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
+						        RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
+						  //      timeout_rc = 0; // Reset del watchdog
+						    } else {
+						        RC_setpoint = 0;
+						        RC_steering = 0;
+						    }
+						    break;
 					}
 					memset(rx_buffer_uart, 0, Size);
 					break; // Salimos del for
@@ -697,7 +859,7 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		}
 		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
 	}
-}
+}*/
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     // Si hubo ruido o error de trama (común al arrancar el ESP)
@@ -783,6 +945,10 @@ int main(void)
 	   lastTime0 = HAL_GetTick();
 	   DataToQt(); //llamada cada 50ms
 	   flagDisplay=1;
+
+
+
+
 	}
 	if(flagDisplay){	//DISPLAY DESACTIVADO
 		flagDisplay=0;
