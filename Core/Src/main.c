@@ -428,11 +428,11 @@ void calculoPID(void){
 			accelz 	= azRaw;
 
 
-	   if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
-	   if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
+	  // if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
+	  // if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
 
-	   float error = angle_y - (setpoint + RC_slow_setpoint);
-	//   float error = angle_y - (setpoint + RC_setpoint);//	   float error = angle_y - setpoint;
+//	   float error = angle_y - (setpoint + RC_slow_setpoint);
+	   float error = angle_y - (setpoint + RC_setpoint);//	   float error = angle_y - setpoint;
 	   integral += error * DT_PID;
 	   if(integral > 2000) integral = 2000;
 	   else if(integral < -2000) integral = -2000;
@@ -590,14 +590,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
     		HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14); // los datos tardan 0.38ms en ser leidos + 2ms retardo. Son 153 bits a 400k bits/s
     	}
-    	 if (flag_RC_active) {
-    		       timeout_rc++;
-    		       if (timeout_rc > 10) { // 1 segundo de gracia
-    		           flag_RC_active = 0;
-    		           RC_setpoint = 0;
-    		           RC_steering = 0;
-    		       }
-    		   }
+//    	 if (flag_RC_active) {
+//			   timeout_rc++;
+//			   if (timeout_rc > 10) { // 1 segundo de gracia
+//				   flag_RC_active = 0;
+//				   RC_setpoint = 0;
+//				   RC_steering = 0;
+//			   }
+//    		   }
         counter++;
         if(counter > delayHB){
             counter = 0;
@@ -727,15 +727,15 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 							ALPHA_PID = payloadFloat;
 							BS_NEWPARAM_ISNOTOK();
 							break;
-						case CMD_RC:
+						case CMD_RC:{
 							flag_RC_active =  payload_ptr[0];
 							if (flag_RC_active) {
 								RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
 								RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
-						  //      timeout_rc = 0; // Reset del watchdog
 							} else {
 								RC_setpoint = 0;
 								RC_steering = 0;
+								}
 							}
 							break;
 					}
@@ -934,21 +934,14 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	buzzerSecuence(&hBuzzer);
-	if(flagPID == 1 ) {
+	if(flagPID) {
 	    flagPID = 0;
-	    uint32_t tiempo_actual = HAL_GetTick();
-		delta_t_medido = tiempo_actual - tiempo_anterior_pid;
-		tiempo_anterior_pid = tiempo_actual;
 	    calculoPID();
 	}
 	if (HAL_GetTick() - lastTime0 > 90){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
 	   lastTime0 = HAL_GetTick();
 	   DataToQt(); //llamada cada 50ms
 	   flagDisplay=1;
-
-
-
-
 	}
 	if(flagDisplay){	//DISPLAY DESACTIVADO
 		flagDisplay=0;
