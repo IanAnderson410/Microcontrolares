@@ -129,8 +129,8 @@ enum {
 	CMD_PID_ALPHA 				= 23, 		/*!< Ajustar  Alpha del del filtro complementario utilizado en el PID basado en grado de libertad Pitch*/
 	//PID SISTEMA DE GIRO
 	CMD_PID_YAW_KP      		= 24, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
-	CMD_PID_YAW_KI      		= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
-	CMD_PID_YAW_KD      		= 26, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Yaw*/
+	CMD_PID_YAW_KD      		= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
+	CMD_PID_YAW_SP      		= 26, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Yaw*/
 	//SENSORES
 	CMD_IR_INICIAR_CALIBRACION	= 27, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
 	CMD_IR_DETENER_CALIBRACION  = 28, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
@@ -200,7 +200,7 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 // Nuevas variables para compensar la diferencia entre motores
 			int16_t 		deadband_L = 55;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 1; 			/*!< Zona Muerta del PWM para el motor 2*/
-// =================[ Variables de Control PID ] ================= //
+// =================[ Variables de Control PID PITCH] ================= //
 			float 			Kp = 155.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 1700.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
 			float 			Kd = 4.0f;					/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
@@ -208,6 +208,12 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			float 			integral = 0;
 			float 			last_error = 0;
 			float           ALPHA_PID = 0.98f;
+// =================[ Variables de Control PID YAW] ================= //
+			// Constantes del PID de YAW (Giro) - Ideales para modificar desde Qt
+			float Kp_yaw = 100.0f; // Ganancia Proporcional inicial (a sintonizar)
+			float Kd_yaw = 10.0f; // Ganancia Derivativa inicial (a sintonizar)
+			float last_error_yaw = 0.0f;
+			volatile    float 			FL_setpoint = 0.5f;
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y 	= 0;
 // =================[ Variables de Calibración ] =================//
@@ -222,6 +228,7 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			uint16_t 		adc_buffer[8]; // El buffer que llena el DMA
 // =================[ Modo Radio Control ] =================//
 volatile 	float 			RC_setpoint = 0;
+
 volatile 	float 			RC_slow_setpoint = 0;
 volatile 	int16_t   		RC_steering = 0;
 float 		paso = 0.1f; // Velocidad de inclinación
@@ -333,7 +340,7 @@ void Leer_Linea_Digital(void);
  */
 void PID_PITCH(void);
 
-void PIDYAW();
+int16_t Calcular_PID_YAW(float error_linea);
 /**
  * @brief sendCMD:						Envía un comando bajo el Protocolo UNER vía UART DMA.
  * @param cmd: 							Código del comando (CMD)
@@ -630,15 +637,51 @@ void PID_PITCH(void){
 	   float output = P + I + D ; // Funcion de transferencia
 	   last_error = error;
 	   if(flagMotorsAreOn){
-		   int16_t outputLeft = (int16_t)output + RC_steering;
-		   int16_t outputRigth = (int16_t)output - RC_steering;
+		   int16_t outputLeft = (int16_t)output + RC_steering 	+ FL_setpoint;
+		   int16_t outputRigth = (int16_t)output - RC_steering 	+ FL_setpoint;
 		   Robot_Drive(outputLeft, outputRigth);
 		//   Robot_Drive((int16_t)output, (int16_t)output);
 	   }
 	   if(flagMotorsAreOn==0||angle_y > 50||angle_y < -50)	   Robot_Drive(0, 0);
 }
-void PIDYAW(){
+float Calcular_Error_Linea(void) {
+    float numerador = 0.0f;
+    float denominador = 0.0f;
 
+    // Calculamos el numerador usando los pesos (-3, -1, 1, 3)
+    // ATENCIÓN: Asumo que el índice 3 es el extremo izquierdo y el 0 el derecho.
+    numerador = (estado_sensores[3] * -3.0f) +
+                (estado_sensores[2] * -1.0f) +
+                (estado_sensores[1] * 1.0f) +
+                (estado_sensores[0] * 3.0f);
+
+    // Calculamos cuántos sensores están viendo la línea
+    denominador = estado_sensores[3] + estado_sensores[2] +
+                  estado_sensores[1] + estado_sensores[0];
+
+    // Lógica de pérdida de línea: si ningún sensor ve negro, el denominador es 0
+    if (denominador == 0) {
+        return 0.0f; // Asumimos error 0 para que siga caminando derecho
+    }
+
+    // Retornamos el promedio ponderado
+    return (numerador / denominador);
+}
+int16_t Calcular_PID_YAW(float error_linea) {
+    // 1. Proporcional: Reacción instantánea al error
+    float P_yaw = Kp_yaw * error_linea;
+    // 2. Derivativa: Frena el giro si se está acercando rápido al centro
+    // DT_PID es tu delta de tiempo (ej: 0.01 si corre a 10ms)
+    float D_yaw = Kd_yaw * (error_linea - last_error_yaw) / DT_PID;
+    // 3. Guardamos el error para la próxima iteración
+    last_error_yaw = error_linea;
+    // 4. Salida total
+    float salida_yaw = P_yaw + D_yaw;
+    // Limitamos la salida máxima para que un volantazo no tire el robot al piso
+    if(salida_yaw > 500.0f) salida_yaw = 500.0f;
+    if(salida_yaw < -500.0f) salida_yaw = -500.0f;
+
+    return (int16_t)salida_yaw;
 }
 void sendCMD(uint8_t cmd, uint16_t param) {
     uint8_t frame[10];
@@ -785,7 +828,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         counterDataToQt++;
         if(counterHB > delayHB){
             counterHB = 0;
-          //  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
         	}
         if(counterDataToQt > 10){
         	counterDataToQt = 0;
@@ -946,6 +989,21 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
                							Ki = payloadFloat;
                							BS_NEWPARAM_OK();
                							break;
+										case CMD_PID_YAW_KP:
+											memcpy(&payloadFloat, payload_ptr, sizeof(float));
+											Kp_yaw = payloadFloat;
+											BS_NEWPARAM_OK();
+											break;
+										case CMD_PID_YAW_KD:
+											memcpy(&payloadFloat, payload_ptr, sizeof(float));
+											Kd_yaw = payloadFloat;
+											BS_NEWPARAM_OK();
+											break;
+										case CMD_PID_YAW_SP:
+											memcpy(&payloadFloat, payload_ptr, sizeof(float));
+											FL_setpoint = payloadFloat;
+											BS_NEWPARAM_OK();
+											break;
                						case CMD_CHANGE_SETPOINT:
                							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
                							setpoint = payloadInt16;
@@ -969,11 +1027,11 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
                							break;
                						case CMD_IR_INICIAR_CALIBRACION:
                							Iniciar_Calibracion_Linea();
-               						  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+               						 // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
                							break;
                						case CMD_IR_DETENER_CALIBRACION:
                							Finalizar_Calibracion_Linea();
-               						  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+               						  //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
                							break;
                					}
                         i = pos_checksum + 1; // Saltamos al final del paquete procesado
@@ -991,242 +1049,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
         __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); // Desactivar interrupción de Half Transfer
     }
 }
-/*
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
-    if (huart->Instance == USART1) {
-        // Recorremos el buffer buscando cabeceras "UNER"
-        for (int i = 0; i <= (Size - 7); ) {
-            if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' &&
-                rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
 
-                uint8_t len = rx_buffer_uart[i+4];
-                uint8_t pos_checksum = i + 5 + len;
-
-                // 1. Validar que el paquete completo esté dentro de lo recibido
-                if (pos_checksum < Size) {
-                    uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
-                    uint8_t checksum_calc = 0;
-
-                    for(int k = i; k < pos_checksum; k++) {
-                        checksum_calc ^= rx_buffer_uart[k];
-                    }
-
-                    if (checksum_calc == checksum_recibido) {
-                        uint8_t cmd = rx_buffer_uart[i+6];
-                        uint8_t *payload_ptr = &rx_buffer_uart[i+7];
-                    	int16_t payloadInt16=0;
-                    	float 	payloadFloat=0;
-                        switch(cmd){
-						case CMD_SET_HB:
-							 delayHB = payload_ptr[0];
-							 break;
-						case CMD_CALIBRATE:
-							 Robot_Drive(0, 0);
-							 flagCalibrationIsReady=0;
-							 break;
-						default:
-						case CMD_ALIVE:
-							sendCMD(CMD_ACK, 0); // te devuelvo un alive
-							break;
-						case CMD_ACK:
-							break;
-						case CMD_ONOFFMOTORS:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							BS_NEWPARAM_OK();
-							flagMotorsAreOn = payloadInt16;
-							break;
-						case CMD_TCP_CONNECTED:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							if(payloadInt16){	//conectado
-								BS_tcpConnectSecuence();
-								flagWIFI=1;
-							}
-							else if(payloadInt16 ==0){				//desconectado
-								BS_Error();
-								flagWIFI=0;
-							}
-							break;
-						case CMD_CHANGE_DEADLINE_LEFT:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							deadband_L = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_CHANGE_DEADLINE_RIGHT:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							deadband_R = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_CHANGE_OLED_SCREEN:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							flagOLED = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_PITCH_KP:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							Kp = payloadFloat;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_PITCH_KD:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							Kd = payloadFloat;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_PITCH_KI:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							Ki = payloadFloat;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_CHANGE_SETPOINT:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							setpoint = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_ALPHA:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							ALPHA_PID = payloadFloat;
-							BS_NEWPARAM_ISNOTOK();
-							break;
-						case CMD_RC:{
-							flag_RC_active =  payload_ptr[0];
-							if (flag_RC_active) {
-								RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
-								RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
-							} else {
-								RC_setpoint = 0;
-								RC_steering = 0;
-								}
-							}
-							break;
-						case CMD_IR_INICIAR_CALIBRACION:
-							Iniciar_Calibracion_Linea();
-							break;
-						case CMD_IR_DETENER_CALIBRACION:
-							Finalizar_Calibracion_Linea();
-							break;
-					}
-							i = pos_checksum + 1;
-							continue;
-						}
-                }
-            }
-            i++;
-        }
-    }
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
-}
-
-*/
-/*
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)	{
-		if (huart->Instance == USART1){
-			for (int i = 0; i < (Size - 6); i++){
-				if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' && rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
-					uint8_t len   = rx_buffer_uart[i+4];
-					uint8_t token = rx_buffer_uart[i+5];
-					uint8_t cmd   = rx_buffer_uart[i+6];
-					if (token != ':') continue;
-					uint8_t pos_checksum = i + 5 + len;
-					if (pos_checksum >= Size) break; // Evitar desbordamiento si el paquete llegó cortado
-					uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
-					uint8_t checksum_calc = 0;
-					for(int k = i; k < pos_checksum; k++){
-						checksum_calc ^= rx_buffer_uart[k];
-					}
-					if (checksum_calc == checksum_recibido) {
-						uint8_t *payload_ptr = &rx_buffer_uart[i+7];
-						int16_t payloadInt16=0;
-						float 	payloadFloat=0;
-
-						switch(cmd) {
-							case CMD_SET_HB:
-								 delayHB = payload_ptr[0];
-							break;
-						case CMD_CALIBRATE:
-							 Robot_Drive(0, 0);
-							 flagCalibrationIsReady=0;
-							 break;
-						default:
-						case CMD_ALIVE:
-							sendCMD(CMD_ACK, 0); // te devuelvo un alive
-							break;
-						case CMD_ACK:
-							break;
-						case CMD_ONOFFMOTORS:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							BS_NEWPARAM_OK();
-							flagMotorsAreOn = payloadInt16;
-							break;
-						case CMD_TCP_CONNECTED:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							if(payloadInt16){	//conectado
-								BS_tcpConnectSecuence();
-								flagWIFI=1;
-							}
-							else if(payloadInt16 ==0){				//desconectado
-								BS_Error();
-								flagWIFI=0;
-							}
-							break;
-						case CMD_CHANGE_DEADLINE_LEFT:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							deadband_L = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_CHANGE_DEADLINE_RIGHT:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							deadband_R = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_CHANGE_OLED_SCREEN:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							flagOLED = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_PITCH_KP:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							Kp = payloadFloat;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_PITCH_KD:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							Kd = payloadFloat;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_PITCH_KI:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							Ki = payloadFloat;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_CHANGE_SETPOINT:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							setpoint = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_ALPHA:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							ALPHA_PID = payloadFloat;
-							BS_NEWPARAM_ISNOTOK();
-							break;
-						case CMD_RC:
-						    flag_RC_active =  payload_ptr[0];
-						    if (flag_RC_active) {
-						        RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
-						        RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
-						  //      timeout_rc = 0; // Reset del watchdog
-						    } else {
-						        RC_setpoint = 0;
-						        RC_steering = 0;
-						    }
-						    break;
-					}
-					memset(rx_buffer_uart, 0, Size);
-					break; // Salimos del for
-				}
-			}
-		}
-		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
-	}
-}*/
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     // Si hubo ruido o error de trama (común al arrancar el ESP)
@@ -1316,9 +1139,15 @@ int main(void)
 	if(flagDisplay){	flagDisplay=0;		screenScheduler();}
 	if(flagPID){
 		flagPID = 0;
-		Filtrar_Sensores_IR();
-		Procesar_Calibracion_Linea();
-		Leer_Linea_Digital();
+
+		if (telemetria.data.modo == MODO_FOLLOWLINE) {
+			//RC_setpoint = 0.0f;
+			Filtrar_Sensores_IR();
+			Procesar_Calibracion_Linea();
+			Leer_Linea_Digital();
+	        float error_linea = Calcular_Error_Linea();
+	        RC_steering = Calcular_PID_YAW(error_linea);
+		}
 		PID_PITCH();
 	}
 	switch(telemetria.data.modo){
