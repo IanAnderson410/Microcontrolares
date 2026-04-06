@@ -28,7 +28,12 @@
   *   sistema de seguridad que desactiva los actuadores ante inclinaciones críticas
   *   superiores a 45 grados.
   *
-  *
+  *	  ============= [ Cómo usar sensores ] =============
+  *	  IR:
+  *	  entonces en resumen, llamo a la funcion Iniciar_Calibracion_Linea. luego tengo que
+  *	  hacer pasar todos los sensores por la pista y la linea negra un par de veces y
+  *	  finalmente llamar a la funcion Finalizar_Calibracion_Linea. Por otra parte,
+  *	  Leer_Linea_Digital se llama constantemente y carga los estados de los sensores .
   *   ============= [ Actualizaciones ] =============
   *   15-2:
   *   Se implementaron los comandos para la comunicación inalambrica entre el robot
@@ -75,7 +80,7 @@ typedef struct __attribute__((packed)) {
     float       pos_x;                  // 4 bytes - Trayectoria X
     float       pos_y;                  // 4 bytes - Trayectoria Y
     float       velocidad;              // 4 bytes - Velocidad lineal
-    uint8_t     modo;                   // 1 byte  - IDLE, FOLLOW_LINE, etc.
+    uint8_t     modo;                   // 1 byte  - IDLE, FOLLOW_LINE, RC
     uint16_t    IR[8];                  // 16 bytes- Sensores IR
     uint8_t     infoAdicional;          // 1 byte  - Info Adicional
 } PayloadData_t;
@@ -94,20 +99,26 @@ typedef struct {
     // El checksum no lo ponemos en el struct fijo porque su posición varía
 } UnerPacket_t;
 enum {
+	MODO_IDDLE 			= 	0,
+	MODO_RC				=	1,
+	MODO_FOLLOWLINE 	= 	2
+};
+enum {
     // Sistema y Heartbeat
-	CMD_ALIVE       			= 0, 		/*!< Busca confirmar conexión inalambrica		*/
-    CMD_ACK 	      			= 1, 		/*!< Confirma conexión inalambrica				*/
-    CMD_SET_HB      			= 2, 		/*!< Configurar intervalo de Heartbeat			*/
-    CMD_CALIBRATE   			= 5, 		/*!< Calibración de MPU6050						*/
-    CMD_START       			= 6, 		/*!< Activar motores / Inicio de balanceo		*/
-    CMD_STOP        			= 7, 		/*!< Parada de emergencia / Motores a 0			*/
-	CMD_TCP_CONNECTED			= 8,		/*!< Comando utilizado en la conexión del TCP y el robot. 1 conectado, 0 desconectado*/
-	CMD_CHANGE_OLED_SCREEN  	= 9,		/*!< Cambia o apaga la pantalla OLED			*/
+	CMD_ALIVE       			= 0, 		/*!< Busca confirmar conexión inalambrica						*/
+    CMD_ACK 	      			= 1, 		/*!< Confirma conexión inalambrica								*/
+    CMD_SET_HB      			= 2, 		/*!< Configurar intervalo de Heartbeat							*/
+	CMD_CHANGE_MODE				= 3,		/*!< Cambiar entre los modos  IDLE, FOLLOW_LINE, RC				*/
+    CMD_CALIBRATE   			= 5, 		/*!< Calibración de MPU6050										*/
+    CMD_START       			= 6, 		/*!< Activar motores / Inicio de balanceo						*/
+    CMD_STOP        			= 7, 		/*!< Parada de emergencia / Motores a 0							*/
+	CMD_TCP_CONNECTED			= 8,		/*!< Comando utilizado en la conexión del TCP y el robot		*/
+	CMD_CHANGE_OLED_SCREEN  	= 9,		/*!< Cambia o apaga la pantalla OLED							*/
 	//RADIO CONTROL
-    CMD_RC    					= 10, 		/*!< Movimiento manual (adelante, atrás, giros derecha e izquierda)	*/
+    CMD_RC    					= 10, 		/*!< Movimiento manual (adelante, atrás, giros)					*/
 	//MOTORES GENERAL
-	CMD_CHANGE_DEADLINE_LEFT 	= 12,		/*!< Ajustar  Deadband del motor izquierdo*/
-	CMD_CHANGE_DEADLINE_RIGHT 	= 13,		/*!< Ajustar  Deadband del motor derecho*/
+	CMD_CHANGE_DEADLINE_LEFT 	= 12,		/*!< Ajustar  Deadband del motor izquierdo						*/
+	CMD_CHANGE_DEADLINE_RIGHT 	= 13,		/*!< Ajustar  Deadband del motor derecho						*/
 	CMD_CHANGE_SETPOINT 		= 14, 		/*!< Ajustar  Setpoint de los motores*/
 	CMD_ONOFFMOTORS 			= 15, 		/*!< Prender y apagar motores*/
 	CMD_DATA 					= 16,		/*!< El robot manda datos de la unidad Sensitiva*/
@@ -120,6 +131,9 @@ enum {
 	CMD_PID_YAW_KP      		= 24, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
 	CMD_PID_YAW_KI      		= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
 	CMD_PID_YAW_KD      		= 26, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Yaw*/
+	//SENSORES
+	CMD_IR_INICIAR_CALIBRACION	= 27, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
+	CMD_IR_DETENER_CALIBRACION  = 28, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
 	//NETWORK
 	CMD_NETWORK_CHANGE_SSID		= 30,
 	CMD_NETWORK_CHANGE_PASSWORD	= 31
@@ -158,15 +172,17 @@ typedef struct {
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 // ================= [ Typedef ] ================= //
-			PayloadUNER_t telemetria;
+			PayloadUNER_t 	telemetria;
 			Buzzer_Seq_t 	hBuzzer = {0}; // Inicializamos en cero
 			FiltroTipo_t 	currentlySelectedFilter = 	FILTRO_COMPLEMENTARIO; //FILTRO_COMPLEMENTARIO;
 // ================= [ Variables generales ] ================= //
-			uint16_t 		delayHB= 90; //ENTRE 1 Y 200
+			uint16_t 		delayHB	= 50; //ENTRE 1 Y 200
+			uint32_t 		lastTime0 = 0; // tiempo en el while 1
 // ================= [ Flags ] ================= //
 volatile 	uint8_t 		flagPID 				= 	0;
 volatile 	uint8_t 		flagDisplay				=	0;
 volatile	uint8_t			flagSendUNER 			= 	0;
+volatile	uint8_t			flagDataToQt 			= 	0;
 volatile	uint8_t			flagWIFI				=   0;
 volatile	uint8_t 		flagOLED 				= 	0;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
@@ -174,7 +190,8 @@ volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el P
 volatile	uint8_t			flag_RC_active			=	0;
 // ================= [ Counters ] ================= //
 			uint16_t 		contador = 0;
-volatile 	uint32_t 		counter=0;				/*!< Utilizado en la interrupción del Timer 4. Es volatile por que se usan en interrupciones*/
+volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Timer 4 para manejar el HeartBit*/
+volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción del Timer 4 para manejar los datos mandados a Qt*/
 			uint8_t  		counter1=0;				/*!< Utilizado para refrezcar la pantalla OLED*/
 //RECEPCION DE DATOS
 			char 			rx_buffer[20];
@@ -192,9 +209,7 @@ volatile 	uint32_t 		counter=0;				/*!< Utilizado en la interrupción del Timer 
 			float 			last_error = 0;
 			float           ALPHA_PID = 0.98f;
 // =================[ Variables del Filtro del MPU6050 ] =================//
-			float 			angle_y = 0;
-			uint32_t 		last_time = 0;
-			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
+			float 			angle_y 	= 0;
 // =================[ Variables de Calibración ] =================//
 			float 			accel_bias_x;
 			float 			accel_bias_y ;
@@ -202,6 +217,9 @@ volatile 	uint32_t 		counter=0;				/*!< Utilizado en la interrupción del Timer 
 			float 			gyro_bias_x ;
 			float 			gyro_bias_y ;
 			float 			gyro_bias_z ;
+// =================[ Buffers de Sensores ] =================//
+			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
+			uint16_t 		adc_buffer[8]; // El buffer que llena el DMA
 // =================[ Modo Radio Control ] =================//
 volatile 	float 			RC_setpoint = 0;
 volatile 	float 			RC_slow_setpoint = 0;
@@ -219,11 +237,16 @@ volatile 	float			salida=0;
 volatile 	uint8_t 		oled_update_requested = 0;
 volatile 	uint8_t 		oled_current_page = 0;
 volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
-uint32_t lastTime0 = 0;
 
+// =================[ Digitalizador del IR ] =================//
+uint16_t 	adc_raw[4];
+uint8_t 	estado_sensores[4];
+uint16_t 	sensor_min[4];
+uint16_t 	sensor_max[4];
+uint16_t 	sensor_threshold[4];
+uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estamos
 // recibidos desde el qt
 uint8_t rx_buffer_uart[256];
-uint16_t adc_buffer[8]; // El buffer que llena el DMA
 char msg[20];
 uint8_t BS=0;
 // Banderas y contadores
@@ -289,19 +312,27 @@ void BS_Error();
  * @brief BS_ACK_NOT_FOUND: 			Secuencia para indicar un error al no recibir el ACK
  */
 void BS_ACK_NOT_FOUND();
+void screenScheduler(void);
+void Iniciar_Calibracion_Linea(void);
+void Iniciar_Calibracion_Linea(void);
+void Procesar_Calibracion_Linea(void);
+void Leer_Linea_Digital(void);
 /**
- * @brief calculoPID:					Calcula la salida del controlador PID para el equilibrio.
+ * @brief PID_PITCH:					Calcula la salida del controlador PID para el equilibrio.
  * @details 							Crea una respuesta en forma de impulso con los motores la cual es proporcional
  * 										al error (pitch) del robot.	Implementa un filtro complementario para fusionar
  * 										acelerómetro y giroscopio.
  * @note 								Frecuencia de ejecución dependiente de la llegada de datos del MPU (100Hz nominal).
  */
-void calculoPID(void);
+void PID_PITCH(void);
+
+void PIDYAW();
 /**
  * @brief sendCMD:						Envía un comando bajo el Protocolo UNER vía UART DMA.
  * @param cmd: 							Código del comando (CMD)
  * @param param: 						Parámetro de 16 bits (enviado en Little Endian ).
  */
+
 void sendCMD(uint8_t cmd, uint16_t param);
 /**
  * @brief DataToQt:						Empaqueta y envía la telemetría completa hacia la interfaz Qt.
@@ -416,7 +447,152 @@ void BS_NEWPARAM_ISNOTOK() {
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
 }
-void calculoPID(void){
+void screenScheduler(void){
+	if (!oled_is_busy) {
+		SSD1306_Fill(SSD1306_COLOR_BLACK);
+			switch(flagOLED){
+			case 0:
+				sprintf(msg, "Follow Line Screen");
+				SSD1306_GotoXY(2, 0);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+
+				sprintf(msg, "0:  %d", estado_sensores[0]);
+				SSD1306_GotoXY(1, 10);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+
+				sprintf(msg, "1:  %d", estado_sensores[1]);
+				SSD1306_GotoXY(1, 20);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+				sprintf(msg, "2:  %d", estado_sensores[2]);
+				SSD1306_GotoXY(1, 30);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+				sprintf(msg, "3:  %d", estado_sensores[3]);
+				SSD1306_GotoXY(1, 40);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+				oled_update_requested = 1;
+				break;
+			case 1:
+				sprintf(msg, "AdicionalInfoScreen");
+				SSD1306_GotoXY(0, 0);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, "Kp:%.2f",Kp);
+				SSD1306_GotoXY(1, 20);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, "Kd:%.2f",Kd);
+				SSD1306_GotoXY(1, 30);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, "Ki:%.2f",Ki);
+				SSD1306_GotoXY(1, 40);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//					sprintf(msg, "SP:%.1f", setpoint);
+//					SSD1306_GotoXY(1, 30);
+//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//					sprintf(msg, "AP:%.3f", ALPHA_PID);
+//					SSD1306_GotoXY(1, 40);
+//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//					sprintf(msg, "dm: %ld", delta_t_medido);
+//					SSD1306_GotoXY(60, 0);
+//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//					sprintf(msg, "AG:%.2f", accelGiro);
+//					SSD1306_GotoXY(60, 10);
+//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//					sprintf(msg, "AX: %.0d", axRaw);
+//					SSD1306_GotoXY(60, 30);
+//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//					sprintf(msg, "AY:%.0d", ayRaw);
+//					SSD1306_GotoXY(60, 40);
+//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//					sprintf(msg, "AZ:%.0d", azRaw);
+//					SSD1306_GotoXY(60, 50);
+//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				SSD1306_GotoXY(1, 20);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, "DBL: %d",deadband_L);
+				SSD1306_GotoXY(1, 30);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, "DBR: %d",deadband_R);
+				if (flagWIFI) {
+					// Dibujamos el icono de WiFi (podes usar lineas o circulos)
+					SSD1306_Clear();
+					SSD1306_DrawLine(110, 8, 114, 4, SSD1306_COLOR_WHITE); // Onda 1
+					SSD1306_DrawLine(114, 4, 118, 8, SSD1306_COLOR_WHITE);
+					SSD1306_DrawLine(112, 10, 116, 10, SSD1306_COLOR_WHITE); // Punto base
+				} else {
+					// Icono tachado o texto simple
+					SSD1306_Clear();
+					SSD1306_GotoXY(105, 2);
+					SSD1306_Puts("X", &Font_7x10, SSD1306_COLOR_WHITE);
+					SSD1306_DrawLine(105, 2, 120, 12, SSD1306_COLOR_WHITE); // Tachado
+				}
+				oled_update_requested = 1;// NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
+				break;
+			case 2:
+				sprintf(msg, "IR and MPU Screen ");
+				SSD1306_GotoXY(2, 0);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				for (int i = 0; i < 8; i++) {
+				        // 1. Calculamos el ancho de la barra (Supongamos 50 píxeles de ancho máximo)
+				        // Mapeo: (Valor ADC * Ancho Máximo) / 4095
+				        uint8_t barWidth = (uint8_t)((adc_buffer[i] * 50) / 4095);
+				        uint8_t yPos = 10 + (i * 7);
+				        if(i==0 || i == 7){
+				        	char label[4];
+							sprintf(label, "IR%d", i);
+							SSD1306_GotoXY(2, yPos);
+							SSD1306_Puts(label, &Font_7x10, SSD1306_COLOR_WHITE);
+				        }
+				        SSD1306_DrawRectangle(25, yPos, 50, 5, SSD1306_COLOR_WHITE);
+				        SSD1306_DrawFilledRectangle(25, yPos, barWidth, 5, SSD1306_COLOR_WHITE);
+				    }
+				    oled_update_requested = 1; // Le avisamos al scheduler que mande los datos al OLED
+				break;
+			}
+	    }
+}
+void Iniciar_Calibracion_Linea(void) {
+    for(int i = 0; i < 4; i++) {
+        sensor_min[i] = 4095; // Valor máximo del ADC
+        sensor_max[i] = 0;    // Valor mínimo del ADC
+    }
+    flag_calibrando_linea = 1;
+}
+void Procesar_Calibracion_Linea(void) {
+    if (flag_calibrando_linea) {
+        for(int i = 0; i < 4; i++) {
+            // Buscamos si hay un nuevo récord de valor bajo (Blanco)
+            if(adc_raw[i] < sensor_min[i]) {
+                sensor_min[i] = adc_raw[i];
+            }
+            // Buscamos si hay un nuevo récord de valor alto (Negro)
+            if(adc_raw[i] > sensor_max[i]) {
+                sensor_max[i] = adc_raw[i];
+            }
+        }
+    }
+}
+void Leer_Linea_Digital(void) {
+    for(int i = 0; i < 4; i++) {
+        // Si el valor analógico superó la mitad, está viendo la línea
+        if(adc_raw[i] > sensor_threshold[i]) {
+            estado_sensores[i] = 1; // NEGRO
+        } else {
+            estado_sensores[i] = 0; // BLANCO
+        }
+    }
+}
+void Finalizar_Calibracion_Linea(void) {
+    flag_calibrando_linea = 0;
+    for(int i = 0; i < 4; i++) {
+        // El punto medio perfecto entre lo más blanco y lo más negro que vio
+        sensor_threshold[i] = (sensor_max[i] + sensor_min[i]) / 2;
+    }
+}
+void PID_PITCH(void){
 		float gyro_rate = -(((float)gyPitchRaw / 131.0f)); // 65.5f));
 		float accel_angle = (atan2f((float)axRaw , (float)azRaw ) * 57.2957f) ;
 		giro 	= gyro_rate;
@@ -426,11 +602,8 @@ void calculoPID(void){
 			accelx 	= axRaw;
 			accely 	= ayRaw;
 			accelz 	= azRaw;
-
-
 	  // if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
 	  // if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
-
 //	   float error = angle_y - (setpoint + RC_slow_setpoint);
 	   float error = angle_y - (setpoint + RC_setpoint);//	   float error = angle_y - setpoint;
 	   integral += error * DT_PID;
@@ -448,6 +621,9 @@ void calculoPID(void){
 		//   Robot_Drive((int16_t)output, (int16_t)output);
 	   }
 	   if(flagMotorsAreOn==0||angle_y > 50||angle_y < -50)	   Robot_Drive(0, 0);
+}
+void PIDYAW(){
+
 }
 void sendCMD(uint8_t cmd, uint16_t param) {
     uint8_t frame[10];
@@ -477,13 +653,13 @@ void DataToQt(){
     telemetria.data.pos_y       = 2.0f;
     telemetria.data.velocidad   = 1.0f;
     for(uint8_t i=0; i<8; i++)       telemetria.data.IR[i] = adc_buffer[i];
-    telemetria.data.modo = 0;
+    telemetria.data.modo = MODO_FOLLOWLINE;
     telemetria.data.infoAdicional = 1;
     static uint8_t frame[56];
     memcpy(&frame[0], "UNER", 4);
     frame[4] = 50;                  // Length = CMD(1) + Payload(48) + CHK(1) = 50
     frame[5] = ':';                 // TOKEN
-    frame[6] = 18;                  // CMD_DATA
+    frame[6] = CMD_DATA;                  // CMD_DATA
     memcpy(&frame[7], telemetria.buffer, 48); // Copiamos los 48 bytes del payload
     uint8_t checksum = 0;
     for (int i = 0; i < 55; i++) {  // XOR de los primeros 55 bytes (índices 0 al 54)
@@ -590,19 +766,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
     		HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14); // los datos tardan 0.38ms en ser leidos + 2ms retardo. Son 153 bits a 400k bits/s
     	}
-//    	 if (flag_RC_active) {
-//			   timeout_rc++;
-//			   if (timeout_rc > 10) { // 1 segundo de gracia
-//				   flag_RC_active = 0;
-//				   RC_setpoint = 0;
-//				   RC_steering = 0;
-//			   }
-//    		   }
-        counter++;
-        if(counter > delayHB){
-            counter = 0;
+        counterHB++;
+        counterDataToQt++;
+        if(counterHB > delayHB){
+            counterHB = 0;
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
-        }
+        	}
+        if(counterDataToQt > 10){
+        	counterDataToQt = 0;
+        	flagDataToQt=1;
+        	flagDisplay=1;
+        	}
+
     }
 }
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
@@ -632,7 +807,6 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
     }
 
 }
-
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if (huart->Instance == USART1) {
         // Recorremos el buffer buscando cabeceras "UNER"
@@ -737,6 +911,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 								RC_steering = 0;
 								}
 							}
+							break;
+						case CMD_IR_INICIAR_CALIBRACION:
+							Iniciar_Calibracion_Linea();
+							break;
+						case CMD_IR_DETENER_CALIBRACION:
+							Finalizar_Calibracion_Linea();
 							break;
 					}
 							i = pos_checksum + 1;
@@ -914,7 +1094,6 @@ int main(void)
 	MPU6050_Init(&hi2c1);
 	HAL_Delay(500);
 	MPU6050_Calibrate();
-
 	if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 8) != HAL_OK) {
 		Error_Handler();
 	}
@@ -924,6 +1103,11 @@ int main(void)
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_Base_Start_IT(&htim4);
 	//Kalman_Init(&kalman_pitch);
+
+	Iniciar_Calibracion_Linea();
+
+	Leer_Linea_Digital() ;
+	Finalizar_Calibracion_Linea();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -934,117 +1118,26 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	buzzerSecuence(&hBuzzer);
-	if(flagPID) {
-	    flagPID = 0;
-	    calculoPID();
+	//Funciones INDEPENDIENTES al modo del robot
+
+	if(flagDataToQt){	flagDataToQt = 0;	DataToQt();		}
+	if(flagDisplay){	flagDisplay=0;		screenScheduler();}
+	if(flagPID){
+		flagPID = 0;
+		Procesar_Calibracion_Linea();
+		Leer_Linea_Digital();
+
+		PID_PITCH();
 	}
-	if (HAL_GetTick() - lastTime0 > 90){// Este if solo puede utilizarse para actualizar datos para mostrar por pantalla y no para calcular nada por que no es confiable
-	   lastTime0 = HAL_GetTick();
-	   DataToQt(); //llamada cada 50ms
-	   flagDisplay=1;
+	switch(telemetria.data.modo){
+	case MODO_IDDLE:
+		break;
+	case MODO_RC:
+		break;
+	case MODO_FOLLOWLINE:
+		break;
 	}
-	if(flagDisplay){	//DISPLAY DESACTIVADO
-		flagDisplay=0;
-		if (!oled_is_busy) {
-			SSD1306_Fill(SSD1306_COLOR_BLACK);
-				switch(flagOLED){
-				case 0:
-					sprintf(msg, "Kp:%.2f",Kp);
-					SSD1306_GotoXY(1, 0);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-					sprintf(msg, "Kd:%.2f",Kd);
-					SSD1306_GotoXY(1, 10);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-					sprintf(msg, "Ki:%.2f",Ki);
-					SSD1306_GotoXY(1, 20);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-					sprintf(msg, "SP:%.1f", setpoint);
-					SSD1306_GotoXY(1, 30);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-					sprintf(msg, "AP:%.3f", ALPHA_PID);
-					SSD1306_GotoXY(1, 40);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-
-					sprintf(msg, "dm: %ld", delta_t_medido);
-					SSD1306_GotoXY(60, 0);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-					sprintf(msg, "AG:%.2f", accelGiro);
-					SSD1306_GotoXY(60, 10);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-					sprintf(msg, "AX: %.0d", axRaw);
-					SSD1306_GotoXY(60, 30);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-					sprintf(msg, "AY:%.0d", ayRaw);
-					SSD1306_GotoXY(60, 40);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					sprintf(msg, "AZ:%.0d", azRaw);
-					SSD1306_GotoXY(60, 50);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//					sprintf(msg, "====================");
-//					SSD1306_GotoXY(2, 60);
-//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				    oled_update_requested = 1;
-					break;
-				case 1:
-					SSD1306_GotoXY(1, 20);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					sprintf(msg, "DBL: %d",deadband_L);
-					SSD1306_GotoXY(1, 30);
-					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					sprintf(msg, "DBR: %d",deadband_R);
-
-					for (int i = 0; i < 4; i++) {
-						sprintf(msg, "C%d:%4hu", i, adc_buffer[i]);
-						SSD1306_GotoXY(2, 15 + (i * 12));
-						SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-						sprintf(msg, "C%d:%4hu", i + 4, adc_buffer[i + 4]);
-						SSD1306_GotoXY(65, 15 + (i * 12));
-						SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-					}
-					if (flagWIFI) {
-						// Dibujamos el icono de WiFi (podes usar lineas o circulos)
-						SSD1306_Clear();
-						SSD1306_DrawLine(110, 8, 114, 4, SSD1306_COLOR_WHITE); // Onda 1
-						SSD1306_DrawLine(114, 4, 118, 8, SSD1306_COLOR_WHITE);
-						SSD1306_DrawLine(112, 10, 116, 10, SSD1306_COLOR_WHITE); // Punto base
-					} else {
-						// Icono tachado o texto simple
-						SSD1306_Clear();
-						SSD1306_GotoXY(105, 2);
-						SSD1306_Puts("X", &Font_7x10, SSD1306_COLOR_WHITE);
-						SSD1306_DrawLine(105, 2, 120, 12, SSD1306_COLOR_WHITE); // Tachado
-					}
-					oled_update_requested = 1;// NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
-					break;
-				case 2:
-					for (int i = 0; i < 8; i++) {
-					        // 1. Calculamos el ancho de la barra (Supongamos 50 píxeles de ancho máximo)
-					        // Mapeo: (Valor ADC * Ancho Máximo) / 4095
-					        uint8_t barWidth = (uint8_t)((adc_buffer[i] * 50) / 4095);
-					        uint8_t yPos = 0 + (i * 7);
-					        if(i==0 || i == 7){
-					        	char label[4];
-								sprintf(label, "IR%d", i);
-								SSD1306_GotoXY(2, yPos);
-								SSD1306_Puts(label, &Font_7x10, SSD1306_COLOR_WHITE);
-					        }
-					        SSD1306_DrawRectangle(25, yPos, 50, 5, SSD1306_COLOR_WHITE);
-					        SSD1306_DrawFilledRectangle(25, yPos, barWidth, 5, SSD1306_COLOR_WHITE);
-					    }
-					    oled_update_requested = 1; // Le avisamos al scheduler que mande los datos al OLED
-					break;
-				}
-
-		    }
-		}
   }
   /* USER CODE END 3 */
 }
