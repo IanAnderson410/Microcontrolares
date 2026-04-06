@@ -263,6 +263,12 @@ volatile int16_t axRaw, ayRaw, azRaw, gyPitchRaw, gzYawRaw;
 
 volatile uint32_t timeout_rc=0;
 
+
+
+char ip_address[16];               // Buffer para guardar el string "192.168.XXX."
+volatile uint8_t ip_received_flag = 0; // Bandera para avisar al loop principal
+uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -452,31 +458,62 @@ void screenScheduler(void){
 		SSD1306_Fill(SSD1306_COLOR_BLACK);
 			switch(flagOLED){
 			case 0:
-				sprintf(msg, "Follow Line Screen");
-				SSD1306_GotoXY(2, 0);
+				sprintf(msg, "IP: %s",ip_address);
+				SSD1306_GotoXY(1, 0);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+				sprintf(msg, "Dig  | Min | Max");
+				SSD1306_GotoXY(2, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
 
-				sprintf(msg, "0:  %d", estado_sensores[0]);
-				SSD1306_GotoXY(1, 10);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-
-				sprintf(msg, "1:  %d", estado_sensores[1]);
+				sprintf(msg, "0:%d", estado_sensores[0]);
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "2:  %d", estado_sensores[2]);
+				sprintf(msg, "| %d", sensor_min[0]);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "3:  %d", estado_sensores[3]);
+				sprintf(msg, "| %d |", sensor_max[0]);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+
+
+
+
+//				sprintf(msg, "1:  %d", estado_sensores[1]);
+//				SSD1306_GotoXY(1, 30);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//
+//				sprintf(msg, "2:  %d", estado_sensores[2]);
+//				SSD1306_GotoXY(1, 40);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//
+//				sprintf(msg, "3:  %d", estado_sensores[3]);
+//				SSD1306_GotoXY(1, 50);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+//
+//				sprintf(msg, "|%d", sensor_min[0]);
+//				SSD1306_GotoXY(1, 20);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//				sprintf(msg, "|%d", estado_sensores[1]);
+//				SSD1306_GotoXY(1, 30);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//
+//				sprintf(msg, "|| S th  %d", estado_sensores[2]);
+//				SSD1306_GotoXY(1, 40);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+
+
 
 				oled_update_requested = 1;
 				break;
 			case 1:
+
 				sprintf(msg, "AdicionalInfoScreen");
 				SSD1306_GotoXY(0, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
@@ -489,6 +526,8 @@ void screenScheduler(void){
 				sprintf(msg, "Ki:%.2f",Ki);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+
 //					sprintf(msg, "SP:%.1f", setpoint);
 //					SSD1306_GotoXY(1, 30);
 //					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
@@ -770,7 +809,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         counterDataToQt++;
         if(counterHB > delayHB){
             counterHB = 0;
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+          //  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
         	}
         if(counterDataToQt > 10){
         	counterDataToQt = 0;
@@ -807,6 +846,176 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
     }
 
 }
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+    if (huart->Instance == USART1) {
+
+        // --- 1. LÓGICA DE CAPTURA DE IP (TEXTO PLANO) ---
+        if (esperando_digitos_ip == 1) {
+            uint16_t ip_len = (Size > 15) ? 15 : Size;
+            memset(ip_address, 0, sizeof(ip_address));
+            strncpy(ip_address, (char*)rx_buffer_uart, ip_len);
+
+            // Limpieza de caracteres de control
+            for(int i = 0; i < 16; i++){
+                if(ip_address[i] == '\r' || ip_address[i] == '\n' || ip_address[i] == ' '){
+                    ip_address[i] = '\0';
+                    break;
+                }
+            }
+            ip_received_flag = 1;
+            esperando_digitos_ip = 0;
+            // No retornamos aquí por si hay un paquete UNER pegado justo después
+        }
+        else if (strncmp((char*)rx_buffer_uart, "IP:", 3) == 0) {
+            if (Size == 3) {
+                esperando_digitos_ip = 1;
+            } else {
+                uint16_t ip_len = (Size - 3 > 15) ? 15 : (Size - 3);
+                memset(ip_address, 0, sizeof(ip_address));
+                strncpy(ip_address, (char*)(rx_buffer_uart + 3), ip_len);
+                // Limpieza...
+                for(int i = 0; i < 16; i++){
+                    if(ip_address[i] == '\r' || ip_address[i] == '\n'){
+                        ip_address[i] = '\0';
+                        break;
+                    }
+                }
+                ip_received_flag = 1;
+            }
+            // Una vez procesada la IP, podríamos limpiar o continuar si hay más datos
+        }
+
+        // --- 2. LÓGICA DE PROTOCOLO UNER (BINARIO) ---
+        // Usamos un for para recorrer el buffer buscando la cabecera 'UNER'
+        for (int i = 0; i <= (Size - 7); ) {
+            if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' &&
+                rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
+
+                uint8_t len = rx_buffer_uart[i+4];
+                // El protocolo indica: Length = 1(CMD) + N(Payload) + 1(Checksum)
+                // Por lo tanto, el checksum está en: i + 5 (Header+Len+Token) + len
+                uint8_t pos_checksum = i + 5 + len;
+
+                if (pos_checksum < Size) {
+                    uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
+                    uint8_t checksum_calc = 0;
+
+                    for(int k = i; k < pos_checksum; k++) {
+                        checksum_calc ^= rx_buffer_uart[k];
+                    }
+
+                    if (checksum_calc == checksum_recibido) {
+                        uint8_t cmd = rx_buffer_uart[i+6];
+                        uint8_t *payload_ptr = &rx_buffer_uart[i+7];
+                        int16_t payloadInt16 = 0;
+                        float   payloadFloat = 0;
+
+                        switch(cmd){
+               						case CMD_SET_HB:
+               							 delayHB = payload_ptr[0];
+               							 break;
+               						case CMD_CALIBRATE:
+               							 Robot_Drive(0, 0);
+               							 flagCalibrationIsReady=0;
+               							 break;
+               						default:
+               						case CMD_ALIVE:
+               							sendCMD(CMD_ACK, 0); // te devuelvo un alive
+               							break;
+               						case CMD_ACK:
+               							break;
+               						case CMD_ONOFFMOTORS:
+               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+               							BS_NEWPARAM_OK();
+               							flagMotorsAreOn = payloadInt16;
+               							break;
+               						case CMD_TCP_CONNECTED:
+               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+               							if(payloadInt16){	//conectado
+               								BS_tcpConnectSecuence();
+               								flagWIFI=1;
+               							}
+               							else if(payloadInt16 ==0){				//desconectado
+               								BS_Error();
+               								flagWIFI=0;
+               							}
+               							break;
+               						case CMD_CHANGE_DEADLINE_LEFT:
+               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+               							deadband_L = payloadInt16;
+               							BS_NEWPARAM_OK();
+               							break;
+               						case CMD_CHANGE_DEADLINE_RIGHT:
+               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+               							deadband_R = payloadInt16;
+               							BS_NEWPARAM_OK();
+               							break;
+               						case CMD_CHANGE_OLED_SCREEN:
+               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+               							flagOLED = payloadInt16;
+               							BS_NEWPARAM_OK();
+               							break;
+               						case CMD_PID_PITCH_KP:
+               							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+               							Kp = payloadFloat;
+               							BS_NEWPARAM_OK();
+               							break;
+               						case CMD_PID_PITCH_KD:
+               							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+               							Kd = payloadFloat;
+               							BS_NEWPARAM_OK();
+               							break;
+               						case CMD_PID_PITCH_KI:
+               							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+               							Ki = payloadFloat;
+               							BS_NEWPARAM_OK();
+               							break;
+               						case CMD_CHANGE_SETPOINT:
+               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+               							setpoint = payloadInt16;
+               							BS_NEWPARAM_OK();
+               							break;
+               						case CMD_PID_ALPHA:
+               							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+               							ALPHA_PID = payloadFloat;
+               							BS_NEWPARAM_ISNOTOK();
+               							break;
+               						case CMD_RC:{
+               							flag_RC_active =  payload_ptr[0];
+               							if (flag_RC_active) {
+               								RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
+               								RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
+               							} else {
+               								RC_setpoint = 0;
+               								RC_steering = 0;
+               								}
+               							}
+               							break;
+               						case CMD_IR_INICIAR_CALIBRACION:
+               							Iniciar_Calibracion_Linea();
+               						  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+               							break;
+               						case CMD_IR_DETENER_CALIBRACION:
+               							Finalizar_Calibracion_Linea();
+               						  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+               							break;
+               					}
+                        i = pos_checksum + 1; // Saltamos al final del paquete procesado
+                        continue;
+                    }
+                }
+            }
+            i++; // Si no hay cabecera, avanzamos un byte
+        }
+
+        // --- 3. REARME DEL DMA ---
+        // Importante: No uses memset(rx_buffer_uart, 0, 256) antes de reiniciar si no estás seguro
+        // de que no quedaron bytes de un paquete incompleto al final.
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+        __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); // Desactivar interrupción de Half Transfer
+    }
+}
+/*
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if (huart->Instance == USART1) {
         // Recorremos el buffer buscando cabeceras "UNER"
@@ -929,6 +1138,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     }
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
 }
+
+*/
 /*
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)	{
 		if (huart->Instance == USART1){
