@@ -239,12 +239,13 @@ volatile 	uint8_t 		oled_current_page = 0;
 volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
 
 // =================[ Digitalizador del IR ] =================//
-uint16_t 	adc_raw[4];
-uint8_t 	estado_sensores[4];
-uint16_t 	sensor_min[4];
-uint16_t 	sensor_max[4];
-uint16_t 	sensor_threshold[4];
-uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estamos
+volatile uint16_t 	adc_raw[4];
+volatile uint16_t adc_filtrado[4] = {2000, 2000, 2000, 2000};
+volatile uint8_t 	estado_sensores[4];
+volatile uint16_t 	sensor_min[4];
+volatile uint16_t 	sensor_max[4];
+volatile uint16_t 	sensor_threshold[4];
+volatile uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estamos
 // recibidos desde el qt
 uint8_t rx_buffer_uart[256];
 char msg[20];
@@ -461,53 +462,25 @@ void screenScheduler(void){
 				sprintf(msg, "IP: %s",ip_address);
 				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
 				sprintf(msg, "Dig  | Min | Max");
 				SSD1306_GotoXY(2, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-
-				sprintf(msg, "0:%d", estado_sensores[0]);
+				sprintf(msg, "0:%d|%d|%d", estado_sensores[0], sensor_min[0], sensor_max[0]);
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "| %d", sensor_min[0]);
+				sprintf(msg, "1:%d|%d|%d", estado_sensores[1], sensor_min[1], sensor_max[1]);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "| %d |", sensor_max[0]);
+				sprintf(msg, "2:%d|%d|%d", estado_sensores[2], sensor_min[2], sensor_max[2]);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-
-
-
-
-//				sprintf(msg, "1:  %d", estado_sensores[1]);
-//				SSD1306_GotoXY(1, 30);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//
-//				sprintf(msg, "2:  %d", estado_sensores[2]);
-//				SSD1306_GotoXY(1, 40);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//
-//				sprintf(msg, "3:  %d", estado_sensores[3]);
-//				SSD1306_GotoXY(1, 50);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-//
-//				sprintf(msg, "|%d", sensor_min[0]);
-//				SSD1306_GotoXY(1, 20);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//				sprintf(msg, "|%d", estado_sensores[1]);
-//				SSD1306_GotoXY(1, 30);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//
-//				sprintf(msg, "|| S th  %d", estado_sensores[2]);
-//				SSD1306_GotoXY(1, 40);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-
+				sprintf(msg, "3:%d|%d|%d", estado_sensores[3], sensor_min[3], sensor_max[3]);
+				SSD1306_GotoXY(1, 50);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
 
 				oled_update_requested = 1;
@@ -593,23 +566,26 @@ void screenScheduler(void){
 			}
 	    }
 }
-void Iniciar_Calibracion_Linea(void) {
+void Filtrar_Sensores_IR(void) {
     for(int i = 0; i < 4; i++) {
-        sensor_min[i] = 4095; // Valor máximo del ADC
-        sensor_max[i] = 0;    // Valor mínimo del ADC
+        // Ahora es 90% historia y 10% dato nuevo
+        adc_filtrado[i] = (adc_filtrado[i] * 9 + adc_buffer[i]) / 10;
     }
+}
+void Iniciar_Calibracion_Linea(void) {
+
     flag_calibrando_linea = 1;
 }
 void Procesar_Calibracion_Linea(void) {
     if (flag_calibrando_linea) {
         for(int i = 0; i < 4; i++) {
             // Buscamos si hay un nuevo récord de valor bajo (Blanco)
-            if(adc_raw[i] < sensor_min[i]) {
-                sensor_min[i] = adc_raw[i];
+            if(adc_filtrado[i] < sensor_min[i]) {
+                sensor_min[i] = adc_filtrado[i];
             }
             // Buscamos si hay un nuevo récord de valor alto (Negro)
-            if(adc_raw[i] > sensor_max[i]) {
-                sensor_max[i] = adc_raw[i];
+            if(adc_filtrado[i] > sensor_max[i]) {
+                sensor_max[i] = adc_filtrado[i];
             }
         }
     }
@@ -617,7 +593,7 @@ void Procesar_Calibracion_Linea(void) {
 void Leer_Linea_Digital(void) {
     for(int i = 0; i < 4; i++) {
         // Si el valor analógico superó la mitad, está viendo la línea
-        if(adc_raw[i] > sensor_threshold[i]) {
+        if(adc_filtrado[i] > sensor_threshold[i]) {
             estado_sensores[i] = 1; // NEGRO
         } else {
             estado_sensores[i] = 0; // BLANCO
@@ -1319,6 +1295,11 @@ int main(void)
 
 	Leer_Linea_Digital() ;
 	Finalizar_Calibracion_Linea();
+
+	for(int i = 0; i < 4; i++) {
+	        sensor_min[i] = 4095; // Valor máximo del ADC
+	        sensor_max[i] = 0;    // Valor mínimo del ADC
+	    }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -1335,9 +1316,9 @@ int main(void)
 	if(flagDisplay){	flagDisplay=0;		screenScheduler();}
 	if(flagPID){
 		flagPID = 0;
+		Filtrar_Sensores_IR();
 		Procesar_Calibracion_Linea();
 		Leer_Linea_Digital();
-
 		PID_PITCH();
 	}
 	switch(telemetria.data.modo){
