@@ -178,6 +178,7 @@ typedef struct {
 // ================= [ Variables generales ] ================= //
 			uint16_t 		delayHB	= 50; //ENTRE 1 Y 200
 			uint32_t 		lastTime0 = 0; // tiempo en el while 1
+volatile	uint8_t			currentMode = MODO_IDDLE;
 // ================= [ Flags ] ================= //
 volatile 	uint8_t 		flagPID 				= 	0;
 volatile 	uint8_t 		flagDisplay				=	0;
@@ -213,7 +214,9 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			float Kp_yaw = 100.0f; // Ganancia Proporcional inicial (a sintonizar)
 			float Kd_yaw = 10.0f; // Ganancia Derivativa inicial (a sintonizar)
 			float last_error_yaw = 0.0f;
-			volatile    float 			FL_setpoint = 0.5f;
+volatile    float 			FL_setpoint = 0.5f;
+			float last_state_linea = 0.0f;
+			float error_linea;
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y 	= 0;
 // =================[ Variables de Calibración ] =================//
@@ -339,7 +342,8 @@ void Leer_Linea_Digital(void);
  * @note 								Frecuencia de ejecución dependiente de la llegada de datos del MPU (100Hz nominal).
  */
 void PID_PITCH(void);
-
+float calcularErrorYawDiscreto(void);
+float calcularErrorYawContinuo(void);
 int16_t Calcular_PID_YAW(float error_linea);
 /**
  * @brief sendCMD:						Envía un comando bajo el Protocolo UNER vía UART DMA.
@@ -466,26 +470,26 @@ void screenScheduler(void){
 		SSD1306_Fill(SSD1306_COLOR_BLACK);
 			switch(flagOLED){
 			case 0:
-				sprintf(msg, "IP: %s",ip_address);
+				sprintf(msg, "IP:%s", ip_address);
 				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "Dig  | Min | Max");
+				sprintf(msg, "Dig|Min|Max| %.2f", error_linea);
 				SSD1306_GotoXY(2, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "0:%d|%d|%d", estado_sensores[0], sensor_min[0], sensor_max[0]);
+				sprintf(msg, "0: %d|%d|%d|%d", estado_sensores[0], sensor_min[0], sensor_max[0], currentMode);
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "1:%d|%d|%d", estado_sensores[1], sensor_min[1], sensor_max[1]);
+				sprintf(msg, "1: %d|%d|%d", estado_sensores[1], sensor_min[1], sensor_max[1]);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "2:%d|%d|%d", estado_sensores[2], sensor_min[2], sensor_max[2]);
+				sprintf(msg, "2: %d|%d|%d", estado_sensores[2], sensor_min[2], sensor_max[2]);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "3:%d|%d|%d", estado_sensores[3], sensor_min[3], sensor_max[3]);
+				sprintf(msg, "3: %d|%d|%d", estado_sensores[3], sensor_min[3], sensor_max[3]);
 				SSD1306_GotoXY(1, 50);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
@@ -644,28 +648,85 @@ void PID_PITCH(void){
 	   }
 	   if(flagMotorsAreOn==0||angle_y > 50||angle_y < -50)	   Robot_Drive(0, 0);
 }
-float Calcular_Error_Linea(void) {
+float calcularErrorYawDiscreto(void) {
     float numerador = 0.0f;
     float denominador = 0.0f;
-
-    // Calculamos el numerador usando los pesos (-3, -1, 1, 3)
-    // ATENCIÓN: Asumo que el índice 3 es el extremo izquierdo y el 0 el derecho.
     numerador = (estado_sensores[3] * -3.0f) +
                 (estado_sensores[2] * -1.0f) +
                 (estado_sensores[1] * 1.0f) +
                 (estado_sensores[0] * 3.0f);
-
-    // Calculamos cuántos sensores están viendo la línea
-    denominador = estado_sensores[3] + estado_sensores[2] +
-                  estado_sensores[1] + estado_sensores[0];
-
-    // Lógica de pérdida de línea: si ningún sensor ve negro, el denominador es 0
+    denominador = estado_sensores[3] + estado_sensores[2] + estado_sensores[1] + estado_sensores[0];
     if (denominador == 0) {
         return 0.0f; // Asumimos error 0 para que siga caminando derecho
-    }
-
-    // Retornamos el promedio ponderado
+    	}
     return (numerador / denominador);
+}
+float calcularErrorYawContinuo(void) {
+		float val_norm[4] = {0};
+	    int pico_index = 0;
+	    float max_val = -1.0f;
+
+	    // Posiciones físicas de nuestros sensores (Izquierda a Derecha)
+	    // indice 3 = Izq ext (-3) | indice 2 = Izq int (-1) | indice 1 = Der int (1) | indice 0 = Der ext (3)
+	    float pos_x[4] = {3.0f, 1.0f, -1.0f, -3.0f};
+	    // 1. NORMALIZACIÓN Y BÚSQUEDA DEL PICO
+	    for(int i = 0; i < 4; i++) {
+	        // Evitar división por cero si la calibración falló
+	        if (sensor_max[i] == sensor_min[i]) {
+	            val_norm[i] = 0.0f;
+	            continue;
+	        }
+	        // Normalizamos: 0.0 (Blanco absoluto) a 1.0 (Negro absoluto)
+	        float rango = (float)(sensor_max[i] - sensor_min[i]);
+	        val_norm[i] = (float)(adc_filtrado[i] - sensor_min[i]) / rango;
+	        // Saturamos por si hay un pico de ruido que supere al max/min
+	        if(val_norm[i] > 1.0f) val_norm[i] = 1.0f;
+	        if(val_norm[i] < 0.0f) val_norm[i] = 0.0f;
+	        // Buscamos cuál sensor está leyendo más negro
+	        if(val_norm[i] > max_val) {
+	            max_val = val_norm[i];
+	            pico_index = i;
+	        }
+	    }
+
+	    // 2. MÁQUINA DE ESTADOS: ¿Perdimos la línea?
+	    // Si el valor máximo normalizado es muy bajo (ej: < 0.25), todos ven blanco
+	    if (max_val < 0.25f) {
+	        // MODO RECUPERACIÓN: Usamos la "memoria"
+	        // Si la última vez que la vimos estaba a la izquierda (< 0), forzamos un giro brusco a la izquierda
+	        if (last_state_linea < 0.0f) {
+	            return -4.0f; // Valor exagerado (mayor a 3) para forzar volantazo
+	        } else {
+	            return 4.0f;  // Volantazo a la derecha
+	        }
+	    }
+
+	    // 3. MODO CUADRÁTICO: Calcular el vértice de la parábola
+	    // Extraemos el valor del centro (el pico) y de sus dos vecinos
+	    float y_centro = val_norm[pico_index];
+
+	    // Vecino Izquierdo (índice + 1). Si es el borde, usamos "Sensor Fantasma" en 0.0f
+	    float y_izq = (pico_index + 1 < 4) ? val_norm[pico_index + 1] : 0.0f;
+
+	    // Vecino Derecho (índice - 1). Si es el borde, usamos "Sensor Fantasma" en 0.0f
+	    float y_der = (pico_index - 1 >= 0) ? val_norm[pico_index - 1] : 0.0f;
+
+	    // Matemática de la parábola: Calculamos cuánto se desvía la línea respecto al sensor pico
+	    float denominador = (y_izq + y_der - 2.0f * y_centro);
+	    float offset = 0.0f;
+
+	    if (denominador != 0.0f) {
+	        // La distancia física entre nuestros sensores es 2.0 (ej: de -1 a 1).
+	        // Esta fórmula ya tiene integrado ese espaciado.
+	        offset = (y_izq - y_der) / denominador;
+	    }
+
+	    // 4. RESULTADO FINAL
+	    // La posición real es la posición del sensor pico MÁS el ajuste milimétrico de la parábola
+	    float error_continuo = pos_x[pico_index] + offset;
+	    // Guardamos esta posición en la memoria para el futuro
+	    last_state_linea = error_continuo;
+	    return error_continuo;
 }
 int16_t Calcular_PID_YAW(float error_linea) {
     // 1. Proporcional: Reacción instantánea al error
@@ -943,6 +1004,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
                							break;
                						case CMD_ACK:
                							break;
+               						case CMD_CHANGE_MODE:
+               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+               							currentMode = payloadInt16;
+               							break;
                						case CMD_ONOFFMOTORS:
                							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
                							BS_NEWPARAM_OK();
@@ -1007,7 +1072,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
                						case CMD_CHANGE_SETPOINT:
                							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
                							setpoint = payloadInt16;
-               							BS_NEWPARAM_OK();
+               							//BS_NEWPARAM_OK();
                							break;
                						case CMD_PID_ALPHA:
                							memcpy(&payloadFloat, payload_ptr, sizeof(float));
@@ -1115,10 +1180,8 @@ int main(void)
 	//Kalman_Init(&kalman_pitch);
 
 	Iniciar_Calibracion_Linea();
-
 	Leer_Linea_Digital() ;
 	Finalizar_Calibracion_Linea();
-
 	for(int i = 0; i < 4; i++) {
 	        sensor_min[i] = 4095; // Valor máximo del ADC
 	        sensor_max[i] = 0;    // Valor mínimo del ADC
@@ -1139,25 +1202,23 @@ int main(void)
 	if(flagDisplay){	flagDisplay=0;		screenScheduler();}
 	if(flagPID){
 		flagPID = 0;
-
-		if (telemetria.data.modo == MODO_FOLLOWLINE) {
-			//RC_setpoint = 0.0f;
-			Filtrar_Sensores_IR();
-			Procesar_Calibracion_Linea();
-			Leer_Linea_Digital();
-	        float error_linea = Calcular_Error_Linea();
-	        RC_steering = Calcular_PID_YAW(error_linea);
-		}
+		switch(currentMode){
+			case MODO_IDDLE:
+				break;
+			case MODO_RC:
+				break;
+			case MODO_FOLLOWLINE:
+				//RC_setpoint = 0.0f;
+				Filtrar_Sensores_IR();
+				Procesar_Calibracion_Linea();
+				Leer_Linea_Digital();
+				error_linea = calcularErrorYawContinuo();//calcularErrorYawDiscreto();
+				RC_steering = Calcular_PID_YAW(error_linea);
+				break;
+			}
 		PID_PITCH();
 	}
-	switch(telemetria.data.modo){
-	case MODO_IDDLE:
-		break;
-	case MODO_RC:
-		break;
-	case MODO_FOLLOWLINE:
-		break;
-	}
+
 
   }
   /* USER CODE END 3 */
