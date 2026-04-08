@@ -99,9 +99,15 @@ typedef struct {
     // El checksum no lo ponemos en el struct fijo porque su posición varía
 } UnerPacket_t;
 enum {
-	MODO_IDDLE 			= 	0,
-	MODO_RC				=	1,
-	MODO_FOLLOWLINE 	= 	2
+	MODO_IDDLE 					= 0,
+	MODO_RC						= 1,
+	MODO_FL_INICIO				= 2,
+	MODO_FL_BUSQUEDA_INICIAL  	= 3,
+	MODO_FL_SIGUIENDO			= 4,
+	MODO_FL_RESCATE				= 5,
+	MODO_FL_PERDIDO_FAILSAFE  	= 6,
+	MODO_FL_ESQUIVAR_OBSTACULO 	= 7,
+	MODO_FL_INGRESO_A_90		= 8
 };
 enum {
     // Sistema y Heartbeat
@@ -167,6 +173,13 @@ typedef struct {
 #define 	UNER_TOKEN      	':'    // 0x3A según tu PDF o preferencia
 // ================= [ Periféricos ] ================= //
 #define 	MPU6050_ADDR 	(0x68 << 1) // Dirección I2C desplazada
+
+	#define IRCSAAB (estado_sensores[0] && estado_sensores[1] && estado_sensores[2] && estado_sensores[3])	// ESTA MACRO SIGNIFICA IR CURRENT STATE ARE ALL BLACK
+	#define IRLSAAB (ultimo_estado_sensores[0] && ultimo_estado_sensores[1] && ultimo_estado_sensores[2] && ultimo_estado_sensores[3])	// ESTA MACRO SIGNIFICA IR LAST STATE ARE ALL BLACK
+	#define IRCSAAW (!estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2] && !estado_sensores[3])	// ESTA MACRO SIGNIFICA IR CURRENT STATE ARE ALL WHITE
+	#define IRLSAAW (!ultimo_estado_sensores[0] && !ultimo_estado_sensores[1] && !ultimo_estado_sensores[2] && !ultimo_estado_sensores[3])	// ESTA MACRO SIGNIFICA IR LAST STATE ARE ALL WHITE
+	#define	AIRAB	(estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3])	// ESTA MACRO SIGNIFICA ANY IR ARE BLACK
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -185,7 +198,7 @@ volatile 	uint8_t 		flagDisplay				=	0;
 volatile	uint8_t			flagSendUNER 			= 	0;
 volatile	uint8_t			flagDataToQt 			= 	0;
 volatile	uint8_t			flagWIFI				=   0;
-volatile	uint8_t 		flagOLED 				= 	0;
+volatile	uint8_t 		flagOLED 				= 	1;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
@@ -211,12 +224,27 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			float           ALPHA_PID = 0.98f;
 // =================[ Variables de Control PID YAW] ================= //
 			// Constantes del PID de YAW (Giro) - Ideales para modificar desde Qt
-			float Kp_yaw = 100.0f; // Ganancia Proporcional inicial (a sintonizar)
-			float Kd_yaw = 10.0f; // Ganancia Derivativa inicial (a sintonizar)
-			float last_error_yaw = 0.0f;
-volatile    float 			FL_setpoint = 0.5f;
-			float last_state_linea = 0.0f;
-			float error_linea;
+			float 		Kp_yaw = 200.0f; // Ganancia Proporcional inicial (a sintonizar)
+			float 		Kd_yaw = 0.1f; // Ganancia Derivativa inicial (a sintonizar)
+			float 		last_error_yaw = 0.0f;
+volatile    float 		FL_setpoint = 0.5f;
+			float 		last_state_linea = 0.0f;
+			float 		error_linea;
+			uint32_t	timer_rescate=0;
+volatile 	uint16_t 	adc_raw[4];
+volatile 	uint16_t adc_filtrado[4] = {2000, 2000, 2000, 2000};
+volatile 	uint8_t 	estado_sensores[4];
+volatile 	uint8_t 	ultimo_estado_sensores[4];
+volatile 	uint16_t 	sensor_min[4];
+volatile 	uint16_t 	sensor_max[4];
+volatile 	uint16_t 	sensor_threshold[4];
+volatile 	uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estamos
+		// Umbrales de los IR de obstáculos (A calibrar luego)
+		// Asumo que a mayor valor, más cerca está el obstáculo
+		uint16_t UMBRAL_FRENTE_CHOQUE = 3700;  // Valor donde detecta la caja de frente
+		uint16_t SETPOINT_PARED_DER = 	1000;    // Valor ideal para mantener la caja a 5cm
+		uint16_t UMBRAL_PERDIDA_PARED = 3000;   // Si cae de este valor, la pared se terminó
+uint8_t sentidoDeGiro=0; // 0 horario, 1 anti-horario
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y 	= 0;
 // =================[ Variables de Calibración ] =================//
@@ -231,7 +259,6 @@ volatile    float 			FL_setpoint = 0.5f;
 			uint16_t 		adc_buffer[8]; // El buffer que llena el DMA
 // =================[ Modo Radio Control ] =================//
 volatile 	float 			RC_setpoint = 0;
-
 volatile 	float 			RC_slow_setpoint = 0;
 volatile 	int16_t   		RC_steering = 0;
 float 		paso = 0.1f; // Velocidad de inclinación
@@ -249,13 +276,19 @@ volatile 	uint8_t 		oled_current_page = 0;
 volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
 
 // =================[ Digitalizador del IR ] =================//
-volatile uint16_t 	adc_raw[4];
-volatile uint16_t adc_filtrado[4] = {2000, 2000, 2000, 2000};
-volatile uint8_t 	estado_sensores[4];
-volatile uint16_t 	sensor_min[4];
-volatile uint16_t 	sensor_max[4];
-volatile uint16_t 	sensor_threshold[4];
-volatile uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estamos
+
+
+// Máquina de estados de la evasión
+typedef enum {
+    EVA_DETECTADO,
+    EVA_GIRAR_IZQ,
+    EVA_SEGUIR_PARED,
+    EVA_AVANZAR_ESQUINA,
+    EVA_GIRAR_DER
+} EstadoEvasion_t;
+
+EstadoEvasion_t estado_evasion = EVA_DETECTADO;
+uint32_t timer_evasion = 0; // Para contar milisegundos en las maniobras
 // recibidos desde el qt
 uint8_t rx_buffer_uart[256];
 char msg[20];
@@ -350,7 +383,7 @@ int16_t Calcular_PID_YAW(float error_linea);
  * @param cmd: 							Código del comando (CMD)
  * @param param: 						Parámetro de 16 bits (enviado en Little Endian ).
  */
-
+void Procesar_Evasion_Obstaculo(void);
 void sendCMD(uint8_t cmd, uint16_t param);
 /**
  * @brief DataToQt:						Empaqueta y envía la telemetría completa hacia la interfaz Qt.
@@ -476,39 +509,60 @@ void screenScheduler(void){
 				sprintf(msg, "Dig|Min|Max| %.2f", error_linea);
 				SSD1306_GotoXY(2, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-				sprintf(msg, "0: %d|%d|%d|%d", estado_sensores[0], sensor_min[0], sensor_max[0], currentMode);
+				sprintf(msg, "0: %d|| %d|", estado_sensores[0], currentMode);
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-				sprintf(msg, "1: %d|%d|%d", estado_sensores[1], sensor_min[1], sensor_max[1]);
+				sprintf(msg, "1: %d|| %d", estado_sensores[1], RC_steering);
+				SSD1306_GotoXY(1, 30);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, "2: %d||Kp:%.2f", estado_sensores[2], Kp_yaw);
+				SSD1306_GotoXY(1, 40);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, "3: %d||Kd:%.2f", estado_sensores[3], Kd_yaw);
+				SSD1306_GotoXY(1, 50);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				oled_update_requested = 1;
+				break;
+			case 2:
+				sprintf(msg, "IP:%s", ip_address);
+				SSD1306_GotoXY(1, 0);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, "%d | %d", adc_buffer[5], ((int16_t)(error_linea * 100.0f)));
+				SSD1306_GotoXY(1, 20);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, "%d | %d ", adc_buffer[6], RC_setpoint);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "2: %d|%d|%d", estado_sensores[2], sensor_min[2], sensor_max[2]);
+				sprintf(msg, "%d ", adc_buffer[7]);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "3: %d|%d|%d", estado_sensores[3], sensor_min[3], sensor_max[3]);
+				sprintf(msg, "Mode: %d ", currentMode);
 				SSD1306_GotoXY(1, 50);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
 
 				oled_update_requested = 1;
 				break;
 			case 1:
-
 				sprintf(msg, "AdicionalInfoScreen");
 				SSD1306_GotoXY(0, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "Kp:%.2f",Kp);
+				sprintf(msg, "Param|PITCH|YAW|M%d", currentMode);
+				SSD1306_GotoXY(0, 10);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, " Kp | %3.2f | %3.2f",Kp , Kp_yaw);
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "Kd:%.2f",Kd);
+				sprintf(msg, " Kd | %3.2f | %3.2f",Kd, Kd_yaw);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "Ki:%.2f",Ki);
+				sprintf(msg, " Ki | %3.2f | - ", Ki);
 				SSD1306_GotoXY(1, 40);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+				sprintf(msg, "SP:%3.2f|RCSP:%4d|RCST:%4d ", setpoint, RC_setpoint, RC_steering);
+				SSD1306_GotoXY(1, 50);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
 
@@ -533,28 +587,28 @@ void screenScheduler(void){
 //					sprintf(msg, "AZ:%.0d", azRaw);
 //					SSD1306_GotoXY(60, 50);
 //					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				SSD1306_GotoXY(1, 20);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "DBL: %d",deadband_L);
-				SSD1306_GotoXY(1, 30);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "DBR: %d",deadband_R);
-				if (flagWIFI) {
-					// Dibujamos el icono de WiFi (podes usar lineas o circulos)
-					SSD1306_Clear();
-					SSD1306_DrawLine(110, 8, 114, 4, SSD1306_COLOR_WHITE); // Onda 1
-					SSD1306_DrawLine(114, 4, 118, 8, SSD1306_COLOR_WHITE);
-					SSD1306_DrawLine(112, 10, 116, 10, SSD1306_COLOR_WHITE); // Punto base
-				} else {
-					// Icono tachado o texto simple
-					SSD1306_Clear();
-					SSD1306_GotoXY(105, 2);
-					SSD1306_Puts("X", &Font_7x10, SSD1306_COLOR_WHITE);
-					SSD1306_DrawLine(105, 2, 120, 12, SSD1306_COLOR_WHITE); // Tachado
-				}
+//				SSD1306_GotoXY(1, 20);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//				sprintf(msg, "DBL: %d",deadband_L);
+//				SSD1306_GotoXY(1, 30);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//				sprintf(msg, "DBR: %d",deadband_R);
+//				if (flagWIFI) {
+//					// Dibujamos el icono de WiFi (podes usar lineas o circulos)
+//					SSD1306_Clear();
+//					SSD1306_DrawLine(110, 8, 114, 4, SSD1306_COLOR_WHITE); // Onda 1
+//					SSD1306_DrawLine(114, 4, 118, 8, SSD1306_COLOR_WHITE);
+//					SSD1306_DrawLine(112, 10, 116, 10, SSD1306_COLOR_WHITE); // Punto base
+//				} else {
+//					// Icono tachado o texto simple
+//					SSD1306_Clear();
+//					SSD1306_GotoXY(105, 2);
+//					SSD1306_Puts("X", &Font_7x10, SSD1306_COLOR_WHITE);
+//					SSD1306_DrawLine(105, 2, 120, 12, SSD1306_COLOR_WHITE); // Tachado
+//				}
 				oled_update_requested = 1;// NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
 				break;
-			case 2:
+			case 3:
 				sprintf(msg, "IR and MPU Screen ");
 				SSD1306_GotoXY(2, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
@@ -584,8 +638,12 @@ void Filtrar_Sensores_IR(void) {
     }
 }
 void Iniciar_Calibracion_Linea(void) {
-
     flag_calibrando_linea = 1;
+    	for(int i = 0; i < 4; i++) {
+    		sensor_min[i] = 4095; // Valor máximo del ADC
+    		sensor_max[i] = 0;    // Valor mínimo del ADC
+    		}
+
 }
 void Procesar_Calibracion_Linea(void) {
     if (flag_calibrando_linea) {
@@ -614,9 +672,13 @@ void Leer_Linea_Digital(void) {
 void Finalizar_Calibracion_Linea(void) {
     flag_calibrando_linea = 0;
     for(int i = 0; i < 4; i++) {
-        // El punto medio perfecto entre lo más blanco y lo más negro que vio
-        sensor_threshold[i] = (sensor_max[i] + sensor_min[i]) / 2;
-    }
+          // El punto medio perfecto entre lo más blanco y lo más negro que vio
+          sensor_threshold[i] = (sensor_max[i] + sensor_min[i]) / 2;
+      }
+//    sensor_threshold[0] = (806 + 3419) / 2;
+//    sensor_threshold[1] = (283 + 3213) / 2;
+//    sensor_threshold[2] = (339 + 3456) / 2;
+//    sensor_threshold[3] = (1280 + 3634) / 2;
 }
 void PID_PITCH(void){
 		float gyro_rate = -(((float)gyPitchRaw / 131.0f)); // 65.5f));
@@ -641,8 +703,23 @@ void PID_PITCH(void){
 	   float output = P + I + D ; // Funcion de transferencia
 	   last_error = error;
 	   if(flagMotorsAreOn){
-		   int16_t outputLeft = (int16_t)output + RC_steering 	+ FL_setpoint;
-		   int16_t outputRigth = (int16_t)output - RC_steering 	+ FL_setpoint;
+		   int16_t outputLeft = 0;
+		   int16_t outputRigth = 0;
+		   switch(currentMode){
+		   case MODO_IDDLE:
+			   outputLeft = (int16_t)output;
+			   outputRigth = (int16_t)output;
+			   break;
+		   case MODO_RC:
+		   default:
+			   outputLeft = (int16_t)output  + RC_steering;
+			   outputRigth = (int16_t)output - RC_steering;
+			   break;
+//		   case MODO_FOLLOWLINE:
+//			   outputLeft = (int16_t)output	 + FL_setpoint;
+//			   outputRigth = (int16_t)output + FL_setpoint;
+//			   break;
+		   }
 		   Robot_Drive(outputLeft, outputRigth);
 		//   Robot_Drive((int16_t)output, (int16_t)output);
 	   }
@@ -651,21 +728,56 @@ void PID_PITCH(void){
 float calcularErrorYawDiscreto(void) {
     float numerador = 0.0f;
     float denominador = 0.0f;
-    numerador = (estado_sensores[3] * -3.0f) +
-                (estado_sensores[2] * -1.0f) +
-                (estado_sensores[1] * 1.0f) +
-                (estado_sensores[0] * 3.0f);
+    numerador = (estado_sensores[3] * -2.5f) +
+                (estado_sensores[2] * -1.2f) +
+                (estado_sensores[1] * 1.2f) +
+                (estado_sensores[0] * 2.5f);
     denominador = estado_sensores[3] + estado_sensores[2] + estado_sensores[1] + estado_sensores[0];
     if (denominador == 0) {
         return 0.0f; // Asumimos error 0 para que siga caminando derecho
     	}
-    return (numerador / denominador);
+    float last_state_linea = (numerador / denominador);;
+
+    return last_state_linea;
 }
+float calcularErrorYawContinuo(void) {
+    float val_norm[4] = {0};
+    int pico_index = 0;
+    float max_val = -1.0f;
+    float pos_x[4] = {3.0f, 1.0f, -1.0f, -3.0f};
+
+    // 1. NORMALIZACIÓN
+    for(int i = 0; i < 4; i++) {
+        if (sensor_max[i] == sensor_min[i]) { val_norm[i] = 0.0f; continue; }
+        float rango = (float)(sensor_max[i] - sensor_min[i]);
+        val_norm[i] = (float)(adc_filtrado[i] - sensor_min[i]) / rango;
+        if(val_norm[i] > 1.0f) val_norm[i] = 1.0f;
+        if(val_norm[i] < 0.0f) val_norm[i] = 0.0f;
+
+        if(val_norm[i] > max_val) { max_val = val_norm[i]; pico_index = i; }
+    }
+
+    // 2. CÁLCULO DE LA PARÁBOLA
+    float y_centro = val_norm[pico_index];
+    float y_izq = (pico_index + 1 < 4) ? val_norm[pico_index + 1] : 0.0f;
+    float y_der = (pico_index - 1 >= 0) ? val_norm[pico_index - 1] : 0.0f;
+
+    float denominador = (y_izq + y_der - 2.0f * y_centro);
+    float offset = 0.0f;
+    if (denominador != 0.0f) { offset = (y_izq - y_der) / denominador; }
+
+    float error_continuo = pos_x[pico_index] + offset;
+
+    // GUARDAMOS MEMORIA PARA EL RESCATE
+    last_state_linea = error_continuo;
+
+    return error_continuo;
+}
+/*
 float calcularErrorYawContinuo(void) {
 		float val_norm[4] = {0};
 	    int pico_index = 0;
 	    float max_val = -1.0f;
-
 	    // Posiciones físicas de nuestros sensores (Izquierda a Derecha)
 	    // indice 3 = Izq ext (-3) | indice 2 = Izq int (-1) | indice 1 = Der int (1) | indice 0 = Der ext (3)
 	    float pos_x[4] = {3.0f, 1.0f, -1.0f, -3.0f};
@@ -688,7 +800,6 @@ float calcularErrorYawContinuo(void) {
 	            pico_index = i;
 	        }
 	    }
-
 	    // 2. MÁQUINA DE ESTADOS: ¿Perdimos la línea?
 	    // Si el valor máximo normalizado es muy bajo (ej: < 0.25), todos ven blanco
 	    if (max_val < 0.25f) {
@@ -700,17 +811,13 @@ float calcularErrorYawContinuo(void) {
 	            return 4.0f;  // Volantazo a la derecha
 	        }
 	    }
-
 	    // 3. MODO CUADRÁTICO: Calcular el vértice de la parábola
 	    // Extraemos el valor del centro (el pico) y de sus dos vecinos
 	    float y_centro = val_norm[pico_index];
-
 	    // Vecino Izquierdo (índice + 1). Si es el borde, usamos "Sensor Fantasma" en 0.0f
 	    float y_izq = (pico_index + 1 < 4) ? val_norm[pico_index + 1] : 0.0f;
-
-	    // Vecino Derecho (índice - 1). Si es el borde, usamos "Sensor Fantasma" en 0.0f
+	    // Vecno Derecho (índice - 1). Si es el borde, usamos "Sensor Fantasma" en 0.0f
 	    float y_der = (pico_index - 1 >= 0) ? val_norm[pico_index - 1] : 0.0f;
-
 	    // Matemática de la parábola: Calculamos cuánto se desvía la línea respecto al sensor pico
 	    float denominador = (y_izq + y_der - 2.0f * y_centro);
 	    float offset = 0.0f;
@@ -727,7 +834,7 @@ float calcularErrorYawContinuo(void) {
 	    // Guardamos esta posición en la memoria para el futuro
 	    last_state_linea = error_continuo;
 	    return error_continuo;
-}
+}*/
 int16_t Calcular_PID_YAW(float error_linea) {
     // 1. Proporcional: Reacción instantánea al error
     float P_yaw = Kp_yaw * error_linea;
@@ -743,6 +850,57 @@ int16_t Calcular_PID_YAW(float error_linea) {
     if(salida_yaw < -500.0f) salida_yaw = -500.0f;
 
     return (int16_t)salida_yaw;
+}
+void Procesar_Evasion_Obstaculo(void) {
+	/*
+    // 1. CONDICIÓN DE SALIDA (Prioridad Absoluta)
+    if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3]) {
+        currentMode = ;
+        estado_evasion = EVA_DETECTADO;
+        return;
+    }
+    // 2. MÁQUINA DE ESTADOS (Pared a la Derecha)
+    switch(estado_evasion) {
+        case EVA_DETECTADO:
+            RC_setpoint = 0.0f;
+            RC_steering = 0.0f;
+            estado_evasion = EVA_GIRAR_IZQ; // <--- Giramos a la izquierda para dejar la caja a la derecha
+            timer_evasion = HAL_GetTick();
+            break;
+        case EVA_GIRAR_IZQ:
+            RC_setpoint = 0.0f;
+            RC_steering = -150.0f; // Negativo (Izquierda)
+            if (HAL_GetTick() - timer_evasion > 500) estado_evasion = EVA_SEGUIR_PARED;
+            break;
+        case EVA_SEGUIR_PARED:
+            RC_setpoint = 1.0f;
+            // Mini PID de Pared Derecha (Usando adc_buffer[6])
+            // Lógica:
+            // Si lee 800 (muy cerca), Error = 800 - 1000 = -200. Steering Negativo -> Dobla Izq (se aleja).
+            // Si lee 1500 (muy lejos), Error = 1500 - 1000 = 500. Steering Positivo -> Dobla Der (se acerca).
+            float error_pared = (float)(adc_buffer[6] - SETPOINT_PARED_DER);
+            // Mantenemos el Kp MUY bajito porque el sensor es súper sensible
+            RC_steering = error_pared * 0.01f;
+            // ¿Llegó a la esquina? (El valor sube porque se va a infinito)
+            if (adc_buffer[6] > UMBRAL_PERDIDA_PARED) {
+                estado_evasion = EVA_AVANZAR_ESQUINA;
+                timer_evasion = HAL_GetTick();
+            }
+            break;
+        case EVA_AVANZAR_ESQUINA:
+            RC_setpoint = 1.0f;
+            RC_steering = 0.0f;
+            if (HAL_GetTick() - timer_evasion > 100) { // Avanza un toque para no enganchar la rueda
+                estado_evasion = EVA_GIRAR_DER; // <--- Ahora giramos a la derecha para rodear
+                timer_evasion = HAL_GetTick();
+            }
+            break;
+        case EVA_GIRAR_DER:
+            RC_setpoint = 0.0f;
+            RC_steering = 150.0f; // Positivo (Derecha)
+            if (HAL_GetTick() - timer_evasion > 500) estado_evasion = EVA_SEGUIR_PARED;
+            break;
+    }*/
 }
 void sendCMD(uint8_t cmd, uint16_t param) {
     uint8_t frame[10];
@@ -772,7 +930,7 @@ void DataToQt(){
     telemetria.data.pos_y       = 2.0f;
     telemetria.data.velocidad   = 1.0f;
     for(uint8_t i=0; i<8; i++)       telemetria.data.IR[i] = adc_buffer[i];
-    telemetria.data.modo = MODO_FOLLOWLINE;
+    telemetria.data.modo = currentMode;
     telemetria.data.infoAdicional = 1;
     static uint8_t frame[56];
     memcpy(&frame[0], "UNER", 4);
@@ -944,7 +1102,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
             }
             ip_received_flag = 1;
             esperando_digitos_ip = 0;
-            // No retornamos aquí por si hay un paquete UNER pegado justo después
         }
         else if (strncmp((char*)rx_buffer_uart, "IP:", 3) == 0) {
             if (Size == 3) {
@@ -964,9 +1121,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
             }
             // Una vez procesada la IP, podríamos limpiar o continuar si hay más datos
         }
-
-        // --- 2. LÓGICA DE PROTOCOLO UNER (BINARIO) ---
-        // Usamos un for para recorrer el buffer buscando la cabecera 'UNER'
         for (int i = 0; i <= (Size - 7); ) {
             if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' &&
                 rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
@@ -991,130 +1145,126 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
                         float   payloadFloat = 0;
 
                         switch(cmd){
-               						case CMD_SET_HB:
-               							 delayHB = payload_ptr[0];
-               							 break;
-               						case CMD_CALIBRATE:
-               							 Robot_Drive(0, 0);
-               							 flagCalibrationIsReady=0;
-               							 break;
-               						default:
-               						case CMD_ALIVE:
-               							sendCMD(CMD_ACK, 0); // te devuelvo un alive
-               							break;
-               						case CMD_ACK:
-               							break;
-               						case CMD_CHANGE_MODE:
-               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-               							currentMode = payloadInt16;
-               							break;
-               						case CMD_ONOFFMOTORS:
-               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-               							BS_NEWPARAM_OK();
-               							flagMotorsAreOn = payloadInt16;
-               							break;
-               						case CMD_TCP_CONNECTED:
-               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-               							if(payloadInt16){	//conectado
-               								BS_tcpConnectSecuence();
-               								flagWIFI=1;
-               							}
-               							else if(payloadInt16 ==0){				//desconectado
-               								BS_Error();
-               								flagWIFI=0;
-               							}
-               							break;
-               						case CMD_CHANGE_DEADLINE_LEFT:
-               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-               							deadband_L = payloadInt16;
-               							BS_NEWPARAM_OK();
-               							break;
-               						case CMD_CHANGE_DEADLINE_RIGHT:
-               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-               							deadband_R = payloadInt16;
-               							BS_NEWPARAM_OK();
-               							break;
-               						case CMD_CHANGE_OLED_SCREEN:
-               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-               							flagOLED = payloadInt16;
-               							BS_NEWPARAM_OK();
-               							break;
-               						case CMD_PID_PITCH_KP:
-               							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-               							Kp = payloadFloat;
-               							BS_NEWPARAM_OK();
-               							break;
-               						case CMD_PID_PITCH_KD:
-               							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-               							Kd = payloadFloat;
-               							BS_NEWPARAM_OK();
-               							break;
-               						case CMD_PID_PITCH_KI:
-               							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-               							Ki = payloadFloat;
-               							BS_NEWPARAM_OK();
-               							break;
-										case CMD_PID_YAW_KP:
-											memcpy(&payloadFloat, payload_ptr, sizeof(float));
-											Kp_yaw = payloadFloat;
-											BS_NEWPARAM_OK();
-											break;
-										case CMD_PID_YAW_KD:
-											memcpy(&payloadFloat, payload_ptr, sizeof(float));
-											Kd_yaw = payloadFloat;
-											BS_NEWPARAM_OK();
-											break;
-										case CMD_PID_YAW_SP:
-											memcpy(&payloadFloat, payload_ptr, sizeof(float));
-											FL_setpoint = payloadFloat;
-											BS_NEWPARAM_OK();
-											break;
-               						case CMD_CHANGE_SETPOINT:
-               							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-               							setpoint = payloadInt16;
-               							//BS_NEWPARAM_OK();
-               							break;
-               						case CMD_PID_ALPHA:
-               							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-               							ALPHA_PID = payloadFloat;
-               							BS_NEWPARAM_ISNOTOK();
-               							break;
-               						case CMD_RC:{
-               							flag_RC_active =  payload_ptr[0];
-               							if (flag_RC_active) {
-               								RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
-               								RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
-               							} else {
-               								RC_setpoint = 0;
-               								RC_steering = 0;
-               								}
-               							}
-               							break;
-               						case CMD_IR_INICIAR_CALIBRACION:
-               							Iniciar_Calibracion_Linea();
-               						 // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
-               							break;
-               						case CMD_IR_DETENER_CALIBRACION:
-               							Finalizar_Calibracion_Linea();
-               						  //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
-               							break;
-               					}
-                        i = pos_checksum + 1; // Saltamos al final del paquete procesado
-                        continue;
-                    }
+								case CMD_SET_HB:
+									 delayHB = payload_ptr[0];
+									 break;
+								case CMD_CALIBRATE:
+									 Robot_Drive(0, 0);
+									 flagCalibrationIsReady=0;
+									 break;
+								default:
+								case CMD_ALIVE:
+									sendCMD(CMD_ACK, 0); // te devuelvo un alive
+									break;
+								case CMD_ACK:
+									break;
+								case CMD_CHANGE_MODE:
+									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+									currentMode = payloadInt16;
+									break;
+								case CMD_ONOFFMOTORS:
+									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+									BS_NEWPARAM_OK();
+									flagMotorsAreOn = payloadInt16;
+									break;
+								case CMD_TCP_CONNECTED:
+									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+									if(payloadInt16){	//conectado
+										BS_tcpConnectSecuence();
+										flagWIFI=1;
+									}
+									else if(payloadInt16 ==0){				//desconectado
+										BS_Error();
+										flagWIFI=0;
+									}
+									break;
+								case CMD_CHANGE_DEADLINE_LEFT:
+									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+									deadband_L = payloadInt16;
+									BS_NEWPARAM_OK();
+									break;
+								case CMD_CHANGE_DEADLINE_RIGHT:
+									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+									deadband_R = payloadInt16;
+									BS_NEWPARAM_OK();
+									break;
+								case CMD_CHANGE_OLED_SCREEN:
+									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+									flagOLED = payloadInt16;
+									BS_NEWPARAM_OK();
+									break;
+								case CMD_PID_PITCH_KP:
+									memcpy(&payloadFloat, payload_ptr, sizeof(float));
+									Kp = payloadFloat;
+									BS_NEWPARAM_OK();
+									break;
+								case CMD_PID_PITCH_KD:
+									memcpy(&payloadFloat, payload_ptr, sizeof(float));
+									Kd = payloadFloat;
+									BS_NEWPARAM_OK();
+									break;
+								case CMD_PID_PITCH_KI:
+									memcpy(&payloadFloat, payload_ptr, sizeof(float));
+									Ki = payloadFloat;
+									BS_NEWPARAM_OK();
+									break;
+									case CMD_PID_YAW_KP:
+										memcpy(&payloadFloat, payload_ptr, sizeof(float));
+										Kp_yaw = payloadFloat;
+										BS_NEWPARAM_OK();
+										break;
+									case CMD_PID_YAW_KD:
+										memcpy(&payloadFloat, payload_ptr, sizeof(float));
+										Kd_yaw = payloadFloat;
+										BS_NEWPARAM_OK();
+										break;
+									case CMD_PID_YAW_SP:
+										memcpy(&payloadFloat, payload_ptr, sizeof(float));
+										FL_setpoint = payloadFloat;
+										BS_NEWPARAM_OK();
+										break;
+								case CMD_CHANGE_SETPOINT:
+									memcpy(&payloadFloat, payload_ptr, sizeof(float));
+									setpoint = payloadFloat;
+									//BS_NEWPARAM_OK();
+									break;
+								case CMD_PID_ALPHA:
+									memcpy(&payloadFloat, payload_ptr, sizeof(float));
+									ALPHA_PID = payloadFloat;
+									BS_NEWPARAM_ISNOTOK();
+									break;
+								case CMD_RC:{
+									flag_RC_active =  payload_ptr[0];
+									if (flag_RC_active) {
+										RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
+										RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
+									} else {
+										RC_setpoint = 0;
+										RC_steering = 0;
+										}
+									}
+									break;
+								case CMD_IR_INICIAR_CALIBRACION:
+									Iniciar_Calibracion_Linea();
+//									HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+									break;
+								case CMD_IR_DETENER_CALIBRACION:
+									Finalizar_Calibracion_Linea();
+									currentMode = MODO_FL_BUSQUEDA_INICIAL;
+//									HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+									break;
+							}
+					i = pos_checksum + 1; // Saltamos al final del paquete procesado
+					continue;
+				}
                 }
             }
             i++; // Si no hay cabecera, avanzamos un byte
         }
-
-        // --- 3. REARME DEL DMA ---
-        // Importante: No uses memset(rx_buffer_uart, 0, 256) antes de reiniciar si no estás seguro
-        // de que no quedaron bytes de un paquete incompleto al final.
         HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
         __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); // Desactivar interrupción de Half Transfer
     }
 }
-
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     // Si hubo ruido o error de trama (común al arrancar el ESP)
@@ -1177,15 +1327,13 @@ int main(void)
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_Base_Start_IT(&htim4);
-	//Kalman_Init(&kalman_pitch);
-
-	Iniciar_Calibracion_Linea();
-	Leer_Linea_Digital() ;
-	Finalizar_Calibracion_Linea();
-	for(int i = 0; i < 4; i++) {
-	        sensor_min[i] = 4095; // Valor máximo del ADC
-	        sensor_max[i] = 0;    // Valor mínimo del ADC
-	    }
+//	Iniciar_Calibracion_Linea();
+//	Leer_Linea_Digital() ;
+//	Finalizar_Calibracion_Linea();
+//	for(int i = 0; i < 4; i++) {
+//		sensor_min[i] = 4095; // Valor máximo del ADC
+//		sensor_max[i] = 0;    // Valor mínimo del ADC
+//		}
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -1201,23 +1349,106 @@ int main(void)
 	if(flagDataToQt){	flagDataToQt = 0;	DataToQt();		}
 	if(flagDisplay){	flagDisplay=0;		screenScheduler();}
 	if(flagPID){
+	    flagPID = 0;
+	    Filtrar_Sensores_IR();
+	    Leer_Linea_Digital(); // Vital para los cambios de estado
+	    switch(currentMode){
+	        case MODO_IDDLE:
+	            break;
+	        case MODO_RC:
+	            break;
+	        case MODO_FL_INICIO:
+	            Procesar_Calibracion_Linea();
+	            break;
+	        case MODO_FL_BUSQUEDA_INICIAL:
+	            RC_setpoint = 0.5f;
+	            RC_steering = 0.0f;
+	            if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3]) {
+	                currentMode = MODO_FL_SIGUIENDO;
+	            	}
+	            break;
+	        case MODO_FL_SIGUIENDO:
+	            if (adc_buffer[5] < UMBRAL_FRENTE_CHOQUE) {	//VIMOS UN OBSTACULO
+//	                currentMode = MODO_FL_ESQUIVAR_OBSTACULO;
+//	                estado_evasion = EVA_DETECTADO;
+	                break;
+	            	}
+	            if (IRCSAAW) {	//PERDIMOS LA LINEA
+	                currentMode = MODO_FL_RESCATE;
+	                timer_rescate = HAL_GetTick(); // Empezamos a contar el tiempo
+	                break;
+	            	}
+	            error_linea = calcularErrorYawDiscreto();//calcularErrorYawContinuo();
+	            RC_steering = Calcular_PID_YAW(error_linea);
+	            RC_setpoint = 0.5f; // Velocidad de carrera
+	            break;
+	        case MODO_FL_RESCATE:
+	        	 RC_setpoint = -0.8f; // Velocidad de carrera
+//	            if (last_state_linea < 0.0f) {
+//	                RC_steering = -70.0f; // Giro  Izquierda
+//					} else {
+//						RC_steering = 70.0f;  // Giro brusco Derecha
+//						}
+//	            if (IRLSAAW && IRCSAAB){// SIGNIFICA QUE INGRESE A 90
+//	            	currentMode = MODO_FL_INGRESO_A_90;
+//	            }else
+	        	 if (AIRAB) { // si algun IR lee negro pasamos de modo
+						currentMode = MODO_FL_SIGUIENDO;
+						break;
+						}
+	            if (HAL_GetTick() - timer_rescate > 2000) {	// DESPUES DE 15 SEGUNDOS SIN ENCONTRAR LA LINEA NOS REDNIMOS
+	                currentMode = MODO_FL_PERDIDO_FAILSAFE;
+	            	}
+	            break;
+	        case MODO_FL_PERDIDO_FAILSAFE:         // Se rinde. Se queda haciendo equilibrio en el lugar.
+	        	 if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3]) {
+					currentMode = MODO_FL_SIGUIENDO;// Aunque el robot este rendido, si vuelve a tocar la linea, vuelve a la normalidad. Esto esta hecho para que pueda moverlo manualmetne hacia la linea
+					break;
+				}
+	        	RC_setpoint = 0.0f;
+	            RC_steering = 0.0f;
+	            break;
+//	        case MODO_FL_ESQUIVAR_OBSTACULO:
+//	            Procesar_Evasion_Obstaculo();
+//	            // Adentro de esta función, si toca la línea, acordate de cambiar a MODO_FL_SIGUIENDO
+//	            break;
+	    }
+	    ultimo_estado_sensores[0] = estado_sensores[0];
+	    ultimo_estado_sensores[1] = estado_sensores[1];
+	    ultimo_estado_sensores[2] = estado_sensores[2];
+	    ultimo_estado_sensores[3] = estado_sensores[3];
+	    PID_PITCH();
+	}
+	/*
+	if(flagPID){
 		flagPID = 0;
 		switch(currentMode){
 			case MODO_IDDLE:
+				//calibración de sensores, ajustes de PID, demas.
 				break;
 			case MODO_RC:
+				//posibilidad de maniobrar a voluntad
 				break;
-			case MODO_FOLLOWLINE:
-				//RC_setpoint = 0.0f;
+			case MODO_FL_INICIO:
 				Filtrar_Sensores_IR();
-				Procesar_Calibracion_Linea();
+				Procesar_Calibracion_Linea(); // Solo calibramos si estamos en este modo
 				Leer_Linea_Digital();
-				error_linea = calcularErrorYawContinuo();//calcularErrorYawDiscreto();
-				RC_steering = Calcular_PID_YAW(error_linea);
+				if (adc_buffer[5] < UMBRAL_FRENTE_CHOQUE) {
+					currentMode = MODO_FL_ESQUIVAR_OBSTACULO; // MODO_EVASION (Acordate de sincronizar currentMode con telemetria.data.modo)
+					estado_evasion = EVA_DETECTADO;
+					}
+				else {
+					float error_linea = calcularErrorYawContinuo();
+					RC_steering = Calcular_PID_YAW(error_linea);
+					// FL_setpoint = 0.9f;
+					}
 				break;
-			}
+			case MODO_FL_ESQUIVAR_OBSTACULO:
+				Procesar_Evasion_Obstaculo();
+				break;
+		}
 		PID_PITCH();
-	}
+	}*/
 
 
   }
