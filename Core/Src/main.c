@@ -126,8 +126,9 @@ enum {
 	CMD_CHANGE_DEADLINE_LEFT 	= 12,		/*!< Ajustar  Deadband del motor izquierdo						*/
 	CMD_CHANGE_DEADLINE_RIGHT 	= 13,		/*!< Ajustar  Deadband del motor derecho						*/
 	CMD_CHANGE_SETPOINT 		= 14, 		/*!< Ajustar  Setpoint de los motores*/
-	CMD_ONOFFMOTORS 			= 15, 		/*!< Prender y apagar motores*/
-	CMD_DATA 					= 16,		/*!< El robot manda datos de la unidad Sensitiva*/
+	CMD_DEFINE_ZERO_SETPOINT	= 15, 		/*!< Ajustar  Setpoint de los motores*/
+	CMD_ONOFFMOTORS 			= 16, 		/*!< Prender y apagar motores*/
+	CMD_DATA 					= 17,		/*!< El robot manda datos de la unidad Sensitiva*/
 	//PID SISTEMA BALANCEO
 	CMD_PID_PITCH_KP      		= 20, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Pitch*/
 	CMD_PID_PITCH_KI      		= 21, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
@@ -215,29 +216,30 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			int16_t 		deadband_L = 55;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 1; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
-			float 			Kp = 155.0f;				/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Kp = 148.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 1700.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 4.0f;					/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 6.0f; // 4.0f;		/*!< Set Point, el punto en el qeu el robot queda a vertical*/
+			float 			Kd = 5.5f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = 5.8f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
+			float 			setpointDeEquilibrio = 0.0f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
 			float 			last_error = 0;
 			float           ALPHA_PID = 0.98f;
 // =================[ Variables de Control PID YAW] ================= //
 			// Constantes del PID de YAW (Giro) - Ideales para modificar desde Qt
-			float 		Kp_yaw = 200.0f; // Ganancia Proporcional inicial (a sintonizar)
-			float 		Kd_yaw = 0.1f; // Ganancia Derivativa inicial (a sintonizar)
-			float 		last_error_yaw = 0.0f;
-volatile    float 		FL_setpoint = 0.5f;
+			float 		Kp_yaw = 80.0f; // Ganancia Proporcional inicial (a sintonizar)
+			float 		Kd_yaw = 40.0f; // Ganancia Derivativa inicial (a sintonizar)
+			float 		last_error_yaw = 0;
+volatile    float 		FL_setpoint = 0.0f;
 			float 		last_state_linea = 0.0f;
 			float 		error_linea;
 			uint32_t	timer_rescate=0;
-volatile 	uint16_t 	adc_raw[4];
-volatile 	uint16_t adc_filtrado[4] = {2000, 2000, 2000, 2000};
-volatile 	uint8_t 	estado_sensores[4];
-volatile 	uint8_t 	ultimo_estado_sensores[4];
-volatile 	uint16_t 	sensor_min[4];
-volatile 	uint16_t 	sensor_max[4];
-volatile 	uint16_t 	sensor_threshold[4];
+volatile 	uint16_t 	adc_raw[4]= {0, 0, 0, 0};
+volatile 	uint16_t 	adc_filtrado[4] = {2000, 2000, 2000, 2000};
+volatile 	uint8_t 	estado_sensores[4]	= {0, 0, 0, 0};
+volatile 	uint8_t 	ultimo_estado_sensores[4] = {0, 0, 0, 0};
+volatile 	uint16_t 	sensor_min[4]= {0, 0, 0, 0};
+volatile 	uint16_t 	sensor_max[4]= {0, 0, 0, 0};
+volatile 	uint16_t 	sensor_threshold[4]= {0, 0, 0, 0};
 volatile 	uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estamos
 		// Umbrales de los IR de obstáculos (A calibrar luego)
 		// Asumo que a mayor valor, más cerca está el obstáculo
@@ -276,8 +278,6 @@ volatile 	uint8_t 		oled_current_page = 0;
 volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
 
 // =================[ Digitalizador del IR ] =================//
-
-
 // Máquina de estados de la evasión
 typedef enum {
     EVA_DETECTADO,
@@ -312,6 +312,12 @@ volatile uint32_t timeout_rc=0;
 char ip_address[16];               // Buffer para guardar el string "192.168.XXX."
 volatile uint8_t ip_received_flag = 0; // Bandera para avisar al loop principal
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
+
+
+
+float velocidad_objetivo = 0.0f; // Reemplaza a tu viejo RC_setpoint y FL_setpoint
+float Kp_vel = 0.015f;           // Ganancia del lazo de velocidad (empezamos MUY bajo)
+
 
 /* USER CODE END PM */
 
@@ -469,8 +475,7 @@ void BS_tcpConnectSecuence() {
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
 }
-void BS_Error()
-	{
+void BS_Error()	{
     hBuzzer.duration = 500;  // Beep largo de 800ms
     hBuzzer.interval = 100;
     hBuzzer.repeat = 1;      //bip
@@ -503,24 +508,34 @@ void screenScheduler(void){
 		SSD1306_Fill(SSD1306_COLOR_BLACK);
 			switch(flagOLED){
 			case 0:
+				uint8_t sensores= (estado_sensores[2] * 100) + (estado_sensores[1] * 10) + estado_sensores[0];
+				uint8_t lastSensores = (ultimo_estado_sensores[2] * 100) + (ultimo_estado_sensores[1] * 10) + ultimo_estado_sensores[0];
+				int16_t errordelinea = (int16_t)(error_linea * 100.0f);
 				sprintf(msg, "IP:%s", ip_address);
 				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "Dig|Min|Max| %.2f", error_linea);
+				sprintf(msg, "Sensores:%3d|%3d", sensores, lastSensores);
+				uint16_t aym = (int16_t)(angle_y * 100.0f);
+				//uint16_t adm =(int16_t)(angulo_deseado * 100.0f);
 				SSD1306_GotoXY(2, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "0: %d|| %d|", estado_sensores[0], currentMode);
+				sprintf(msg, "Modo: %d|LEY:%4d", currentMode, last_error_yaw);
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "1: %d|| %d", estado_sensores[1], RC_steering);
+				sprintf(msg, "ErrorLINEA:%d", errordelinea);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "2: %d||Kp:%.2f", estado_sensores[2], Kp_yaw);
+//				sprintf(msg, "RC_steering: %d", RC_steering);
+//				SSD1306_GotoXY(1, 40);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+				sprintf(msg, "AY:%d|", aym);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "3: %d||Kd:%.2f", estado_sensores[3], Kd_yaw);
+
+				sprintf(msg, "VO:%d", velocidad_objetivo);
 				SSD1306_GotoXY(1, 50);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
 				oled_update_requested = 1;
 				break;
 			case 2:
@@ -548,7 +563,7 @@ void screenScheduler(void){
 				sprintf(msg, "AdicionalInfoScreen");
 				SSD1306_GotoXY(0, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "Param|PITCH|YAW|M%d", currentMode);
+				sprintf(msg, "Par|PITCH|YAW|M%d", currentMode);
 				SSD1306_GotoXY(0, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 				sprintf(msg, " Kp | %3.2f | %3.2f",Kp , Kp_yaw);
@@ -557,15 +572,12 @@ void screenScheduler(void){
 				sprintf(msg, " Kd | %3.2f | %3.2f",Kd, Kd_yaw);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, " Ki | %3.2f | - ", Ki);
+				sprintf(msg, " Ki | %3.2f | %3.2f ", Ki, setpointDeEquilibrio);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-				sprintf(msg, "SP:%3.2f|RCSP:%4d|RCST:%4d ", setpoint, RC_setpoint, RC_steering);
+				sprintf(msg, "SP%3.2f|RSP%4d|RST%4d ", setpoint, RC_setpoint, RC_steering);
 				SSD1306_GotoXY(1, 50);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-
 //					sprintf(msg, "SP:%.1f", setpoint);
 //					SSD1306_GotoXY(1, 30);
 //					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
@@ -632,14 +644,14 @@ void screenScheduler(void){
 	    }
 }
 void Filtrar_Sensores_IR(void) {
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 3; i++) {
         // Ahora es 90% historia y 10% dato nuevo
         adc_filtrado[i] = (adc_filtrado[i] * 9 + adc_buffer[i]) / 10;
     }
 }
 void Iniciar_Calibracion_Linea(void) {
     flag_calibrando_linea = 1;
-    	for(int i = 0; i < 4; i++) {
+    	for(int i = 0; i < 3; i++) {
     		sensor_min[i] = 4095; // Valor máximo del ADC
     		sensor_max[i] = 0;    // Valor mínimo del ADC
     		}
@@ -647,7 +659,7 @@ void Iniciar_Calibracion_Linea(void) {
 }
 void Procesar_Calibracion_Linea(void) {
     if (flag_calibrando_linea) {
-        for(int i = 0; i < 4; i++) {
+        for(int i = 0; i < 3; i++) {
             // Buscamos si hay un nuevo récord de valor bajo (Blanco)
             if(adc_filtrado[i] < sensor_min[i]) {
                 sensor_min[i] = adc_filtrado[i];
@@ -660,7 +672,7 @@ void Procesar_Calibracion_Linea(void) {
     }
 }
 void Leer_Linea_Digital(void) {
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 3; i++) {
         // Si el valor analógico superó la mitad, está viendo la línea
         if(adc_filtrado[i] > sensor_threshold[i]) {
             estado_sensores[i] = 1; // NEGRO
@@ -671,7 +683,7 @@ void Leer_Linea_Digital(void) {
 }
 void Finalizar_Calibracion_Linea(void) {
     flag_calibrando_linea = 0;
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 3; i++) {
           // El punto medio perfecto entre lo más blanco y lo más negro que vio
           sensor_threshold[i] = (sensor_max[i] + sensor_min[i]) / 2;
       }
@@ -680,6 +692,8 @@ void Finalizar_Calibracion_Linea(void) {
 //    sensor_threshold[2] = (339 + 3456) / 2;
 //    sensor_threshold[3] = (1280 + 3634) / 2;
 }
+
+
 void PID_PITCH(void){
 		float gyro_rate = -(((float)gyPitchRaw / 131.0f)); // 65.5f));
 		float accel_angle = (atan2f((float)axRaw , (float)azRaw ) * 57.2957f) ;
@@ -690,10 +704,10 @@ void PID_PITCH(void){
 			accelx 	= axRaw;
 			accely 	= ayRaw;
 			accelz 	= azRaw;
-	  // if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
-	  // if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
-//	   float error = angle_y - (setpoint + RC_slow_setpoint);
-	   float error = angle_y - (setpoint + RC_setpoint);//	   float error = angle_y - setpoint;
+	   if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
+	   if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
+	   float error = angle_y - (setpoint + RC_slow_setpoint);
+//	   float error = angle_y - (setpoint + RC_setpoint);//	   float error = angle_y - setpoint;
 	   integral += error * DT_PID;
 	   if(integral > 2000) integral = 2000;
 	   else if(integral < -2000) integral = -2000;
@@ -723,7 +737,7 @@ void PID_PITCH(void){
 		   Robot_Drive(outputLeft, outputRigth);
 		//   Robot_Drive((int16_t)output, (int16_t)output);
 	   }
-	   if(flagMotorsAreOn==0||angle_y > 50||angle_y < -50)	   Robot_Drive(0, 0);
+	   if(flagMotorsAreOn==0||angle_y > 40||angle_y < -40)	   Robot_Drive(0, 0);
 }
 float calcularErrorYawDiscreto(void) {
     float numerador = 0.0f;
@@ -741,100 +755,32 @@ float calcularErrorYawDiscreto(void) {
     return last_state_linea;
 }
 float calcularErrorYawContinuo(void) {
-    float val_norm[4] = {0};
-    int pico_index = 0;
-    float max_val = -1.0f;
-    float pos_x[4] = {3.0f, 1.0f, -1.0f, -3.0f};
-
-    // 1. NORMALIZACIÓN
-    for(int i = 0; i < 4; i++) {
-        if (sensor_max[i] == sensor_min[i]) { val_norm[i] = 0.0f; continue; }
+    float val_norm[3] = {0}; // Solo necesitamos los índices 0, 1 y 2
+    for(int i = 0; i < 3; i++) {
+        // Evitar división por cero si la calibración falló
+        if (sensor_max[i] == sensor_min[i]) {
+            val_norm[i] = 0.0f;
+            continue;
+        }
         float rango = (float)(sensor_max[i] - sensor_min[i]);
         val_norm[i] = (float)(adc_filtrado[i] - sensor_min[i]) / rango;
+
+        // Saturamos
         if(val_norm[i] > 1.0f) val_norm[i] = 1.0f;
         if(val_norm[i] < 0.0f) val_norm[i] = 0.0f;
-
-        if(val_norm[i] > max_val) { max_val = val_norm[i]; pico_index = i; }
     }
-
-    // 2. CÁLCULO DE LA PARÁBOLA
-    float y_centro = val_norm[pico_index];
-    float y_izq = (pico_index + 1 < 4) ? val_norm[pico_index + 1] : 0.0f;
-    float y_der = (pico_index - 1 >= 0) ? val_norm[pico_index - 1] : 0.0f;
+    float y_izq    = val_norm[2]; // Sensor Interior Izquierdo
+    float y_centro = val_norm[1]; // Sensor Interior Derecho
+    float y_der    = val_norm[0]; // Sensor Exterior Derecho
 
     float denominador = (y_izq + y_der - 2.0f * y_centro);
     float offset = 0.0f;
-    if (denominador != 0.0f) { offset = (y_izq - y_der) / denominador; }
-
-    float error_continuo = pos_x[pico_index] + offset;
-
-    // GUARDAMOS MEMORIA PARA EL RESCATE
+    if (denominador != 0.0f)    offset = (y_izq - y_der) / denominador;
+    float error_continuo =  offset;
     last_state_linea = error_continuo;
-
     return error_continuo;
 }
-/*
-float calcularErrorYawContinuo(void) {
-		float val_norm[4] = {0};
-	    int pico_index = 0;
-	    float max_val = -1.0f;
-	    // Posiciones físicas de nuestros sensores (Izquierda a Derecha)
-	    // indice 3 = Izq ext (-3) | indice 2 = Izq int (-1) | indice 1 = Der int (1) | indice 0 = Der ext (3)
-	    float pos_x[4] = {3.0f, 1.0f, -1.0f, -3.0f};
-	    // 1. NORMALIZACIÓN Y BÚSQUEDA DEL PICO
-	    for(int i = 0; i < 4; i++) {
-	        // Evitar división por cero si la calibración falló
-	        if (sensor_max[i] == sensor_min[i]) {
-	            val_norm[i] = 0.0f;
-	            continue;
-	        }
-	        // Normalizamos: 0.0 (Blanco absoluto) a 1.0 (Negro absoluto)
-	        float rango = (float)(sensor_max[i] - sensor_min[i]);
-	        val_norm[i] = (float)(adc_filtrado[i] - sensor_min[i]) / rango;
-	        // Saturamos por si hay un pico de ruido que supere al max/min
-	        if(val_norm[i] > 1.0f) val_norm[i] = 1.0f;
-	        if(val_norm[i] < 0.0f) val_norm[i] = 0.0f;
-	        // Buscamos cuál sensor está leyendo más negro
-	        if(val_norm[i] > max_val) {
-	            max_val = val_norm[i];
-	            pico_index = i;
-	        }
-	    }
-	    // 2. MÁQUINA DE ESTADOS: ¿Perdimos la línea?
-	    // Si el valor máximo normalizado es muy bajo (ej: < 0.25), todos ven blanco
-	    if (max_val < 0.25f) {
-	        // MODO RECUPERACIÓN: Usamos la "memoria"
-	        // Si la última vez que la vimos estaba a la izquierda (< 0), forzamos un giro brusco a la izquierda
-	        if (last_state_linea < 0.0f) {
-	            return -4.0f; // Valor exagerado (mayor a 3) para forzar volantazo
-	        } else {
-	            return 4.0f;  // Volantazo a la derecha
-	        }
-	    }
-	    // 3. MODO CUADRÁTICO: Calcular el vértice de la parábola
-	    // Extraemos el valor del centro (el pico) y de sus dos vecinos
-	    float y_centro = val_norm[pico_index];
-	    // Vecino Izquierdo (índice + 1). Si es el borde, usamos "Sensor Fantasma" en 0.0f
-	    float y_izq = (pico_index + 1 < 4) ? val_norm[pico_index + 1] : 0.0f;
-	    // Vecno Derecho (índice - 1). Si es el borde, usamos "Sensor Fantasma" en 0.0f
-	    float y_der = (pico_index - 1 >= 0) ? val_norm[pico_index - 1] : 0.0f;
-	    // Matemática de la parábola: Calculamos cuánto se desvía la línea respecto al sensor pico
-	    float denominador = (y_izq + y_der - 2.0f * y_centro);
-	    float offset = 0.0f;
 
-	    if (denominador != 0.0f) {
-	        // La distancia física entre nuestros sensores es 2.0 (ej: de -1 a 1).
-	        // Esta fórmula ya tiene integrado ese espaciado.
-	        offset = (y_izq - y_der) / denominador;
-	    }
-
-	    // 4. RESULTADO FINAL
-	    // La posición real es la posición del sensor pico MÁS el ajuste milimétrico de la parábola
-	    float error_continuo = pos_x[pico_index] + offset;
-	    // Guardamos esta posición en la memoria para el futuro
-	    last_state_linea = error_continuo;
-	    return error_continuo;
-}*/
 int16_t Calcular_PID_YAW(float error_linea) {
     // 1. Proporcional: Reacción instantánea al error
     float P_yaw = Kp_yaw * error_linea;
@@ -846,8 +792,8 @@ int16_t Calcular_PID_YAW(float error_linea) {
     // 4. Salida total
     float salida_yaw = P_yaw + D_yaw;
     // Limitamos la salida máxima para que un volantazo no tire el robot al piso
-    if(salida_yaw > 500.0f) salida_yaw = 500.0f;
-    if(salida_yaw < -500.0f) salida_yaw = -500.0f;
+    if(salida_yaw > 400.0f) salida_yaw = 400.0f;
+    if(salida_yaw < -400.0f) salida_yaw = -400.0f;
 
     return (int16_t)salida_yaw;
 }
@@ -1143,7 +1089,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
                         uint8_t *payload_ptr = &rx_buffer_uart[i+7];
                         int16_t payloadInt16 = 0;
                         float   payloadFloat = 0;
-
                         switch(cmd){
 								case CMD_SET_HB:
 									 delayHB = payload_ptr[0];
@@ -1224,14 +1169,18 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 										BS_NEWPARAM_OK();
 										break;
 								case CMD_CHANGE_SETPOINT:
-									memcpy(&payloadFloat, payload_ptr, sizeof(float));
-									setpoint = payloadFloat;
-									//BS_NEWPARAM_OK();
+									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+									setpoint = ((float)payloadInt16)/10;
+									break;
+								case CMD_DEFINE_ZERO_SETPOINT:
+//									setpointDeEquilibrio = setpoint;
+//									setpoint = 0;
 									break;
 								case CMD_PID_ALPHA:
 									memcpy(&payloadFloat, payload_ptr, sizeof(float));
-									ALPHA_PID = payloadFloat;
-									BS_NEWPARAM_ISNOTOK();
+//									ALPHA_PID = payloadFloat;
+//									BS_NEWPARAM_ISNOTOK();
+									Kp_vel= payloadFloat;
 									break;
 								case CMD_RC:{
 									flag_RC_active =  payload_ptr[0];
@@ -1345,7 +1294,6 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	buzzerSecuence(&hBuzzer);
 	//Funciones INDEPENDIENTES al modo del robot
-
 	if(flagDataToQt){	flagDataToQt = 0;	DataToQt();		}
 	if(flagDisplay){	flagDisplay=0;		screenScheduler();}
 	if(flagPID){
@@ -1361,64 +1309,74 @@ int main(void)
 	            Procesar_Calibracion_Linea();
 	            break;
 	        case MODO_FL_BUSQUEDA_INICIAL:
-	            RC_setpoint = 0.5f;
 	            RC_steering = 0.0f;
-	            if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3]) {
+	            if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
 	                currentMode = MODO_FL_SIGUIENDO;
 	            	}
 	            break;
 	        case MODO_FL_SIGUIENDO:
+	        	RC_steering = 0.0f;
 	            if (adc_buffer[5] < UMBRAL_FRENTE_CHOQUE) {	//VIMOS UN OBSTACULO
 //	                currentMode = MODO_FL_ESQUIVAR_OBSTACULO;
 //	                estado_evasion = EVA_DETECTADO;
 	                break;
 	            	}
-	            if (IRCSAAW) {	//PERDIMOS LA LINEA
-	                currentMode = MODO_FL_RESCATE;
-	                timer_rescate = HAL_GetTick(); // Empezamos a contar el tiempo
-	                break;
-	            	}
-	            error_linea = calcularErrorYawDiscreto();//calcularErrorYawContinuo();
+//	            if ( !estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2]) {	//PERDIMOS LA LINEA
+//	                currentMode = MODO_FL_RESCATE;
+//	                break;
+//	            	}
+	            error_linea = calcularErrorYawContinuo();//calcularErrorYawDiscreto();//
 	            RC_steering = Calcular_PID_YAW(error_linea);
-	            RC_setpoint = 0.5f; // Velocidad de carrera
 	            break;
-	        case MODO_FL_RESCATE:
-	        	 RC_setpoint = -0.8f; // Velocidad de carrera
+//	        case MODO_FL_RESCATE:
+//	        	RC_steering = 0.0f;
+//	        	error_linea=0;
 //	            if (last_state_linea < 0.0f) {
-//	                RC_steering = -70.0f; // Giro  Izquierda
+//	                RC_steering = 250.0f; // Giro  Izquierda
 //					} else {
-//						RC_steering = 70.0f;  // Giro brusco Derecha
+//						RC_steering = -250.0f;  // Giro brusco Derecha
 //						}
-//	            if (IRLSAAW && IRCSAAB){// SIGNIFICA QUE INGRESE A 90
-//	            	currentMode = MODO_FL_INGRESO_A_90;
-//	            }else
-	        	 if (AIRAB) { // si algun IR lee negro pasamos de modo
-						currentMode = MODO_FL_SIGUIENDO;
-						break;
-						}
-	            if (HAL_GetTick() - timer_rescate > 2000) {	// DESPUES DE 15 SEGUNDOS SIN ENCONTRAR LA LINEA NOS REDNIMOS
-	                currentMode = MODO_FL_PERDIDO_FAILSAFE;
-	            	}
+////	            if ((estado_sensores[0] && estado_sensores[1] && estado_sensores[2])){// SIGNIFICA QUE INGRESE A 90
+////	            	currentMode = MODO_FL_INGRESO_A_90;
+////	            	timer_rescate = HAL_GetTick(); // Empezamos a contar el tiempo
+////	            }else
+//	        	 if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) { // si algun IR lee negro pasamos de modo
+//					currentMode = MODO_FL_SIGUIENDO;
+//					setpoint = setpointDeEquilibrio;
+//					break;
+//					}
+//	            if (HAL_GetTick() - timer_rescate > 2000) {	// DESPUES DE 15 SEGUNDOS SIN ENCONTRAR LA LINEA NOS REDNIMOS
+//	                currentMode = MODO_FL_PERDIDO_FAILSAFE;
+//	            	}
 	            break;
-	        case MODO_FL_PERDIDO_FAILSAFE:         // Se rinde. Se queda haciendo equilibrio en el lugar.
-	        	 if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3]) {
-					currentMode = MODO_FL_SIGUIENDO;// Aunque el robot este rendido, si vuelve a tocar la linea, vuelve a la normalidad. Esto esta hecho para que pueda moverlo manualmetne hacia la linea
-					break;
-				}
-	        	RC_setpoint = 0.0f;
-	            RC_steering = 0.0f;
-	            break;
+//	        case MODO_FL_INGRESO_A_90:
+//	        	 RC_steering = 250.0f; // Giro  Izquierda
+//				if (HAL_GetTick() - timer_rescate > 500) {	// DESPUES DE 15 SEGUNDOS SIN ENCONTRAR LA LINEA NOS REDNIMOS
+//					currentMode = MODO_FL_RESCATE;
+//					}
+//	        	break;
+//	        case MODO_FL_PERDIDO_FAILSAFE:         // Se rinde. Se queda haciendo equilibrio en el lugar.
+//	        	 if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
+//					currentMode = MODO_FL_SIGUIENDO;// Aunque el robot este rendido, si vuelve a tocar la linea, vuelve a la normalidad. Esto esta hecho para que pueda moverlo manualmetne hacia la linea
+//					break;
+//				}
+//	        	RC_setpoint = 0.0f;
+//	            RC_steering = 0.0f;
+//	            break;
 //	        case MODO_FL_ESQUIVAR_OBSTACULO:
 //	            Procesar_Evasion_Obstaculo();
 //	            // Adentro de esta función, si toca la línea, acordate de cambiar a MODO_FL_SIGUIENDO
 //	            break;
 	    }
-	    ultimo_estado_sensores[0] = estado_sensores[0];
-	    ultimo_estado_sensores[1] = estado_sensores[1];
-	    ultimo_estado_sensores[2] = estado_sensores[2];
-	    ultimo_estado_sensores[3] = estado_sensores[3];
 	    PID_PITCH();
+	    if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) { // SI AL MENOS UNA LINEA ES NEGRA ALMACENAMOS LA VARIABLE
+			ultimo_estado_sensores[0] = estado_sensores[0];
+			ultimo_estado_sensores[1] = estado_sensores[1];
+			ultimo_estado_sensores[2] = estado_sensores[2];
+			}
 	}
+
+
 	/*
 	if(flagPID){
 		flagPID = 0;
