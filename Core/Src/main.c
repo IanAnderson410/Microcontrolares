@@ -199,7 +199,7 @@ volatile 	uint8_t 		flagDisplay				=	0;
 volatile	uint8_t			flagSendUNER 			= 	0;
 volatile	uint8_t			flagDataToQt 			= 	0;
 volatile	uint8_t			flagWIFI				=   0;
-volatile	uint8_t 		flagOLED 				= 	1;
+volatile	uint8_t 		flagOLED 				= 	2;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
@@ -213,8 +213,8 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			uint8_t 		rx_index = 0;
 			uint8_t 		rx_data;
 // Nuevas variables para compensar la diferencia entre motores
-			int16_t 		deadband_L = 55;			/*!< Zona Muerta del PWM para el motor 1*/
-			int16_t 		deadband_R = 1; 			/*!< Zona Muerta del PWM para el motor 2*/
+			int16_t 		deadband_L = 130;//55;			/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_R = 75;//1; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
 			float 			Kp = 148.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 1700.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
@@ -277,6 +277,13 @@ volatile 	uint8_t 		oled_update_requested = 0;
 volatile 	uint8_t 		oled_current_page = 0;
 volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
 
+
+	float P =  0;
+	float I =  0;
+	float D = 0;
+	float output = 0;
+
+	float Kp_Agresivo = 5.0f;
 // =================[ Digitalizador del IR ] =================//
 // Máquina de estados de la evasión
 typedef enum {
@@ -318,6 +325,8 @@ uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estad
 float velocidad_objetivo = 0.0f; // Reemplaza a tu viejo RC_setpoint y FL_setpoint
 float Kp_vel = 0.015f;           // Ganancia del lazo de velocidad (empezamos MUY bajo)
 
+
+float showoutput=0;
 
 /* USER CODE END PM */
 
@@ -511,29 +520,20 @@ void screenScheduler(void){
 				uint8_t sensores= (estado_sensores[2] * 100) + (estado_sensores[1] * 10) + estado_sensores[0];
 				uint8_t lastSensores = (ultimo_estado_sensores[2] * 100) + (ultimo_estado_sensores[1] * 10) + ultimo_estado_sensores[0];
 				int16_t errordelinea = (int16_t)(error_linea * 100.0f);
-				sprintf(msg, "IP:%s", ip_address);
+//				sprintf(msg, "IP:%s", ip_address);
+//				SSD1306_GotoXY(1, 0);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+				sprintf(msg, "Motores");
 				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "Sensores:%3d|%3d", sensores, lastSensores);
-				uint16_t aym = (int16_t)(angle_y * 100.0f);
-				//uint16_t adm =(int16_t)(angulo_deseado * 100.0f);
-				SSD1306_GotoXY(2, 10);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "Modo: %d|LEY:%4d", currentMode, last_error_yaw);
-				SSD1306_GotoXY(1, 20);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "ErrorLINEA:%d", errordelinea);
-				SSD1306_GotoXY(1, 30);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//				sprintf(msg, "RC_steering: %d", RC_steering);
-//				SSD1306_GotoXY(1, 40);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "AY:%d|", aym);
-				SSD1306_GotoXY(1, 40);
+
+				sprintf(msg, "Output: %f", showoutput);
+				SSD1306_GotoXY(1, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "VO:%d", velocidad_objetivo);
-				SSD1306_GotoXY(1, 50);
+				sprintf(msg, "DB|L:%d|R:&d", deadband_L, deadband_R);
+				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
 				oled_update_requested = 1;
@@ -560,10 +560,10 @@ void screenScheduler(void){
 				oled_update_requested = 1;
 				break;
 			case 1:
-				sprintf(msg, "AdicionalInfoScreen");
+				sprintf(msg, "Config PID");
 				SSD1306_GotoXY(0, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "Par|PITCH|YAW|M%d", currentMode);
+				sprintf(msg, "P|PITCH|YAW|M%d", currentMode);
 				SSD1306_GotoXY(0, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 				sprintf(msg, " Kp | %3.2f | %3.2f",Kp , Kp_yaw);
@@ -575,7 +575,7 @@ void screenScheduler(void){
 				sprintf(msg, " Ki | %3.2f | %3.2f ", Ki, setpointDeEquilibrio);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "SP%3.2f|RSP%4d|RST%4d ", setpoint, RC_setpoint, RC_steering);
+				sprintf(msg, "SP:%3.2f|RST:%4d ", setpoint, RC_steering);
 				SSD1306_GotoXY(1, 50);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 //					sprintf(msg, "SP:%.1f", setpoint);
@@ -711,10 +711,18 @@ void PID_PITCH(void){
 	   integral += error * DT_PID;
 	   if(integral > 2000) integral = 2000;
 	   else if(integral < -2000) integral = -2000;
-	   float P =  Kp * error;
-	   float I =  Ki * integral;
-	   float D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //Kd * (error - last_error) / DT_PID;//float D =  Kd * gyro_rate; //
-	   float output = P + I + D ; // Funcion de transferencia
+
+	   float P_base = Kp * error;
+	   float abs_error = (error < 0) ? -error : error;
+	   float P_agresivo = Kp_Agresivo * (error * abs_error);
+	   P = P_base + P_agresivo;
+
+//	   P =  Kp * error;
+	   I =  Ki * integral;
+	   //D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //Kd * (error - last_error) / DT_PID;//float D =  Kd * gyro_rate; //
+	   D =  Kd * gyro_rate; //
+	   output = P + I + D ; // Funcion de transferencia
+	   showoutput = output;
 	   last_error = error;
 	   if(flagMotorsAreOn){
 		   int16_t outputLeft = 0;
@@ -871,10 +879,10 @@ void DataToQt(){
     telemetria.data.acc_y       = (int16_t)accely;
     telemetria.data.acc_z       = (int16_t)accelz;
     telemetria.data.gyro_yaw    = (int16_t)giro_z;
-    telemetria.data.yaw_filtrado= 1;
-    telemetria.data.pos_x       = 3.0f;
-    telemetria.data.pos_y       = 2.0f;
-    telemetria.data.velocidad   = 1.0f;
+    telemetria.data.yaw_filtrado= output;
+    telemetria.data.pos_x       = P;
+    telemetria.data.pos_y       = I;
+    telemetria.data.velocidad   = D;
     for(uint8_t i=0; i<8; i++)       telemetria.data.IR[i] = adc_buffer[i];
     telemetria.data.modo = currentMode;
     telemetria.data.infoAdicional = 1;
@@ -1155,7 +1163,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 									break;
 									case CMD_PID_YAW_KP:
 										memcpy(&payloadFloat, payload_ptr, sizeof(float));
-										Kp_yaw = payloadFloat;
+//										Kp_yaw = payloadFloat;
+										Kp_Agresivo = payloadFloat;
 										BS_NEWPARAM_OK();
 										break;
 									case CMD_PID_YAW_KD:
@@ -1302,6 +1311,7 @@ int main(void)
 	    Leer_Linea_Digital(); // Vital para los cambios de estado
 	    switch(currentMode){
 	        case MODO_IDDLE:
+//	        	Robot_Drive(deadband_L, deadband_R);
 	            break;
 	        case MODO_RC:
 	            break;
