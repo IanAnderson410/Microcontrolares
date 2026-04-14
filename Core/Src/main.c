@@ -216,10 +216,10 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			int16_t 		deadband_L = 130;//55;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 75;//1; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
-			float 			Kp = 148.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 1700.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 5.5f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 5.8f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
+			float 			Kp = 95.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 0.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 6.0f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = 0.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 			float 			setpointDeEquilibrio = 0.0f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
 			float 			last_error = 0;
@@ -283,7 +283,7 @@ volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
 	float D = 0;
 	float output = 0;
 
-	float Kp_Agresivo = 5.0f;
+	float Kp_Agresivo = 0.0f;
 // =================[ Digitalizador del IR ] =================//
 // Máquina de estados de la evasión
 typedef enum {
@@ -327,7 +327,7 @@ float Kp_vel = 0.015f;           // Ganancia del lazo de velocidad (empezamos MU
 
 
 float showoutput=0;
-
+int8_t prescaler=0;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -524,16 +524,20 @@ void screenScheduler(void){
 //				SSD1306_GotoXY(1, 0);
 //				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "Motores");
+				sprintf(msg, "Depurar FL");
 				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "Output: %f", showoutput);
+				sprintf(msg, "O:%f", showoutput, error_linea, RC_steering);
 				SSD1306_GotoXY(1, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "DB|L:%d|R:&d", deadband_L, deadband_R);
-				SSD1306_GotoXY(1, 0);
+				sprintf(msg, "EL:%d|RCS%d", error_linea, RC_steering);
+				SSD1306_GotoXY(1, 20);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+				sprintf(msg, "|%d|&d", sensores, lastSensores);
+				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
 				oled_update_requested = 1;
@@ -1098,129 +1102,129 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
                         int16_t payloadInt16 = 0;
                         float   payloadFloat = 0;
                         switch(cmd){
-								case CMD_SET_HB:
-									 delayHB = payload_ptr[0];
-									 break;
-								case CMD_CALIBRATE:
-									 Robot_Drive(0, 0);
-									 flagCalibrationIsReady=0;
-									 break;
-								default:
-								case CMD_ALIVE:
-									sendCMD(CMD_ACK, 0); // te devuelvo un alive
-									break;
-								case CMD_ACK:
-									break;
-								case CMD_CHANGE_MODE:
-									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-									currentMode = payloadInt16;
-									break;
-								case CMD_ONOFFMOTORS:
-									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-									BS_NEWPARAM_OK();
-									flagMotorsAreOn = payloadInt16;
-									break;
-								case CMD_TCP_CONNECTED:
-									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-									if(payloadInt16){	//conectado
-										BS_tcpConnectSecuence();
-										flagWIFI=1;
-									}
-									else if(payloadInt16 ==0){				//desconectado
-										BS_Error();
-										flagWIFI=0;
-									}
-									break;
-								case CMD_CHANGE_DEADLINE_LEFT:
-									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-									deadband_L = payloadInt16;
-									BS_NEWPARAM_OK();
-									break;
-								case CMD_CHANGE_DEADLINE_RIGHT:
-									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-									deadband_R = payloadInt16;
-									BS_NEWPARAM_OK();
-									break;
-								case CMD_CHANGE_OLED_SCREEN:
-									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-									flagOLED = payloadInt16;
-									BS_NEWPARAM_OK();
-									break;
-								case CMD_PID_PITCH_KP:
-									memcpy(&payloadFloat, payload_ptr, sizeof(float));
-									Kp = payloadFloat;
-									BS_NEWPARAM_OK();
-									break;
-								case CMD_PID_PITCH_KD:
-									memcpy(&payloadFloat, payload_ptr, sizeof(float));
-									Kd = payloadFloat;
-									BS_NEWPARAM_OK();
-									break;
-								case CMD_PID_PITCH_KI:
-									memcpy(&payloadFloat, payload_ptr, sizeof(float));
-									Ki = payloadFloat;
-									BS_NEWPARAM_OK();
-									break;
-									case CMD_PID_YAW_KP:
-										memcpy(&payloadFloat, payload_ptr, sizeof(float));
-//										Kp_yaw = payloadFloat;
-										Kp_Agresivo = payloadFloat;
-										BS_NEWPARAM_OK();
-										break;
-									case CMD_PID_YAW_KD:
-										memcpy(&payloadFloat, payload_ptr, sizeof(float));
-										Kd_yaw = payloadFloat;
-										BS_NEWPARAM_OK();
-										break;
-									case CMD_PID_YAW_SP:
-										memcpy(&payloadFloat, payload_ptr, sizeof(float));
-										FL_setpoint = payloadFloat;
-										BS_NEWPARAM_OK();
-										break;
-								case CMD_CHANGE_SETPOINT:
-									memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-									setpoint = ((float)payloadInt16)/10;
-									break;
-								case CMD_DEFINE_ZERO_SETPOINT:
+						case CMD_SET_HB:
+							 delayHB = payload_ptr[0];
+							 break;
+						case CMD_CALIBRATE:
+							 Robot_Drive(0, 0);
+							 flagCalibrationIsReady=0;
+							 break;
+						default:
+						case CMD_ALIVE:
+							sendCMD(CMD_ACK, 0); // te devuelvo un alive
+							break;
+						case CMD_ACK:
+							break;
+						case CMD_CHANGE_MODE:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							currentMode = payloadInt16;
+							break;
+						case CMD_ONOFFMOTORS:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							BS_NEWPARAM_OK();
+							flagMotorsAreOn = payloadInt16;
+							break;
+						case CMD_TCP_CONNECTED:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							if(payloadInt16){	//conectado
+								BS_tcpConnectSecuence();
+								flagWIFI=1;
+							}
+							else if(payloadInt16 ==0){				//desconectado
+								BS_Error();
+								flagWIFI=0;
+							}
+							break;
+						case CMD_CHANGE_DEADLINE_LEFT:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							deadband_L = payloadInt16;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_CHANGE_DEADLINE_RIGHT:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							deadband_R = payloadInt16;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_CHANGE_OLED_SCREEN:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							flagOLED = payloadInt16;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_PID_PITCH_KP:
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							Kp = payloadFloat;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_PID_PITCH_KD:
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							Kd = payloadFloat;
+							BS_NEWPARAM_OK();
+							break;
+						case CMD_PID_PITCH_KI:
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							Ki = payloadFloat;
+							BS_NEWPARAM_OK();
+							break;
+							case CMD_PID_YAW_KP:
+								memcpy(&payloadFloat, payload_ptr, sizeof(float));
+								Kp_yaw = payloadFloat;
+								BS_NEWPARAM_OK();
+								break;
+							case CMD_PID_YAW_KD:
+								memcpy(&payloadFloat, payload_ptr, sizeof(float));
+								Kd_yaw = payloadFloat;
+								BS_NEWPARAM_OK();
+								break;
+							case CMD_PID_YAW_SP:
+								memcpy(&payloadFloat, payload_ptr, sizeof(float));
+								Kp_Agresivo = payloadFloat;
+								BS_NEWPARAM_OK();
+								break;
+						case CMD_CHANGE_SETPOINT:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							setpoint = ((float)payloadInt16)/10;
+							break;
+						case CMD_DEFINE_ZERO_SETPOINT:
 //									setpointDeEquilibrio = setpoint;
 //									setpoint = 0;
-									break;
-								case CMD_PID_ALPHA:
-									memcpy(&payloadFloat, payload_ptr, sizeof(float));
+							break;
+						case CMD_PID_ALPHA:
+							memcpy(&payloadFloat, payload_ptr, sizeof(float));
 //									ALPHA_PID = payloadFloat;
 //									BS_NEWPARAM_ISNOTOK();
-									Kp_vel= payloadFloat;
-									break;
-								case CMD_RC:{
-									flag_RC_active =  payload_ptr[0];
-									if (flag_RC_active) {
-										RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
-										RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
-									} else {
-										RC_setpoint = 0;
-										RC_steering = 0;
-										}
-									}
-									break;
-								case CMD_IR_INICIAR_CALIBRACION:
-									Iniciar_Calibracion_Linea();
-//									HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
-									break;
-								case CMD_IR_DETENER_CALIBRACION:
-									Finalizar_Calibracion_Linea();
-									currentMode = MODO_FL_BUSQUEDA_INICIAL;
-//									HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
-									break;
+						//	Kp_vel= payloadFloat;
+							prescaler = payloadFloat;
+							break;
+						case CMD_RC:{
+							flag_RC_active =  payload_ptr[0];
+							if (flag_RC_active) {
+								RC_setpoint = payload_ptr[1] ;
+								RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
+							} else {
+								RC_setpoint = 0;
+								RC_steering = 0;
+								}
 							}
-					i = pos_checksum + 1; // Saltamos al final del paquete procesado
-					continue;
-				}
-                }
-            }
-            i++; // Si no hay cabecera, avanzamos un byte
-        }
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
-        __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); // Desactivar interrupción de Half Transfer
+							break;
+						case CMD_IR_INICIAR_CALIBRACION:
+							Iniciar_Calibracion_Linea();
+//									HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+							break;
+						case CMD_IR_DETENER_CALIBRACION:
+							Finalizar_Calibracion_Linea();
+							currentMode = MODO_FL_BUSQUEDA_INICIAL;
+//									HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+							break;
+					}
+			i = pos_checksum + 1; // Saltamos al final del paquete procesado
+			continue;
+		}
+		}
+	}
+	i++; // Si no hay cabecera, avanzamos un byte
+}
+HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+__HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); // Desactivar interrupción de Half Transfer
     }
 }
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
