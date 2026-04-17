@@ -138,9 +138,11 @@ enum {
 	CMD_PID_YAW_KP      		= 24, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
 	CMD_PID_YAW_KD      		= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
 	CMD_PID_YAW_SP      		= 26, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Yaw*/
+
+	CMD_PID_YAW_MULTIPLICADOR  = 27, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
 	//SENSORES
-	CMD_IR_INICIAR_CALIBRACION	= 27, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
-	CMD_IR_DETENER_CALIBRACION  = 28, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
+	CMD_IR_INICIAR_CALIBRACION	= 28, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
+	CMD_IR_DETENER_CALIBRACION  = 29, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
 	//NETWORK
 	CMD_NETWORK_CHANGE_SSID		= 30,
 	CMD_NETWORK_CHANGE_PASSWORD	= 31
@@ -216,9 +218,9 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			int16_t 		deadband_L = 130;//55;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 75;//1; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
-			float 			Kp = 95.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 6.0f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			Kp = 170.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 0.1f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 2.0f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float 			setpoint = 0.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 			float 			setpointDeEquilibrio = 0.0f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
@@ -226,8 +228,8 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			float           ALPHA_PID = 0.98f;
 // =================[ Variables de Control PID YAW] ================= //
 			// Constantes del PID de YAW (Giro) - Ideales para modificar desde Qt
-			float 		Kp_yaw = 80.0f; // Ganancia Proporcional inicial (a sintonizar)
-			float 		Kd_yaw = 40.0f; // Ganancia Derivativa inicial (a sintonizar)
+			float 		Kp_yaw = 1200.0f; // Ganancia Proporcional inicial (a sintonizar)
+			float 		Kd_yaw = 0.0f; // Ganancia Derivativa inicial (a sintonizar)
 			float 		last_error_yaw = 0;
 volatile    float 		FL_setpoint = 0.0f;
 			float 		last_state_linea = 0.0f;
@@ -276,11 +278,9 @@ volatile 	float			salida=0;
 volatile 	uint8_t 		oled_update_requested = 0;
 volatile 	uint8_t 		oled_current_page = 0;
 volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
-
-
 	float P =  0;
 	float I =  0;
-	float D = 0;
+	float D =  0;
 	float output = 0;
 
 	float Kp_Agresivo = 0.0f;
@@ -328,6 +328,14 @@ float Kp_vel = 0.015f;           // Ganancia del lazo de velocidad (empezamos MU
 
 float showoutput=0;
 int8_t prescaler=0;
+
+float multiplicadorYaw 	 = 0.01;
+float setpoint_base		 = 0.8f;
+
+
+float error=0;
+
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -536,8 +544,12 @@ void screenScheduler(void){
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "|%d|&d", sensores, lastSensores);
+				sprintf(msg, "|%d|&d|%3.2f", sensores, lastSensores, multiplicadorYaw);
 				SSD1306_GotoXY(1, 30);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+				sprintf(msg, "|E:%3.3f|", error);
+				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
 				oled_update_requested = 1;
@@ -549,7 +561,7 @@ void screenScheduler(void){
 				sprintf(msg, "%d | %d", adc_buffer[5], ((int16_t)(error_linea * 100.0f)));
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "%d | %d ", adc_buffer[6], RC_setpoint);
+				sprintf(msg, "%d|%3.3F ", adc_buffer[6], RC_setpoint);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
@@ -687,14 +699,14 @@ void Leer_Linea_Digital(void) {
 }
 void Finalizar_Calibracion_Linea(void) {
     flag_calibrando_linea = 0;
-    for(int i = 0; i < 3; i++) {
-          // El punto medio perfecto entre lo más blanco y lo más negro que vio
-          sensor_threshold[i] = (sensor_max[i] + sensor_min[i]) / 2;
-      }
-//    sensor_threshold[0] = (806 + 3419) / 2;
-//    sensor_threshold[1] = (283 + 3213) / 2;
-//    sensor_threshold[2] = (339 + 3456) / 2;
-//    sensor_threshold[3] = (1280 + 3634) / 2;
+//    for(int i = 0; i < 3; i++) {
+//          // El punto medio perfecto entre lo más blanco y lo más negro que vio
+//          sensor_threshold[i] = (sensor_max[i] + sensor_min[i]) / 2;
+//      }
+    sensor_threshold[0] = (806 + 3419) / 2;
+    sensor_threshold[1] = (283 + 3213) / 2;
+    sensor_threshold[2] = (339 + 3456) / 2;
+    sensor_threshold[3] = (1280 + 3634) / 2;
 }
 
 
@@ -710,7 +722,7 @@ void PID_PITCH(void){
 			accelz 	= azRaw;
 	   if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
 	   if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
-	   float error = angle_y - (setpoint + RC_slow_setpoint);
+	   error = angle_y - (setpoint + RC_slow_setpoint);
 //	   float error = angle_y - (setpoint + RC_setpoint);//	   float error = angle_y - setpoint;
 	   integral += error * DT_PID;
 	   if(integral > 2000) integral = 2000;
@@ -1040,7 +1052,6 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
             oled_is_busy = 0; // Liberamos para que el while(1) pueda armar el siguiente frame
         }
     }
-
 }
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if (huart->Instance == USART1) {
@@ -1177,7 +1188,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 								break;
 							case CMD_PID_YAW_SP:
 								memcpy(&payloadFloat, payload_ptr, sizeof(float));
-								Kp_Agresivo = payloadFloat;
+								multiplicadorYaw = payloadFloat;
 								BS_NEWPARAM_OK();
 								break;
 						case CMD_CHANGE_SETPOINT:
@@ -1187,6 +1198,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 						case CMD_DEFINE_ZERO_SETPOINT:
 //									setpointDeEquilibrio = setpoint;
 //									setpoint = 0;
+
 							break;
 						case CMD_PID_ALPHA:
 							memcpy(&payloadFloat, payload_ptr, sizeof(float));
@@ -1199,6 +1211,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 							flag_RC_active =  payload_ptr[0];
 							if (flag_RC_active) {
 								RC_setpoint = payload_ptr[1] ;
+
 								RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
 							} else {
 								RC_setpoint = 0;
@@ -1291,11 +1304,8 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim4);
 //	Iniciar_Calibracion_Linea();
 //	Leer_Linea_Digital() ;
-//	Finalizar_Calibracion_Linea();
-//	for(int i = 0; i < 4; i++) {
-//		sensor_min[i] = 4095; // Valor máximo del ADC
-//		sensor_max[i] = 0;    // Valor mínimo del ADC
-//		}
+	Finalizar_Calibracion_Linea();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -1329,40 +1339,63 @@ int main(void)
 	            	}
 	            break;
 	        case MODO_FL_SIGUIENDO:
-	        	RC_steering = 0.0f;
-	            if (adc_buffer[5] < UMBRAL_FRENTE_CHOQUE) {	//VIMOS UN OBSTACULO
-//	                currentMode = MODO_FL_ESQUIVAR_OBSTACULO;
-//	                estado_evasion = EVA_DETECTADO;
-	                break;
-	            	}
-//	            if ( !estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2]) {	//PERDIMOS LA LINEA
-//	                currentMode = MODO_FL_RESCATE;
-//	                break;
-//	            	}
-	            error_linea = calcularErrorYawContinuo();//calcularErrorYawDiscreto();//
-	            RC_steering = Calcular_PID_YAW(error_linea);
-	            break;
-//	        case MODO_FL_RESCATE:
-//	        	RC_steering = 0.0f;
-//	        	error_linea=0;
-//	            if (last_state_linea < 0.0f) {
-//	                RC_steering = 250.0f; // Giro  Izquierda
-//					} else {
-//						RC_steering = -250.0f;  // Giro brusco Derecha
-//						}
-////	            if ((estado_sensores[0] && estado_sensores[1] && estado_sensores[2])){// SIGNIFICA QUE INGRESE A 90
-////	            	currentMode = MODO_FL_INGRESO_A_90;
-////	            	timer_rescate = HAL_GetTick(); // Empezamos a contar el tiempo
-////	            }else
-//	        	 if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) { // si algun IR lee negro pasamos de modo
-//					currentMode = MODO_FL_SIGUIENDO;
-//					setpoint = setpointDeEquilibrio;
-//					break;
+					if (adc_buffer[5] < UMBRAL_FRENTE_CHOQUE) {
+						break;
+					}
+					// PERDIMOS LA LÍNEA
+//					if (!estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2]) {
+//						currentMode = MODO_FL_RESCATE;
+//						timer_rescate = HAL_GetTick(); // Guardamos el tiempo de pérdida
+//						// Reseteo rápido del integral para no arrastrar la memoria tóxica de la curva
+//						integral = 0.0f;
+//						break;
 //					}
-//	            if (HAL_GetTick() - timer_rescate > 2000) {	// DESPUES DE 15 SEGUNDOS SIN ENCONTRAR LA LINEA NOS REDNIMOS
-//	                currentMode = MODO_FL_PERDIDO_FAILSAFE;
-//	            	}
-	            break;
+					// --- 1. CÁLCULO DE DIRECCIÓN ---
+					error_linea = calcularErrorYawContinuo();
+					RC_steering = Calcular_PID_YAW(error_linea);
+					// --- 2. LA MAGIA PARA LA PISTA CIRCULAR ---
+					float abs_steering = (RC_steering < 0) ? -RC_steering : RC_steering;
+
+					// A) REDUCCIÓN DE VELOCIDAD DINÁMICA
+					// Velocidad base en recta: ej 0.8f. Le restamos un proporcional al giro.
+					// Ajustá el multiplicador (ej: 0.005f) hasta que el robot frene notablemente al doblar.
+
+					RC_setpoint = setpoint_base - (abs_steering * multiplicadorYaw);
+					// Límite de seguridad: Que no frene a cero ni vaya marcha atrás por culpa de la curva
+					if (RC_setpoint < 0.2f) {
+						RC_setpoint = 0.2f;
+					}
+					// B) COMPENSACIÓN DE YAW (ANTI-INYECCIÓN)
+					// Si el volante (steering) es muy alto, el robot "pierde" empuje total y se cae de trompa.
+					// Le restamos grados al setpoint (lo tiramos para atrás) proporcionalmente a la curva.
+					// Ajustá este valor (ej: 0.002f) si ves que al doblar "cabecea" hacia adelante.
+					float compensacion_anti_caida = abs_steering * multiplicadorYaw;
+					RC_setpoint = RC_setpoint - compensacion_anti_caida;
+					break;
+				case MODO_FL_RESCATE:
+					// Soltamos el acelerador para el giro sobre su eje
+					RC_setpoint = 0.0f;
+					error_linea = 0.0f;
+
+					// Giro controlado de búsqueda (no uses 250 para no derrapar inútilmente)
+					if (last_state_linea < 0.0f) {
+						RC_steering = 0;//350.0f; // Izquierda
+					} else {
+						RC_steering = 0;//-350.0f; // Derecha
+					}
+					// Si vemos la línea, volvemos a seguirla
+					if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
+						currentMode = MODO_FL_SIGUIENDO;
+						// Reseteo rápido del integral de Yaw para que no dé un volantazo al reengancharse
+						// (Asumo que tus variables se llaman integral_yaw o I_yaw. Ajustalas).
+//	        					integral_yaw = 0.0f;
+						break;
+					}
+
+//					if (HAL_GetTick() - timer_rescate > 2000) {	// Rendición a los 2 segundos
+//						currentMode = MODO_FL_PERDIDO_FAILSAFE;
+//					}
+					break;
 //	        case MODO_FL_INGRESO_A_90:
 //	        	 RC_steering = 250.0f; // Giro  Izquierda
 //				if (HAL_GetTick() - timer_rescate > 500) {	// DESPUES DE 15 SEGUNDOS SIN ENCONTRAR LA LINEA NOS REDNIMOS
