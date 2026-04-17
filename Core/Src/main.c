@@ -134,18 +134,23 @@ enum {
 	CMD_PID_PITCH_KI      		= 21, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
 	CMD_PID_PITCH_KD      		= 22, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Pitch*/
 	CMD_PID_ALPHA 				= 23, 		/*!< Ajustar  Alpha del del filtro complementario utilizado en el PID basado en grado de libertad Pitch*/
-	//PID SISTEMA DE GIRO
-	CMD_PID_YAW_KP      		= 24, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
-	CMD_PID_YAW_KD      		= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
-	CMD_PID_YAW_SP      		= 26, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Yaw*/
 
-	CMD_PID_YAW_MULTIPLICADOR  = 27, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
+
+	CMD_PID_PITCH_LIM_INCLI		= 24, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Pitch*/
+	CMD_PID_PITCH_CORECCION_RCSP= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
+
+	//PID SISTEMA DE GIRO
+	CMD_PID_YAW_KP      		= 26, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
+	CMD_PID_YAW_KD      		= 27, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
+	CMD_PID_YAW_SP      		= 28, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Yaw*/
+
+	CMD_PID_YAW_MULTIPLICADOR  	= 29, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
 	//SENSORES
-	CMD_IR_INICIAR_CALIBRACION	= 28, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
-	CMD_IR_DETENER_CALIBRACION  = 29, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
+	CMD_IR_INICIAR_CALIBRACION	= 30, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
+	CMD_IR_DETENER_CALIBRACION  = 31, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
 	//NETWORK
-	CMD_NETWORK_CHANGE_SSID		= 30,
-	CMD_NETWORK_CHANGE_PASSWORD	= 31
+	CMD_NETWORK_CHANGE_SSID		= 32,
+	CMD_NETWORK_CHANGE_PASSWORD	= 33
 	   // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
 	   // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
 };
@@ -221,11 +226,13 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			float 			Kp = 170.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 0.1f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
 			float 			Kd = 2.0f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 0.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
+			float 			setpoint = 5.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 			float 			setpointDeEquilibrio = 0.0f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
 			float 			last_error = 0;
 			float           ALPHA_PID = 0.98f;
+			float			correccionRCSP = 0.5;
+			float 			limite_inclinacion = 2.0f;
 // =================[ Variables de Control PID YAW] ================= //
 			// Constantes del PID de YAW (Giro) - Ideales para modificar desde Qt
 			float 		Kp_yaw = 1200.0f; // Ganancia Proporcional inicial (a sintonizar)
@@ -527,7 +534,7 @@ void screenScheduler(void){
 			case 0:
 				uint8_t sensores= (estado_sensores[2] * 100) + (estado_sensores[1] * 10) + estado_sensores[0];
 				uint8_t lastSensores = (ultimo_estado_sensores[2] * 100) + (ultimo_estado_sensores[1] * 10) + ultimo_estado_sensores[0];
-				int16_t errordelinea = (int16_t)(error_linea * 100.0f);
+
 //				sprintf(msg, "IP:%s", ip_address);
 //				SSD1306_GotoXY(1, 0);
 //				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
@@ -536,7 +543,7 @@ void screenScheduler(void){
 				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "O:%f", showoutput, error_linea, RC_steering);
+				sprintf(msg, "O:%f", showoutput);
 				SSD1306_GotoXY(1, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
@@ -544,7 +551,7 @@ void screenScheduler(void){
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "|%d|&d|%3.2f", sensores, lastSensores, multiplicadorYaw);
+				sprintf(msg, "|%d|%d|%3.2f", sensores, lastSensores, multiplicadorYaw);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
@@ -593,6 +600,10 @@ void screenScheduler(void){
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 				sprintf(msg, "SP:%3.2f|RST:%4d ", setpoint, RC_steering);
 				SSD1306_GotoXY(1, 50);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+				sprintf(msg, "esto se lee?");
+				SSD1306_GotoXY(1, 60);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 //					sprintf(msg, "SP:%.1f", setpoint);
 //					SSD1306_GotoXY(1, 30);
@@ -720,19 +731,42 @@ void PID_PITCH(void){
 			accelx 	= axRaw;
 			accely 	= ayRaw;
 			accelz 	= azRaw;
-	   if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
-	   if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
+
+
+
+
+			// 1. Calculamos la inclinación real absoluta (sin importar si va para adelante o atrás)
+			    float abs_angle = (angle_y < 0) ? -angle_y : angle_y;
+
+			    // 2. Definimos el límite donde el robot se descontrola (Tu barrera de 2 grados)
+
+
+			    // 3. LA LÓGICA INTELIGENTE DEL SETPOINT
+			    if (abs_angle > limite_inclinacion) {
+			        // ¡Peligro de aceleración infinita!
+			        // Desinflamos el RC_slow_setpoint hacia 0 rápidamente (se multiplica por 0.9 en cada ciclo de 10ms).
+			        // Esto obliga al robot a enderezarse y dejar de acelerar.
+			        RC_slow_setpoint = RC_slow_setpoint * correccionRCSP;
+			    } else {
+			        // Estamos en un ángulo seguro. Le permitimos al setpoint acercarse a tu objetivo normal (RC_setpoint).
+			        // Podés hacer el 'paso' un poquito más grande si querés que recupere tracción más rápido.
+			        if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
+			        if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
+			    }
+
+			    // 4. Calculamos el error final usando el setpoint que el Gobernador acaba de decidir
+			    error = angle_y - (setpoint + RC_slow_setpoint);
+
+
+
 	   error = angle_y - (setpoint + RC_slow_setpoint);
-//	   float error = angle_y - (setpoint + RC_setpoint);//	   float error = angle_y - setpoint;
 	   integral += error * DT_PID;
 	   if(integral > 2000) integral = 2000;
 	   else if(integral < -2000) integral = -2000;
-
 	   float P_base = Kp * error;
 	   float abs_error = (error < 0) ? -error : error;
 	   float P_agresivo = Kp_Agresivo * (error * abs_error);
 	   P = P_base + P_agresivo;
-
 //	   P =  Kp * error;
 	   I =  Ki * integral;
 	   //D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //Kd * (error - last_error) / DT_PID;//float D =  Kd * gyro_rate; //
@@ -753,15 +787,10 @@ void PID_PITCH(void){
 			   outputLeft = (int16_t)output  + RC_steering;
 			   outputRigth = (int16_t)output - RC_steering;
 			   break;
-//		   case MODO_FOLLOWLINE:
-//			   outputLeft = (int16_t)output	 + FL_setpoint;
-//			   outputRigth = (int16_t)output + FL_setpoint;
-//			   break;
 		   }
 		   Robot_Drive(outputLeft, outputRigth);
-		//   Robot_Drive((int16_t)output, (int16_t)output);
 	   }
-	   if(flagMotorsAreOn==0||angle_y > 40||angle_y < -40)	   Robot_Drive(0, 0);
+	   if(flagMotorsAreOn==0||angle_y > 35 ||angle_y < -35)	   Robot_Drive(0, 0);
 }
 float calcularErrorYawDiscreto(void) {
     float numerador = 0.0f;
@@ -1227,6 +1256,14 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 							Finalizar_Calibracion_Linea();
 							currentMode = MODO_FL_BUSQUEDA_INICIAL;
 //									HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+							break;
+						case CMD_PID_PITCH_CORECCION_RCSP:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							correccionRCSP = ((float)payloadInt16)/100;
+							break;
+						case CMD_PID_PITCH_LIM_INCLI:
+							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+							limite_inclinacion = ((float)payloadInt16)/100;
 							break;
 					}
 			i = pos_checksum + 1; // Saltamos al final del paquete procesado
