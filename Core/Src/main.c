@@ -110,50 +110,52 @@ enum {
 	MODO_FL_INGRESO_A_90		= 8
 };
 enum {
-    // Sistema y Heartbeat
-	CMD_ALIVE       			= 0, 		/*!< Busca confirmar conexión inalambrica						*/
-    CMD_ACK 	      			= 1, 		/*!< Confirma conexión inalambrica								*/
-    CMD_SET_HB      			= 2, 		/*!< Configurar intervalo de Heartbeat							*/
-	CMD_CHANGE_MODE				= 3,		/*!< Cambiar entre los modos  IDLE, FOLLOW_LINE, RC				*/
-    CMD_CALIBRATE   			= 5, 		/*!< Calibración de MPU6050										*/
-    CMD_START       			= 6, 		/*!< Activar motores / Inicio de balanceo						*/
-    CMD_STOP        			= 7, 		/*!< Parada de emergencia / Motores a 0							*/
-	CMD_TCP_CONNECTED			= 8,		/*!< Comando utilizado en la conexión del TCP y el robot		*/
-	CMD_CHANGE_OLED_SCREEN  	= 9,		/*!< Cambia o apaga la pantalla OLED							*/
-	//RADIO CONTROL
-    CMD_RC    					= 10, 		/*!< Movimiento manual (adelante, atrás, giros)					*/
-	//MOTORES GENERAL
-	CMD_CHANGE_DEADLINE_LEFT 	= 12,		/*!< Ajustar  Deadband del motor izquierdo						*/
-	CMD_CHANGE_DEADLINE_RIGHT 	= 13,		/*!< Ajustar  Deadband del motor derecho						*/
-	CMD_CHANGE_SETPOINT 		= 14, 		/*!< Ajustar  Setpoint de los motores*/
-	CMD_DEFINE_ZERO_SETPOINT	= 15, 		/*!< Ajustar  Setpoint de los motores*/
-	CMD_ONOFFMOTORS 			= 16, 		/*!< Prender y apagar motores*/
-	CMD_DATA 					= 17,		/*!< El robot manda datos de la unidad Sensitiva*/
-	//PID SISTEMA BALANCEO
-	CMD_PID_PITCH_KP      		= 20, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Pitch*/
-	CMD_PID_PITCH_KI      		= 21, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
-	CMD_PID_PITCH_KD      		= 22, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Pitch*/
-	CMD_PID_ALPHA 				= 23, 		/*!< Ajustar  Alpha del del filtro complementario utilizado en el PID basado en grado de libertad Pitch*/
+       // Sistema y Heartbeat
+       CMD_ALIVE       			= 0, 		/*!< Busca confirmar conexión inalambrica						*/
+       CMD_ACK 	      			= 1, 		/*!< Confirma conexión inalambrica								*/
+       CMD_SET_HB      			= 2, 		/*!< Configurar intervalo de Heartbeat							*/
+       CMD_CHANGE_MODE				= 3,		/*!< Cambiar entre los modos  IDLE, FOLLOW_LINE, RC				*/
+       CMD_CALIBRATE   			= 5, 		/*!< Calibración de MPU6050										*/
+       CMD_START       			= 6, 		/*!< Activar motores / Inicio de balanceo						*/
+       CMD_STOP        			= 7, 		/*!< Parada de emergencia / Motores a 0							*/
+       CMD_TCP_CONNECTED			= 8,		/*!< Comando utilizado en la conexión del TCP y el robot		*/
+       CMD_CHANGE_OLED_SCREEN  	= 9,		/*!< Cambia o apaga la pantalla OLED							*/
+       //RADIO CONTROL
+       CMD_RC    					= 10, 		/*!< Movimiento manual (adelante, atrás, giros)					*/
+       //MOTORES GENERAL
+       CMD_CHANGE_DEADLINE_LEFT 	= 12,		/*!< Ajustar  Deadband del motor izquierdo						*/
+       CMD_CHANGE_DEADLINE_RIGHT 	= 13,		/*!< Ajustar  Deadband del motor derecho						*/
+       CMD_CHANGE_SETPOINT 		= 14, 		/*!< Ajustar  Setpoint de los motores*/
+       CMD_DEFINE_ZERO_SETPOINT	= 15, 		/*!< Ajustar  Setpoint de los motores*/
+       CMD_ONOFFMOTORS 			= 16, 		/*!< Prender y apagar motores*/
+       CMD_DATA 					= 17,		/*!< El robot manda datos de la unidad Sensitiva*/
+       //PID SISTEMA BALANCEO
+       CMD_PID_PITCH_KP      		= 20, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Pitch*/
+       CMD_PID_PITCH_KI      		= 21, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
+       CMD_PID_PITCH_KD      		= 22, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Pitch*/
+       CMD_PID_ALPHA 				= 23, 		/*!< Ajustar  Alpha del del filtro complementario utilizado en el PID basado en grado de libertad Pitch*/
 
 
-	CMD_PID_PITCH_LIM_INCLI		= 24, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Pitch*/
-	CMD_PID_PITCH_CORECCION_RCSP= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
+       CMD_PID_PITCH_LIM_INCLI		= 24, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Pitch*/
+       CMD_PID_PITCH_CORECCION_RCSP= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
 
-	//PID SISTEMA DE GIRO
-	CMD_PID_YAW_KP      		= 26, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
-	CMD_PID_YAW_KD      		= 27, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
-	CMD_PID_YAW_SP      		= 28, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Yaw*/
+       CMD_RC_MOVE_5_CM             = 30, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
 
-	CMD_PID_YAW_MULTIPLICADOR  	= 29, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
-	//SENSORES
-	CMD_IR_INICIAR_CALIBRACION	= 30, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
-	CMD_IR_DETENER_CALIBRACION  = 31, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
-	//NETWORK
-	CMD_NETWORK_CHANGE_SSID		= 32,
-	CMD_NETWORK_CHANGE_PASSWORD	= 33
-	   // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
-	   // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
-};
+       //PID SISTEMA DE GIRO
+       CMD_PID_YAW_KP      		= 40, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
+       CMD_PID_YAW_KD      		= 41, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
+       CMD_PID_YAW_SP      		= 42, 		/*!< Ajustar Término Derivativa del PID basado en grado de libertad Yaw*/
+
+       CMD_PID_YAW_MULTIPLICADOR  	= 43, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
+       //SENSORES
+       CMD_IR_INICIAR_CALIBRACION	= 44, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Yaw*/
+       CMD_IR_DETENER_CALIBRACION  = 45, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
+       //NETWORK
+       CMD_NETWORK_CHANGE_SSID		= 50,
+       CMD_NETWORK_CHANGE_PASSWORD	= 51
+       // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
+       // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
+   };
 typedef enum {
     FILTRO_COMPLEMENTARIO = 0,	/*!< Predeterminado */
     FILTRO_KALMAN = 1,			/*!< Presenta matemática más compleja que el filtro complementario */
@@ -223,16 +225,16 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			int16_t 		deadband_L = 130;//55;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 75;//1; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
-			float 			Kp = 170.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.1f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 2.0f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 5.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
+			float 			Kp = 170.0f;//170					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 0.1f;	//0.1				/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 2.5f;	//2.0 					/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = 7.1f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 			float 			setpointDeEquilibrio = 0.0f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
 			float 			last_error = 0;
-			float           ALPHA_PID = 0.98f;
-			float			correccionRCSP = 0.5;
-			float 			limite_inclinacion = 2.0f;
+			float           ALPHA_PID = 0.994f;
+			float			correccionRCSP = 0.98;
+			float 			limite_inclinacion = 3.0f;
 // =================[ Variables de Control PID YAW] ================= //
 			// Constantes del PID de YAW (Giro) - Ideales para modificar desde Qt
 			float 		Kp_yaw = 1200.0f; // Ganancia Proporcional inicial (a sintonizar)
@@ -269,10 +271,11 @@ uint8_t sentidoDeGiro=0; // 0 horario, 1 anti-horario
 			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
 			uint16_t 		adc_buffer[8]; // El buffer que llena el DMA
 // =================[ Modo Radio Control ] =================//
-volatile 	float 			RC_setpoint = 0;
+volatile 	float 			RC_setpoint 			= 0;
+volatile	float 			RC_setpoint_base	 = 0.8f;
 volatile 	float 			RC_slow_setpoint = 0;
 volatile 	int16_t   		RC_steering = 0;
-float 		paso = 0.1f; // Velocidad de inclinación
+float 		paso = 0.08f; // Velocidad de inclinación
 // =================[ Protocolo UNER ] =================//
 volatile 	uint16_t 		accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
 volatile 	uint16_t 		accely=0;
@@ -337,7 +340,7 @@ float showoutput=0;
 int8_t prescaler=0;
 
 float multiplicadorYaw 	 = 0.01;
-float setpoint_base		 = 0.8f;
+
 
 
 float error=0;
@@ -543,7 +546,7 @@ void screenScheduler(void){
 				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "O:%f", showoutput);
+				sprintf(msg, "O:%2.2f", showoutput);
 				SSD1306_GotoXY(1, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
@@ -595,16 +598,20 @@ void screenScheduler(void){
 				sprintf(msg, " Kd | %3.2f | %3.2f",Kd, Kd_yaw);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
 				sprintf(msg, " Ki | %3.2f | %3.2f ", Ki, setpointDeEquilibrio);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "SP:%3.2f|RST:%4d ", setpoint, RC_steering);
-				SSD1306_GotoXY(1, 50);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "esto se lee?");
-				SSD1306_GotoXY(1, 60);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//				float u = setpoint + RC_setpoint;
+//				sprintf(msg, "%3.2f ",u);
+//				SSD1306_GotoXY(1, 40);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//				sprintf(msg, "SP%3.2f|RCSP%f ", setpoint, RC_setpoint);
+//				SSD1306_GotoXY(1, 50);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+
 //					sprintf(msg, "SP:%.1f", setpoint);
 //					SSD1306_GotoXY(1, 30);
 //					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
@@ -731,35 +738,28 @@ void PID_PITCH(void){
 			accelx 	= axRaw;
 			accely 	= ayRaw;
 			accelz 	= azRaw;
-
-
-
-
 			// 1. Calculamos la inclinación real absoluta (sin importar si va para adelante o atrás)
-			    float abs_angle = (angle_y < 0) ? -angle_y : angle_y;
-
-			    // 2. Definimos el límite donde el robot se descontrola (Tu barrera de 2 grados)
-
-
-			    // 3. LA LÓGICA INTELIGENTE DEL SETPOINT
-			    if (abs_angle > limite_inclinacion) {
-			        // ¡Peligro de aceleración infinita!
-			        // Desinflamos el RC_slow_setpoint hacia 0 rápidamente (se multiplica por 0.9 en cada ciclo de 10ms).
-			        // Esto obliga al robot a enderezarse y dejar de acelerar.
-			        RC_slow_setpoint = RC_slow_setpoint * correccionRCSP;
-			    } else {
-			        // Estamos en un ángulo seguro. Le permitimos al setpoint acercarse a tu objetivo normal (RC_setpoint).
-			        // Podés hacer el 'paso' un poquito más grande si querés que recupere tracción más rápido.
+			float abs_angle = (angle_y < 0) ? -angle_y : angle_y;
+			if (abs_angle > limite_inclinacion) {
+//			        RC_slow_setpoint = RC_slow_setpoint * correccionRCSP;
+				RC_setpoint = RC_setpoint * correccionRCSP;
+			}
+			    else {
 			        if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
 			        if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
 			    }
-
-			    // 4. Calculamos el error final usando el setpoint que el Gobernador acaba de decidir
-			    error = angle_y - (setpoint + RC_slow_setpoint);
-
-
-
 	   error = angle_y - (setpoint + RC_slow_setpoint);
+
+	   switch(currentMode){
+	   case MODO_RC:
+	   default:
+		   error = angle_y - setpoint;
+		   break;
+	   case MODO_IDDLE:
+		   error = angle_y - setpoint - RC_setpoint;
+		   break;
+	   }
+
 	   integral += error * DT_PID;
 	   if(integral > 2000) integral = 2000;
 	   else if(integral < -2000) integral = -2000;
@@ -778,15 +778,15 @@ void PID_PITCH(void){
 		   int16_t outputLeft = 0;
 		   int16_t outputRigth = 0;
 		   switch(currentMode){
-		   case MODO_IDDLE:
-			   outputLeft = (int16_t)output;
-			   outputRigth = (int16_t)output;
-			   break;
-		   case MODO_RC:
-		   default:
-			   outputLeft = (int16_t)output  + RC_steering;
-			   outputRigth = (int16_t)output - RC_steering;
-			   break;
+			   case MODO_IDDLE:
+				   outputLeft = (int16_t)output;
+				   outputRigth = (int16_t)output;
+				   break;
+			   case MODO_RC:
+			   default:
+				   outputLeft = (int16_t)output  + RC_steering;
+				   outputRigth = (int16_t)output - RC_steering;
+				   break;
 		   }
 		   Robot_Drive(outputLeft, outputRigth);
 	   }
@@ -1058,22 +1058,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	if (hi2c->Instance == I2C1) {
-			axRaw 		= (int16_t)(mpu_data[0] << 8 | mpu_data[1]);
-			ayRaw 		= (int16_t)(mpu_data[2] << 8 | mpu_data[3]);
-			azRaw 		= (int16_t)(mpu_data[4] << 8 | mpu_data[5]);
-			gyPitchRaw 	= (int16_t)(mpu_data[10] << 8 | mpu_data[11]);
-			gzYawRaw 	= (int16_t)(mpu_data[12] << 8 | mpu_data[13]);
-			flagPID = 1;
-	        if (oled_update_requested) {
-				oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
-				SSD1306_UpdatePage_DMA(oled_current_page);
-				oled_current_page++;				// Incrementamos para la próxima vez
-				if (oled_current_page >= 8) {
-					oled_current_page = 0;// Ya mandamos toda la pantalla. Terminamos el proceso.
-					oled_update_requested = 0;
-				}
+		axRaw 		= (int16_t)(mpu_data[0] << 8 	| mpu_data[1]);
+		ayRaw 		= (int16_t)(mpu_data[2] << 8	| mpu_data[3]);
+		azRaw 		= (int16_t)(mpu_data[4] << 8 	| mpu_data[5]);
+		gyPitchRaw 	= (int16_t)(mpu_data[10] << 8 	| mpu_data[11]);
+		gzYawRaw 	= (int16_t)(mpu_data[12] << 8 	| mpu_data[13]);
+		flagPID = 1;
+		if (oled_update_requested) {
+			oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
+			SSD1306_UpdatePage_DMA(oled_current_page);
+			oled_current_page++;				// Incrementamos para la próxima vez
+			if (oled_current_page >= 8) {
+				oled_current_page = 0;// Ya mandamos toda la pantalla. Terminamos el proceso.
+				oled_update_requested = 0;
 			}
-    }
+		}
+}
 }
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	if (hi2c->Instance == I2C1) {
@@ -1207,7 +1207,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 							break;
 							case CMD_PID_YAW_KP:
 								memcpy(&payloadFloat, payload_ptr, sizeof(float));
-								Kp_yaw = payloadFloat;
+								//Kp_yaw = payloadFloat;
+								Kp_Agresivo = payloadFloat;
 								BS_NEWPARAM_OK();
 								break;
 							case CMD_PID_YAW_KD:
@@ -1227,7 +1228,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 						case CMD_DEFINE_ZERO_SETPOINT:
 //									setpointDeEquilibrio = setpoint;
 //									setpoint = 0;
-
 							break;
 						case CMD_PID_ALPHA:
 							memcpy(&payloadFloat, payload_ptr, sizeof(float));
@@ -1237,17 +1237,19 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 							prescaler = payloadFloat;
 							break;
 						case CMD_RC:{
-							flag_RC_active =  payload_ptr[0];
+							flag_RC_active = payload_ptr[0];
 							if (flag_RC_active) {
-								RC_setpoint = payload_ptr[1] ;
+								// Casteamos a int8_t para recuperar el signo negativo, luego a float y dividimos.
+								RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
 
+								// El steering ya era int16_t, así que reconstruimos y el signo se mantiene bien
 								RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
 							} else {
-								RC_setpoint = 0;
-								RC_steering = 0;
-								}
+								RC_setpoint = 0.0f;
+								RC_steering = 0.0f;
 							}
-							break;
+						}
+						break;
 						case CMD_IR_INICIAR_CALIBRACION:
 							Iniciar_Calibracion_Linea();
 //									HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
@@ -1264,6 +1266,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 						case CMD_PID_PITCH_LIM_INCLI:
 							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
 							limite_inclinacion = ((float)payloadInt16)/100;
+							break;
+						case CMD_RC_MOVE_5_CM:
+//							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
+//							limite_inclinacion = ((float)payloadInt16)/100;
 							break;
 					}
 			i = pos_checksum + 1; // Saltamos al final del paquete procesado
@@ -1391,14 +1397,17 @@ int main(void)
 					error_linea = calcularErrorYawContinuo();
 					RC_steering = Calcular_PID_YAW(error_linea);
 					// --- 2. LA MAGIA PARA LA PISTA CIRCULAR ---
+
 					float abs_steering = (RC_steering < 0) ? -RC_steering : RC_steering;
 
 					// A) REDUCCIÓN DE VELOCIDAD DINÁMICA
 					// Velocidad base en recta: ej 0.8f. Le restamos un proporcional al giro.
 					// Ajustá el multiplicador (ej: 0.005f) hasta que el robot frene notablemente al doblar.
 
-					RC_setpoint = setpoint_base - (abs_steering * multiplicadorYaw);
+					RC_setpoint = RC_setpoint_base - (abs_steering * multiplicadorYaw);
+
 					// Límite de seguridad: Que no frene a cero ni vaya marcha atrás por culpa de la curva
+
 					if (RC_setpoint < 0.2f) {
 						RC_setpoint = 0.2f;
 					}
@@ -1406,12 +1415,13 @@ int main(void)
 					// Si el volante (steering) es muy alto, el robot "pierde" empuje total y se cae de trompa.
 					// Le restamos grados al setpoint (lo tiramos para atrás) proporcionalmente a la curva.
 					// Ajustá este valor (ej: 0.002f) si ves que al doblar "cabecea" hacia adelante.
+
 					float compensacion_anti_caida = abs_steering * multiplicadorYaw;
 					RC_setpoint = RC_setpoint - compensacion_anti_caida;
 					break;
 				case MODO_FL_RESCATE:
 					// Soltamos el acelerador para el giro sobre su eje
-					RC_setpoint = 0.0f;
+					RC_setpoint_base = 0.0f;
 					error_linea = 0.0f;
 
 					// Giro controlado de búsqueda (no uses 250 para no derrapar inútilmente)
