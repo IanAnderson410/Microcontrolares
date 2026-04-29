@@ -209,7 +209,7 @@ volatile	uint8_t			flagSendUNER 			= 	0;
 volatile	uint8_t			flagDataToQt 			= 	0;
 volatile	uint8_t			flagWIFI				=   0;
 volatile	uint8_t 		flagOLED 				= 	2;
-volatile	uint8_t			flagMotorsAreOn 		=	0;
+volatile	uint8_t			flagMotorsAreOn 		=	1;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
 // ================= [ Counters ] ================= //
@@ -578,7 +578,6 @@ void screenScheduler(void){
 				sprintf(msg, "%d ", adc_buffer[7]);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
 				sprintf(msg, "Mode: %d ", currentMode);
 				SSD1306_GotoXY(1, 50);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
@@ -1341,6 +1340,7 @@ int main(void)
 		Error_Handler();
 	}
 	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);  // Preparamos la recepción DMA para la Comunicación Inalámbrica (ESP8266)[cite: 15].
+
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET); // (Asumo que es el Enable del TB6612FNG o un LED)
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
@@ -1358,6 +1358,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  HAL_Delay(2100);
+	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
+
 	buzzerSecuence(&hBuzzer);
 	//Funciones INDEPENDIENTES al modo del robot
 	if(flagDataToQt){	flagDataToQt = 0;	DataToQt();		}
