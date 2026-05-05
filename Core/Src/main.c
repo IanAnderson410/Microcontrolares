@@ -114,17 +114,17 @@ enum {
        CMD_ALIVE       			= 0, 		/*!< Busca confirmar conexión inalambrica						*/
        CMD_ACK 	      			= 1, 		/*!< Confirma conexión inalambrica								*/
        CMD_SET_HB      			= 2, 		/*!< Configurar intervalo de Heartbeat							*/
-       CMD_CHANGE_MODE				= 3,		/*!< Cambiar entre los modos  IDLE, FOLLOW_LINE, RC				*/
+       CMD_CHANGE_MODE			= 3,		/*!< Cambiar entre los modos  IDLE, FOLLOW_LINE, RC				*/
        CMD_CALIBRATE   			= 5, 		/*!< Calibración de MPU6050										*/
        CMD_START       			= 6, 		/*!< Activar motores / Inicio de balanceo						*/
        CMD_STOP        			= 7, 		/*!< Parada de emergencia / Motores a 0							*/
-       CMD_TCP_CONNECTED			= 8,		/*!< Comando utilizado en la conexión del TCP y el robot		*/
+       CMD_TCP_CONNECTED		= 8,		/*!< Comando utilizado en la conexión del TCP y el robot		*/
        CMD_CHANGE_OLED_SCREEN  	= 9,		/*!< Cambia o apaga la pantalla OLED							*/
        //RADIO CONTROL
-       CMD_RC    					= 10, 		/*!< Movimiento manual (adelante, atrás, giros)					*/
+       CMD_RC    				= 10, 		/*!< Movimiento manual (adelante, atrás, giros)					*/
        //MOTORES GENERAL
-       CMD_CHANGE_DEADLINE_LEFT 	= 12,		/*!< Ajustar  Deadband del motor izquierdo						*/
-       CMD_CHANGE_DEADLINE_RIGHT 	= 13,		/*!< Ajustar  Deadband del motor derecho						*/
+       CMD_CHANGE_DEADLINE_LEFT = 12,		/*!< Ajustar  Deadband del motor izquierdo						*/
+       CMD_CHANGE_DEADLINE_RIGHT = 13,		/*!< Ajustar  Deadband del motor derecho						*/
        CMD_CHANGE_SETPOINT 		= 14, 		/*!< Ajustar  Setpoint de los motores*/
        CMD_DEFINE_ZERO_SETPOINT	= 15, 		/*!< Ajustar  Setpoint de los motores*/
        CMD_ONOFFMOTORS 			= 16, 		/*!< Prender y apagar motores*/
@@ -184,11 +184,11 @@ typedef struct {
 // ================= [ Periféricos ] ================= //
 #define 	MPU6050_ADDR 	(0x68 << 1) // Dirección I2C desplazada
 
-	#define IRCSAAB (estado_sensores[0] && estado_sensores[1] && estado_sensores[2] && estado_sensores[3])	// ESTA MACRO SIGNIFICA IR CURRENT STATE ARE ALL BLACK
-	#define IRLSAAB (ultimo_estado_sensores[0] && ultimo_estado_sensores[1] && ultimo_estado_sensores[2] && ultimo_estado_sensores[3])	// ESTA MACRO SIGNIFICA IR LAST STATE ARE ALL BLACK
-	#define IRCSAAW (!estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2] && !estado_sensores[3])	// ESTA MACRO SIGNIFICA IR CURRENT STATE ARE ALL WHITE
-	#define IRLSAAW (!ultimo_estado_sensores[0] && !ultimo_estado_sensores[1] && !ultimo_estado_sensores[2] && !ultimo_estado_sensores[3])	// ESTA MACRO SIGNIFICA IR LAST STATE ARE ALL WHITE
-	#define	AIRAB	(estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3])	// ESTA MACRO SIGNIFICA ANY IR ARE BLACK
+//	#define IRCSAAB (estado_sensores[0] && estado_sensores[1] && estado_sensores[2] && estado_sensores[3])	// ESTA MACRO SIGNIFICA IR CURRENT STATE ARE ALL BLACK
+//	#define IRLSAAB (ultimo_estado_sensores[0] && ultimo_estado_sensores[1] && ultimo_estado_sensores[2] && ultimo_estado_sensores[3])	// ESTA MACRO SIGNIFICA IR LAST STATE ARE ALL BLACK
+//	#define IRCSAAW (!estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2] && !estado_sensores[3])	// ESTA MACRO SIGNIFICA IR CURRENT STATE ARE ALL WHITE
+//	#define IRLSAAW (!ultimo_estado_sensores[0] && !ultimo_estado_sensores[1] && !ultimo_estado_sensores[2] && !ultimo_estado_sensores[3])	// ESTA MACRO SIGNIFICA IR LAST STATE ARE ALL WHITE
+//	#define	AIRAB	(estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3])	// ESTA MACRO SIGNIFICA ANY IR ARE BLACK
 
 /* USER CODE END PD */
 
@@ -225,10 +225,10 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			int16_t 		deadband_L = 130;//55;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 75;//1; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
-			float 			Kp = 170.0f;//170					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Kp = 130.0f;//170					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 0.1f;	//0.1				/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 2.5f;	//2.0 					/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 7.1f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
+			float 			Kd = 1.0f;	//2.0 					/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = 9.1f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 			float 			setpointDeEquilibrio = 0.0f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
 			float 			last_error = 0;
@@ -345,6 +345,19 @@ float multiplicadorYaw 	 = 0.01;
 
 float error=0;
 
+typedef enum {
+    WIFI_IDLE,
+    WIFI_SEND_AT,
+    WIFI_WAIT_OK,
+    WIFI_ERROR
+} WifiState_t;
+
+WifiState_t wifiState_1 = WIFI_SEND_AT;
+uint8_t rx_buffer_1[64]; // Buffer para recibir la respuesta del ESP
+uint8_t rx_byte_1;       // Byte individual para DMA/Interrupción
+uint16_t rx_index_1 = 0;
+uint32_t timeout_counter_1 = 0;
+uint8_t flagOK=0;
 
 /* USER CODE END PM */
 
@@ -568,19 +581,41 @@ void screenScheduler(void){
 				sprintf(msg, "IP:%s", ip_address);
 				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "%d | %d", adc_buffer[5], ((int16_t)(error_linea * 100.0f)));
+
+				sprintf(msg, "FlagOK %d", flagOK);
+				SSD1306_GotoXY(1, 10);
+				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+				sprintf(msg, "%f", angle_y);
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "%d|%3.3F ", adc_buffer[6], RC_setpoint);
+
+				sprintf(msg, "%3.3f ", output);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "%d ", adc_buffer[7]);
+				sprintf(msg, "%4d %4d %4d", adc_buffer[0], adc_buffer[1], adc_buffer[2]);
+				sprintf(msg, "%4d %4d %4d", adc_buffer[3], adc_buffer[4], adc_buffer[5]);
 				SSD1306_GotoXY(1, 40);
+
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 				sprintf(msg, "Mode: %d ", currentMode);
 				SSD1306_GotoXY(1, 50);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+//				sprintf(msg, "%d | %d", adc_buffer[5], ((int16_t)(error_linea * 100.0f)));
+//				SSD1306_GotoXY(1, 20);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//				sprintf(msg, "%d|%3.3F ", adc_buffer[6], RC_setpoint);
+//				SSD1306_GotoXY(1, 30);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//
+//				sprintf(msg, "%d ", adc_buffer[7]);
+//				SSD1306_GotoXY(1, 40);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//				sprintf(msg, "Mode: %d ", currentMode);
+//				SSD1306_GotoXY(1, 50);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
 				oled_update_requested = 1;
 				break;
@@ -789,7 +824,7 @@ void PID_PITCH(void){
 		   }
 		   Robot_Drive(outputLeft, outputRigth);
 	   }
-	   if(flagMotorsAreOn==0||angle_y > 35 ||angle_y < -35)	   Robot_Drive(0, 0);
+	   if(flagMotorsAreOn==0||angle_y > 45 ||angle_y < -45)	   Robot_Drive(0, 0);
 }
 float calcularErrorYawDiscreto(void) {
     float numerador = 0.0f;
@@ -958,12 +993,15 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 		// __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)speed_L);
 	   } else {
 		if (speed_L >= 0) { // Motor 1 (PA8, PA9, PB4)
-			HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin,  GPIO_PIN_SET);
-			HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_RESET  );
+			HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_RESET );
+							HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_SET);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)speed_L);
 			} else {
-				HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_RESET );
-				HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_SET);
+
+
+
+				HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin,  GPIO_PIN_SET);
+							HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_RESET  );
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)(-speed_L));
 			}
 	   	   }
@@ -973,12 +1011,14 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	      //  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)speed_R);
 	    } else {
 		if (speed_R >= 0) {// Motor 2 (PB3, PA15, PB5)
-			HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_SET  );
+			HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_SET  );
+						HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin,  GPIO_PIN_RESET);
 			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)speed_R);
 		} else {
-			HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_SET  );
-			HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin,  GPIO_PIN_RESET);
+
+
+			HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_RESET);
+						HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_SET  );
 			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)(-speed_R));
 		}
 	    }
@@ -1083,13 +1123,11 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 }
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if (huart->Instance == USART1) {
-
         // --- 1. LÓGICA DE CAPTURA DE IP (TEXTO PLANO) ---
         if (esperando_digitos_ip == 1) {
             uint16_t ip_len = (Size > 15) ? 15 : Size;
             memset(ip_address, 0, sizeof(ip_address));
             strncpy(ip_address, (char*)rx_buffer_uart, ip_len);
-
             // Limpieza de caracteres de control
             for(int i = 0; i < 16; i++){
                 if(ip_address[i] == '\r' || ip_address[i] == '\n' || ip_address[i] == ' '){
@@ -1282,6 +1320,50 @@ HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
 __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); // Desactivar interrupción de Half Transfer
     }
 }
+// Callback de recepción: se ejecuta cada vez que llega un byte del ESP
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == USART1) { // Asumiendo que usás USART1 para el ESP
+        rx_buffer_1[rx_index_1++] = rx_byte_1;
+        if (rx_index_1 >= 64) rx_index_1 = 0; // Evitar desborde
+        HAL_UART_Receive_IT(huart, &rx_byte_1, 1); // Re-activar interrupción
+    }
+}
+void Gestion_WiFi_AT(UART_HandleTypeDef *huart) {
+    switch (wifiState_1) {
+        case WIFI_SEND_AT:
+            rx_index_1 = 0;
+            memset(rx_buffer_1, 0, sizeof(rx_buffer_1));
+            flagOK = 0;
+            // Transmisión por interrupción para no frenar el CPU
+            HAL_UART_Transmit_IT(huart, (uint8_t*)"AT\r\n", 4);
+            timeout_counter_1 = HAL_GetTick();
+            wifiState_1 = WIFI_WAIT_OK;
+            break;
+
+        case WIFI_WAIT_OK:
+            if (strstr((char*)rx_buffer_1, "OK")) {
+                wifiState_1 = WIFI_IDLE;
+                flagOK = 1;
+            }
+            else if (HAL_GetTick() - timeout_counter_1 > 2000) {
+                wifiState_1 = WIFI_ERROR;
+                timeout_counter_1 = HAL_GetTick(); // Usamos esto para el delay de reintento
+            }
+            break;
+
+        case WIFI_IDLE:
+            // Aquí es donde luego agregarás el AT+CWJAP, AT+CIPSTART, etc.
+            break;
+
+        case WIFI_ERROR:
+            flagOK = 0;
+            // En lugar de HAL_Delay, esperamos que pasen 1000ms usando el Tick
+            if (HAL_GetTick() - timeout_counter_1 > 1000) {
+                wifiState_1 = WIFI_SEND_AT;
+            }
+            break;
+    }
+}
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     // Si hubo ruido o error de trama (común al arrancar el ESP)
@@ -1358,17 +1440,17 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  HAL_Delay(2100);
-	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
 
-	buzzerSecuence(&hBuzzer);
+
+//	buzzerSecuence(&hBuzzer);
 	//Funciones INDEPENDIENTES al modo del robot
-	if(flagDataToQt){	flagDataToQt = 0;	DataToQt();		}
+//	if(flagDataToQt){	flagDataToQt = 0;	DataToQt();		}
 	if(flagDisplay){	flagDisplay=0;		screenScheduler();}
 	if(flagPID){
 	    flagPID = 0;
 	    Filtrar_Sensores_IR();
 	    Leer_Linea_Digital(); // Vital para los cambios de estado
+	    Gestion_WiFi_AT(&huart1);
 	    switch(currentMode){
 	        case MODO_IDDLE:
 //	        	Robot_Drive(deadband_L, deadband_R);
