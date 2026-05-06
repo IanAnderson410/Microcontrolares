@@ -54,6 +54,18 @@
   *
   *
   *  El sistema de navegación para el modo follow line utiliza una barra de 4 sensores TCRT5000 digitalizados mediante umbrales individuales calibrados en el arranque (punto medio entre blanco y negro), asignando pesos simétricos de -3, -1, 1 y 3 a cada sensor para calcular un error de posición mediante el promedio ponderado de los sensores que detectan la línea; este error alimenta un PID de Yaw independiente donde el término proporcional ($P$) busca centrar la línea y el término derivativo ($D$) utiliza la velocidad angular real del Giroscopio en Z como amortiguador para suavizar los giros, resultando en un valor de steering que se suma al output de equilibrio en el motor izquierdo y se resta en el derecho, permitiendo que el robot avance con un setpoint de inclinación constante (1° o 2°) mientras corrige su trayectoria diferencialmente sin necesidad de encoders.
+  *
+  *
+  *
+  *
+FIRMWARE DE AT:
+OK
+AT+GMR
+AT+GMR
+AT version:1.7.4.0(Jul  8 2020 15:53:04)
+SDK version:3.0.5-dev(52383f9)
+compile time:Aug 28 2020 14:37:33
+OK
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -65,6 +77,8 @@
 /* USER CODE BEGIN Includes */
 #include "ssd1306.h"
 #include "fonts.h"
+#include "wifi_anderson.h"
+
 #include "math.h"
 #include <string.h>
 /* USER CODE END Includes */
@@ -198,6 +212,7 @@ typedef struct {
 			PayloadUNER_t 	telemetria;
 			Buzzer_Seq_t 	hBuzzer = {0}; // Inicializamos en cero
 			FiltroTipo_t 	currentlySelectedFilter = 	FILTRO_COMPLEMENTARIO; //FILTRO_COMPLEMENTARIO;
+			RobotState_t miRobot;
 // ================= [ Variables generales ] ================= //
 			uint16_t 		delayHB	= 50; //ENTRE 1 Y 200
 			uint32_t 		lastTime0 = 0; // tiempo en el while 1
@@ -324,8 +339,6 @@ volatile int16_t axRaw, ayRaw, azRaw, gyPitchRaw, gzYawRaw;
 
 volatile uint32_t timeout_rc=0;
 
-
-
 char ip_address[16];               // Buffer para guardar el string "192.168.XXX."
 volatile uint8_t ip_received_flag = 0; // Bandera para avisar al loop principal
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
@@ -345,19 +358,29 @@ float multiplicadorYaw 	 = 0.01;
 
 float error=0;
 
-typedef enum {
-    WIFI_IDLE,
-    WIFI_SEND_AT,
-    WIFI_WAIT_OK,
-    WIFI_ERROR
-} WifiState_t;
-
-WifiState_t wifiState_1 = WIFI_SEND_AT;
-uint8_t rx_buffer_1[64]; // Buffer para recibir la respuesta del ESP
-uint8_t rx_byte_1;       // Byte individual para DMA/Interrupción
-uint16_t rx_index_1 = 0;
-uint32_t timeout_counter_1 = 0;
 uint8_t flagOK=0;
+
+
+
+
+typedef enum {
+    ESP_STATE_RESET,
+    ESP_STATE_WAIT_RESET,
+    ESP_STATE_CWMODE,
+    ESP_STATE_WAIT_CWMODE,
+    ESP_STATE_CWJAP,
+    ESP_STATE_WAIT_CWJAP,
+    ESP_STATE_CIFSR,
+    ESP_STATE_WAIT_CIFSR,
+    ESP_STATE_CIPMUX,
+    ESP_STATE_WAIT_CIPMUX,
+    ESP_STATE_CIPSERVER,
+    ESP_STATE_WAIT_CIPSERVER,
+    ESP_STATE_READY,       // Servidor corriendo, listo para el protocolo UNER
+    ESP_STATE_ERROR
+} ESP_State_t;
+
+ESP_State_t esp_state = ESP_STATE_RESET;
 
 /* USER CODE END PM */
 
@@ -760,8 +783,6 @@ void Finalizar_Calibracion_Linea(void) {
     sensor_threshold[2] = (339 + 3456) / 2;
     sensor_threshold[3] = (1280 + 3634) / 2;
 }
-
-
 void PID_PITCH(void){
 		float gyro_rate = -(((float)gyPitchRaw / 131.0f)); // 65.5f));
 		float accel_angle = (atan2f((float)axRaw , (float)azRaw ) * 57.2957f) ;
@@ -1112,6 +1133,8 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 				oled_update_requested = 0;
 			}
 		}
+// Actualizamos el timeout de seguridad sumando 10ms
+		WIFI_UpdateAlive(&miRobot, 10);
 }
 }
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
@@ -1316,59 +1339,15 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 	}
 	i++; // Si no hay cabecera, avanzamos un byte
 }
-HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+//HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
 __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); // Desactivar interrupción de Half Transfer
-    }
-}
-// Callback de recepción: se ejecuta cada vez que llega un byte del ESP
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    if (huart->Instance == USART1) { // Asumiendo que usás USART1 para el ESP
-        rx_buffer_1[rx_index_1++] = rx_byte_1;
-        if (rx_index_1 >= 64) rx_index_1 = 0; // Evitar desborde
-        HAL_UART_Receive_IT(huart, &rx_byte_1, 1); // Re-activar interrupción
-    }
-}
-void Gestion_WiFi_AT(UART_HandleTypeDef *huart) {
-    switch (wifiState_1) {
-        case WIFI_SEND_AT:
-            rx_index_1 = 0;
-            memset(rx_buffer_1, 0, sizeof(rx_buffer_1));
-            flagOK = 0;
-            // Transmisión por interrupción para no frenar el CPU
-            HAL_UART_Transmit_IT(huart, (uint8_t*)"AT\r\n", 4);
-            timeout_counter_1 = HAL_GetTick();
-            wifiState_1 = WIFI_WAIT_OK;
-            break;
-
-        case WIFI_WAIT_OK:
-            if (strstr((char*)rx_buffer_1, "OK")) {
-                wifiState_1 = WIFI_IDLE;
-                flagOK = 1;
-            }
-            else if (HAL_GetTick() - timeout_counter_1 > 2000) {
-                wifiState_1 = WIFI_ERROR;
-                timeout_counter_1 = HAL_GetTick(); // Usamos esto para el delay de reintento
-            }
-            break;
-
-        case WIFI_IDLE:
-            // Aquí es donde luego agregarás el AT+CWJAP, AT+CIPSTART, etc.
-            break;
-
-        case WIFI_ERROR:
-            flagOK = 0;
-            // En lugar de HAL_Delay, esperamos que pasen 1000ms usando el Tick
-            if (HAL_GetTick() - timeout_counter_1 > 1000) {
-                wifiState_1 = WIFI_SEND_AT;
-            }
-            break;
     }
 }
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     // Si hubo ruido o error de trama (común al arrancar el ESP)
     if (huart->Instance == USART1){
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+//        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
     }
 }
 /* USER CODE END 0 */
@@ -1431,6 +1410,10 @@ int main(void)
 //	Leer_Linea_Digital() ;
 	Finalizar_Calibracion_Linea();
 
+
+	WIFI_Init(&miRobot, &huart1);
+	// En el main, después de inicializar periféricos y antes del while(1)	HAL_UART_Receive_IT(&huart1, &rx_byte_1, 1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -1444,13 +1427,14 @@ int main(void)
 
 //	buzzerSecuence(&hBuzzer);
 	//Funciones INDEPENDIENTES al modo del robot
+	WIFI_CheckRxBuffer(&miRobot);
 //	if(flagDataToQt){	flagDataToQt = 0;	DataToQt();		}
 	if(flagDisplay){	flagDisplay=0;		screenScheduler();}
 	if(flagPID){
 	    flagPID = 0;
 	    Filtrar_Sensores_IR();
 	    Leer_Linea_Digital(); // Vital para los cambios de estado
-	    Gestion_WiFi_AT(&huart1);
+	  //  Gestion_WiFi_AT(&huart1);
 	    switch(currentMode){
 	        case MODO_IDDLE:
 //	        	Robot_Drive(deadband_L, deadband_R);

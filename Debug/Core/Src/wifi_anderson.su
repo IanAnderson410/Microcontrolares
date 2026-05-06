@@ -1,0 +1,4 @@
+../Core/Src/wifi_anderson.c:12:6:WIFI_Init	16	static
+../Core/Src/wifi_anderson.c:24:6:WIFI_UpdateAlive	16	static
+../Core/Src/wifi_anderson.c:37:6:WIFI_ResetAlive	16	static
+../Core/Src/wifi_anderson.c:43:6:WIFI_CheckRxBuffer	24	static
