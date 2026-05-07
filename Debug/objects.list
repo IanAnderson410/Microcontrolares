@@ -1,3 +1,5 @@
+"./Core/Src/ESP01.o"
+"./Core/Src/MPU6050.o"
 "./Core/Src/fonts.o"
 "./Core/Src/main.o"
 "./Core/Src/ssd1306.o"

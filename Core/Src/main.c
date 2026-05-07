@@ -78,6 +78,7 @@ OK
 #include "ssd1306.h"
 #include "fonts.h"
 #include "wifi_anderson.h"
+#include "ESP01.h"
 
 #include "math.h"
 #include <string.h>
@@ -183,6 +184,39 @@ typedef struct {
     uint32_t last_tick; // Auxiliar para el tiempo
     uint8_t state;      // 0 = Silencio, 1 = Sonando
 } Buzzer_Seq_t;
+
+	typedef enum { ESPERANDO_U,
+		ESPERANDO_N,
+		ESPERANDO_E,
+		ESPERANDO_R,
+		RECIBIENDO_LEN,
+		RECIBIENDO_TOKEN,
+		RECIBIENDO_DATOS
+	}eEstadoUNER;
+	   typedef enum {
+		   ESP_STATE_RESET,
+		   ESP_STATE_WAIT_RESET,
+		   ESP_STATE_CWMODE,
+		   ESP_STATE_WAIT_CWMODE,
+		   ESP_STATE_CWJAP,
+		   ESP_STATE_WAIT_CWJAP,
+		   ESP_STATE_CIFSR,
+		   ESP_STATE_WAIT_CIFSR,
+		   ESP_STATE_CIPMUX,
+		   ESP_STATE_WAIT_CIPMUX,
+		   ESP_STATE_CIPSERVER,
+		   ESP_STATE_WAIT_CIPSERVER,
+		   ESP_STATE_READY,       // Servidor corriendo, listo para el protocolo UNER
+		   ESP_STATE_ERROR
+	   } ESP_State_t;
+
+	   typedef enum {
+		   EVA_DETECTADO,
+		   EVA_GIRAR_IZQ,
+		   EVA_SEGUIR_PARED,
+		   EVA_AVANZAR_ESQUINA,
+		   EVA_GIRAR_DER
+	   } EstadoEvasion_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -195,6 +229,17 @@ typedef struct {
 #define 	RX_BUFFER_SIZE 		64          // Suficiente para la IP y futuros comandos UNER
 #define 	UNER_HEADER_STR 	"UNER"
 #define 	UNER_TOKEN      	':'    // 0x3A según tu PDF o preferencia
+
+
+#define ESP_CHPD_PIN    GPIO_PIN_4 // El pin físico donde conectaste el CH_PD del ESP01
+#define PUERTO_REMOTO   30000      // Puerto definido en tu interfaz Qt
+#define PUERTO_LOCAL    30001      // Puerto local del robot
+
+
+#define QT_HMI_IP    "192.168.1.100"
+#define QT_HMI_PORT  8888
+#define LOCAL_PORT   8889
+#define RX_DATA_BUF_SIZE 256
 // ================= [ Periféricos ] ================= //
 #define 	MPU6050_ADDR 	(0x68 << 1) // Dirección I2C desplazada
 
@@ -203,7 +248,6 @@ typedef struct {
 //	#define IRCSAAW (!estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2] && !estado_sensores[3])	// ESTA MACRO SIGNIFICA IR CURRENT STATE ARE ALL WHITE
 //	#define IRLSAAW (!ultimo_estado_sensores[0] && !ultimo_estado_sensores[1] && !ultimo_estado_sensores[2] && !ultimo_estado_sensores[3])	// ESTA MACRO SIGNIFICA IR LAST STATE ARE ALL WHITE
 //	#define	AIRAB	(estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3])	// ESTA MACRO SIGNIFICA ANY IR ARE BLACK
-
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -213,8 +257,11 @@ typedef struct {
 			Buzzer_Seq_t 	hBuzzer = {0}; // Inicializamos en cero
 			FiltroTipo_t 	currentlySelectedFilter = 	FILTRO_COMPLEMENTARIO; //FILTRO_COMPLEMENTARIO;
 			RobotState_t miRobot;
+			ESP_State_t esp_state = ESP_STATE_RESET;
+			_sESP01Handle 	hESP01;
+			EstadoEvasion_t estado_evasion = EVA_DETECTADO;
 // ================= [ Variables generales ] ================= //
-			uint16_t 		delayHB	= 50; //ENTRE 1 Y 200
+			uint16_t 		delayHB	= 20; //ENTRE 1 Y 200
 			uint32_t 		lastTime0 = 0; // tiempo en el while 1
 volatile	uint8_t			currentMode = MODO_IDDLE;
 // ================= [ Flags ] ================= //
@@ -224,7 +271,7 @@ volatile	uint8_t			flagSendUNER 			= 	0;
 volatile	uint8_t			flagDataToQt 			= 	0;
 volatile	uint8_t			flagWIFI				=   0;
 volatile	uint8_t 		flagOLED 				= 	2;
-volatile	uint8_t			flagMotorsAreOn 		=	1;
+volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
 // ================= [ Counters ] ================= //
@@ -307,19 +354,11 @@ volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
 	float I =  0;
 	float D =  0;
 	float output = 0;
-
 	float Kp_Agresivo = 0.0f;
 // =================[ Digitalizador del IR ] =================//
 // Máquina de estados de la evasión
-typedef enum {
-    EVA_DETECTADO,
-    EVA_GIRAR_IZQ,
-    EVA_SEGUIR_PARED,
-    EVA_AVANZAR_ESQUINA,
-    EVA_GIRAR_DER
-} EstadoEvasion_t;
 
-EstadoEvasion_t estado_evasion = EVA_DETECTADO;
+
 uint32_t timer_evasion = 0; // Para contar milisegundos en las maniobras
 // recibidos desde el qt
 uint8_t rx_buffer_uart[256];
@@ -339,48 +378,33 @@ volatile int16_t axRaw, ayRaw, azRaw, gyPitchRaw, gzYawRaw;
 
 volatile uint32_t timeout_rc=0;
 
-char ip_address[16];               // Buffer para guardar el string "192.168.XXX."
+char ip_address[18];               // Buffer para guardar el string "192.168.XXX."
 volatile uint8_t ip_received_flag = 0; // Bandera para avisar al loop principal
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
-
-
-
 float velocidad_objetivo = 0.0f; // Reemplaza a tu viejo RC_setpoint y FL_setpoint
 float Kp_vel = 0.015f;           // Ganancia del lazo de velocidad (empezamos MUY bajo)
-
-
 float showoutput=0;
 int8_t prescaler=0;
-
 float multiplicadorYaw 	 = 0.01;
-
-
-
 float error=0;
 
-uint8_t flagOK=0;
 
 
 
 
-typedef enum {
-    ESP_STATE_RESET,
-    ESP_STATE_WAIT_RESET,
-    ESP_STATE_CWMODE,
-    ESP_STATE_WAIT_CWMODE,
-    ESP_STATE_CWJAP,
-    ESP_STATE_WAIT_CWJAP,
-    ESP_STATE_CIFSR,
-    ESP_STATE_WAIT_CIFSR,
-    ESP_STATE_CIPMUX,
-    ESP_STATE_WAIT_CIPMUX,
-    ESP_STATE_CIPSERVER,
-    ESP_STATE_WAIT_CIPSERVER,
-    ESP_STATE_READY,       // Servidor corriendo, listo para el protocolo UNER
-    ESP_STATE_ERROR
-} ESP_State_t;
 
-ESP_State_t esp_state = ESP_STATE_RESET;
+
+
+
+
+
+uint8_t rx_byte;
+
+
+static uint8_t  rxDataBuf[RX_DATA_BUF_SIZE];
+static uint16_t rxDataIW = 0;   // índice escritura (lo escribe la librería)
+static uint16_t rxDataIR = 0;   // índice lectura  (lo usás vos en el parser)
+
 
 /* USER CODE END PM */
 
@@ -414,6 +438,12 @@ static void MX_TIM4_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
+
+void ESP01_DoCHPD(uint8_t value);
+int  ESP01_WriteUSARTByte(uint8_t value);
+void ESP01_WriteByteToBufRX(uint8_t value);
+void OnESP01ChangeState(_eESP01STATUS state);
+
 /**
  * @brief buzzerSecuence:  				Máquina de estados para señales auditivas (Buzzer) no-bloqueante.
  * @param seq:			   				Estructura con tiempos de duración, intervalo y repeticiones.
@@ -508,11 +538,63 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size);
  * @param huart:
  */
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
+
+
+
+void UNER_Parser_Feed(uint8_t byte);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-// Función pura para el filtro
+
+
+
+
+void MX_WIFI_Init(void) {
+    hESP01.WriteUSARTByte   = ESP01_WriteUSARTByte;
+    hESP01.WriteByteToBufRX = ESP01_WriteByteToBufRX;
+    miRobot.conexion_perdida = 1;
+
+
+    ESP01_Init(&hESP01);
+    ESP01_AttachChangeState(OnESP01ChangeState);
+    //ESP01_AttachDebugStr() // PARA ENVIAR CMDS POR SERIE
+    ESP01_SetWIFI("InternetPlus_872f10", "wlan78d0ef");
+    //	ESP01_SetWIFI("FCAL", "fcalconcordia.06-2019");
+}
+// La librería te avisa cada vez que cambia de estado
+void OnESP01ChangeState(_eESP01STATUS state) {
+    switch (state) {
+		case ESP01_WIFI_NEW_IP:
+			// WiFi conectado y tenemos IP local — arrancamos UDP hacia el Qt
+			ESP01_StartUDP(QT_HMI_IP, QT_HMI_PORT, LOCAL_PORT);
+			break;
+		case ESP01_UDPTCP_CONNECTED:
+		    miRobot.conexion_perdida = false;
+		    char *ip_ptr = ESP01_GetLocalIP();
+		    if (ip_ptr != NULL)
+		        strcpy(ip_address, ip_ptr);
+		    break;
+		case ESP01_WIFI_DISCONNECTED:
+		case ESP01_UDPTCP_DISCONNECTED:
+			miRobot.conexion_perdida = true;
+			break;
+		default:
+        break;
+    }
+}
+
+int ESP01_WriteUSARTByte(uint8_t value) {
+    if (HAL_UART_Transmit_DMA(&huart1, &value, sizeof(&value)) == HAL_OK)
+        return 1;
+    return 0;
+}
+void ESP01_WriteByteToBufRX(uint8_t value) {
+    rxDataBuf[rxDataIW++] = value;
+    if (rxDataIW >= RX_DATA_BUF_SIZE)
+        rxDataIW = 0;
+}
+
 void buzzerSecuence(Buzzer_Seq_t *seq) {
     if (seq->repeat == 0) {
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET); // Asegurar apagado
@@ -601,30 +683,31 @@ void screenScheduler(void){
 				oled_update_requested = 1;
 				break;
 			case 2:
+
 				sprintf(msg, "IP:%s", ip_address);
 				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "FlagOK %d", flagOK);
-				SSD1306_GotoXY(1, 10);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-				sprintf(msg, "%f", angle_y);
+				sprintf(msg, "Conexion [%d]", miRobot.conexion_perdida);
 				SSD1306_GotoXY(1, 20);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "%3.3f ", output);
-				SSD1306_GotoXY(1, 30);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-				sprintf(msg, "%4d %4d %4d", adc_buffer[0], adc_buffer[1], adc_buffer[2]);
-				sprintf(msg, "%4d %4d %4d", adc_buffer[3], adc_buffer[4], adc_buffer[5]);
-				SSD1306_GotoXY(1, 40);
-
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-				sprintf(msg, "Mode: %d ", currentMode);
-				SSD1306_GotoXY(1, 50);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//				sprintf(msg, "%f", angle_y);
+//				SSD1306_GotoXY(1, 20);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//
+//				sprintf(msg, "%3.3f ", output);
+//				SSD1306_GotoXY(1, 30);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//
+//				sprintf(msg, "%4d %4d %4d", adc_buffer[0], adc_buffer[1], adc_buffer[2]);
+//				sprintf(msg, "%4d %4d %4d", adc_buffer[3], adc_buffer[4], adc_buffer[5]);
+//				SSD1306_GotoXY(1, 40);
+//
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+//				sprintf(msg, "Mode: %d ", currentMode);
+//				SSD1306_GotoXY(1, 50);
+//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
 //				sprintf(msg, "%d | %d", adc_buffer[5], ((int16_t)(error_linea * 100.0f)));
 //				SSD1306_GotoXY(1, 20);
@@ -1091,6 +1174,19 @@ void MPU6050_Calibrate(void) {
         flagCalibrationIsReady = 1;
     }
 }
+void HardReset_ESP(uint8_t value) {
+    HAL_GPIO_WritePin(GPIOA, ESP_CHPD_PIN, value ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+int SendByte_USART(uint8_t value) {
+    // Retorna 1 si el buffer de transmisión está libre y pudo enviar
+    if (HAL_UART_Transmit_IT(&huart1, &value, 1) == HAL_OK) return 1;
+    return 0;
+}
+void ProcessReceivedData(uint8_t value) {
+    // Aquí es donde el driver entrega los datos puros recibidos (+IPD)
+    // Se deben enviar al parser del Protocolo UNER
+    UNER_Parser_Feed(value);
+}
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	/*
 	 * Frecuencia del Timer: 72MHz
@@ -1102,6 +1198,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     	if (hi2c1.State == HAL_I2C_STATE_READY) {
     		HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14); // los datos tardan 0.38ms en ser leidos + 2ms retardo. Son 153 bits a 400k bits/s
     	}
+        ESP01_Timeout10ms();
+//        WIFI_UpdateAlive(&miRobot, 10);
+
         counterHB++;
         counterDataToQt++;
         if(counterHB > delayHB){
@@ -1133,8 +1232,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 				oled_update_requested = 0;
 			}
 		}
-// Actualizamos el timeout de seguridad sumando 10ms
-		WIFI_UpdateAlive(&miRobot, 10);
+
 }
 }
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
@@ -1144,6 +1242,13 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
         }
     }
 }
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == USART1) {
+        ESP01_WriteRX(rx_byte);
+        HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+    }
+}
+/*
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if (huart->Instance == USART1) {
         // --- 1. LÓGICA DE CAPTURA DE IP (TEXTO PLANO) ---
@@ -1343,6 +1448,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); // Desactivar interrupción de Half Transfer
     }
 }
+*/
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     // Si hubo ruido o error de trama (común al arrancar el ESP)
@@ -1350,6 +1456,48 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 //        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
     }
 }
+void UNER_Parser_Feed(uint8_t byte) {
+    static eEstadoUNER estado = ESPERANDO_U;
+    static uint8_t bufferPayload[64];
+    static uint8_t index = 0, len = 0;
+
+    switch(estado) {
+        case ESPERANDO_U: if(byte == 'U') estado = ESPERANDO_N; break;
+        case ESPERANDO_N: if(byte == 'N') estado = ESPERANDO_E; else estado = ESPERANDO_U; break;
+        case ESPERANDO_E: if(byte == 'E') estado = ESPERANDO_R; else estado = ESPERANDO_U; break;
+        case ESPERANDO_R: if(byte == 'R') estado = RECIBIENDO_LEN; else estado = ESPERANDO_U; break;
+
+        case RECIBIENDO_LEN:
+            len = byte; // El protocolo dice que aquí viene el largo[cite: 5]
+            index = 0;
+            estado = RECIBIENDO_TOKEN;
+            break;
+
+        case RECIBIENDO_TOKEN:
+            estado = RECIBIENDO_DATOS; // Saltamos el TOKEN constante[cite: 5]
+            break;
+
+        case RECIBIENDO_DATOS:
+            bufferPayload[index++] = byte;
+            if (index >= len) {
+                // Aquí deberías validar el Checksum (XOR de todo)[cite: 5]
+                // Y luego ejecutar el comando (CMD NAME + PARAM)
+//                procesarComandoUNER(bufferPayload);
+                estado = ESPERANDO_U;
+            }
+            break;
+    }
+}
+void enviarTelemetriaUNER() {
+    uint8_t buffer[32];
+    // 1. Armar paquete según Protocolo UNER (Little Endian)[cite: 5]
+    // 2. Calcular Checksum XOR[cite: 5]
+    // 3. Enviar mediante el driver
+    uint8_t total_bytes=255;
+    ESP01_Send(buffer, 0, total_bytes, 32);
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -1401,7 +1549,6 @@ int main(void)
 		Error_Handler();
 	}
 	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);  // Preparamos la recepción DMA para la Comunicación Inalámbrica (ESP8266)[cite: 15].
-
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET); // (Asumo que es el Enable del TB6612FNG o un LED)
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
@@ -1410,9 +1557,7 @@ int main(void)
 //	Leer_Linea_Digital() ;
 	Finalizar_Calibracion_Linea();
 
-
-	WIFI_Init(&miRobot, &huart1);
-	// En el main, después de inicializar periféricos y antes del while(1)	HAL_UART_Receive_IT(&huart1, &rx_byte_1, 1);
+	MX_WIFI_Init();
 
   /* USER CODE END 2 */
 
@@ -1427,14 +1572,15 @@ int main(void)
 
 //	buzzerSecuence(&hBuzzer);
 	//Funciones INDEPENDIENTES al modo del robot
-	WIFI_CheckRxBuffer(&miRobot);
+
+//	  ESP01_Task();
 //	if(flagDataToQt){	flagDataToQt = 0;	DataToQt();		}
 	if(flagDisplay){	flagDisplay=0;		screenScheduler();}
 	if(flagPID){
 	    flagPID = 0;
-	    Filtrar_Sensores_IR();
-	    Leer_Linea_Digital(); // Vital para los cambios de estado
-	  //  Gestion_WiFi_AT(&huart1);
+//		WIFI_CheckRxBuffer(&miRobot);
+//	    Filtrar_Sensores_IR();
+//	    Leer_Linea_Digital(); // Vital para los cambios de estado
 	    switch(currentMode){
 	        case MODO_IDDLE:
 //	        	Robot_Drive(deadband_L, deadband_R);

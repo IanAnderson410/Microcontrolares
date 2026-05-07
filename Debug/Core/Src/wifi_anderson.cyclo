@@ -1,4 +1,4 @@
 ../Core/Src/wifi_anderson.c:12:6:WIFI_Init	1
-../Core/Src/wifi_anderson.c:24:6:WIFI_UpdateAlive	2
-../Core/Src/wifi_anderson.c:37:6:WIFI_ResetAlive	1
-../Core/Src/wifi_anderson.c:43:6:WIFI_CheckRxBuffer	4
+../Core/Src/wifi_anderson.c:23:6:WIFI_UpdateAlive	2
+../Core/Src/wifi_anderson.c:34:6:WIFI_ResetAlive	1
+../Core/Src/wifi_anderson.c:39:6:WIFI_CheckRxBuffer	4
