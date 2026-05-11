@@ -384,7 +384,7 @@ static void MX_ADC1_Init(void);
  */
 void buzzerSecuence(Buzzer_Seq_t *seq);
 /**
- * @brief BS_tcpConnectSecuence:		Secuencia para la conexión del servidor
+ * @brief BS_tcpConnectSecuence:		Secuencia para la conexión del servidor.
  */
 void BS_tcpConnectSecuence();
 /**
