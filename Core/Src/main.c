@@ -13,7 +13,13 @@
   * in the root directory of this software component.
   * If no LICENSE file comes with this software, it is provided AS-IS.
   *
-  *
+  *main.c
+ ├── Control del robot: PID, MPU6050, motores, OLED
+ ├── Protocolo UNER: armar/desarmar paquetes
+ ├── Heartbeat de seguridad
+ ├── Telemetría cada 50 ms
+ └── UART DMA/IDLE hacia ESP01
+
   *   Este firmware implementa un sistema de control de lazo cerrado para un robot
   *   balancín mediante el uso de un microcontrolador STM32. La lógica principal
   *   reside en una interrupción periódica de 10ms donde se procesan los datos
@@ -66,6 +72,8 @@
 #include "ssd1306.h"
 #include "fonts.h"
 #include "math.h"
+
+#include "ESP01.h"
 #include <string.h>
 /* USER CODE END Includes */
 
@@ -169,6 +177,21 @@ typedef struct {
     uint32_t last_tick; // Auxiliar para el tiempo
     uint8_t state;      // 0 = Silencio, 1 = Sonando
 } Buzzer_Seq_t;
+
+
+// ================= [ ESP01 / UDP ALIVE TEST ] ================= //
+typedef struct {
+    _sESP01Handle Config;
+
+    uint8_t uner_rx_ring[255];
+    volatile uint16_t uner_rx_write;
+    volatile uint16_t uner_rx_read;
+
+    volatile uint8_t udp_started;
+    volatile uint8_t udp_connected;
+} ESP01_App_t;
+
+ESP01_App_t ESP = {0};
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -177,10 +200,6 @@ typedef struct {
 // ================= [ PID ] ================= //
 //#define 	ALPHA_PID 			0.98f    // Suaviza las vibraciones del acelerómetro
 #define 	DT_PID 				0.01f
-// ================= [ Comunicación ] ================= //
-#define 	RX_BUFFER_SIZE 		64          // Suficiente para la IP y futuros comandos UNER
-#define 	UNER_HEADER_STR 	"UNER"
-#define 	UNER_TOKEN      	':'    // 0x3A según tu PDF o preferencia
 // ================= [ Periféricos ] ================= //
 #define 	MPU6050_ADDR 	(0x68 << 1) // Dirección I2C desplazada
 
@@ -189,7 +208,19 @@ typedef struct {
 	#define IRCSAAW (!estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2] && !estado_sensores[3])	// ESTA MACRO SIGNIFICA IR CURRENT STATE ARE ALL WHITE
 	#define IRLSAAW (!ultimo_estado_sensores[0] && !ultimo_estado_sensores[1] && !ultimo_estado_sensores[2] && !ultimo_estado_sensores[3])	// ESTA MACRO SIGNIFICA IR LAST STATE ARE ALL WHITE
 	#define	AIRAB	(estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3])	// ESTA MACRO SIGNIFICA ANY IR ARE BLACK
+// ================= [ Comunicación ] ================= //
+#define 	RX_BUFFER_SIZE 		        64
+#define 	UNER_HEADER_STR 	        "UNER"
+#define 	UNER_TOKEN      	        ':'
 
+#define     ESP01_UDP_LOCAL_PORT       8888
+#define     ESP01_QT_REMOTE_PORT       8888
+#define     ESP01_QT_REMOTE_IP         "172.23.224.234"
+#define     ESP01_RX_DMA_SIZE          256
+#define     UNER_RX_RING_SIZE          128
+
+#define     WIFI_SSID                  "FCAL"
+#define     WIFI_PASSWORD              "fcalconcordia.06-2019"
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -222,12 +253,12 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			uint8_t 		rx_index = 0;
 			uint8_t 		rx_data;
 // Nuevas variables para compensar la diferencia entre motores
-			int16_t 		deadband_L = 130;//55;			/*!< Zona Muerta del PWM para el motor 1*/
-			int16_t 		deadband_R = 75;//1; 			/*!< Zona Muerta del PWM para el motor 2*/
+			int16_t 		deadband_L = 130;			/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_R = 75; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
-			float 			Kp = 170.0f;//170					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.1f;	//0.1				/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 2.5f;	//2.0 					/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			Kp = 170.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 0.1f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 2.5f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float 			setpoint = 7.1f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 			float 			setpointDeEquilibrio = 0.0f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
@@ -236,9 +267,8 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 			float			correccionRCSP = 0.98;
 			float 			limite_inclinacion = 3.0f;
 // =================[ Variables de Control PID YAW] ================= //
-			// Constantes del PID de YAW (Giro) - Ideales para modificar desde Qt
-			float 		Kp_yaw = 1200.0f; // Ganancia Proporcional inicial (a sintonizar)
-			float 		Kd_yaw = 0.0f; // Ganancia Derivativa inicial (a sintonizar)
+			float 		Kp_yaw = 1200.0f;
+			float 		Kd_yaw = 0.0f;
 			float 		last_error_yaw = 0;
 volatile    float 		FL_setpoint = 0.0f;
 			float 		last_state_linea = 0.0f;
@@ -320,32 +350,24 @@ float gy_prev_raw = 0.0f;
 // --- Constantes de Sintonía ---
 volatile uint32_t tiempo_anterior_pid = 0;
 volatile uint32_t delta_t_medido = 0;
-volatile int16_t axRaw, ayRaw, azRaw, gyPitchRaw, gzYawRaw;
-
 volatile uint32_t timeout_rc=0;
 
-
-
-char ip_address[16];               // Buffer para guardar el string "192.168.XXX."
-volatile uint8_t ip_received_flag = 0; // Bandera para avisar al loop principal
+char ip_address[16] = "0.0.0.0";
+volatile uint8_t ip_received_flag = 0;
+volatile uint8_t esp01_alive_received = 0;
+volatile uint8_t esp01_oled_ready = 0;
+volatile uint8_t esp01_udp_probe_pending = 0;
+volatile uint32_t esp01_tx_count = 0;
+volatile uint32_t esp01_rx_count = 0;
+char esp01_last_debug[18] = "-";
+char esp01_last_rx[18] = "-";
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
-
-
-
 float velocidad_objetivo = 0.0f; // Reemplaza a tu viejo RC_setpoint y FL_setpoint
 float Kp_vel = 0.015f;           // Ganancia del lazo de velocidad (empezamos MUY bajo)
-
-
 float showoutput=0;
 int8_t prescaler=0;
-
 float multiplicadorYaw 	 = 0.01;
-
-
-
 float error=0;
-
-
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -378,6 +400,22 @@ static void MX_TIM4_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
+void buzzerSecuence(Buzzer_Seq_t *seq);
+void BS_tcpConnectSecuence(void);
+void BS_Error(void);
+
+void setESP01_CHPD(uint8_t val);
+int ESP01_UART_Transmit(uint8_t val);
+void ESP01_Data_Received(uint8_t value);
+void onESP01ChangeState(_eESP01STATUS esp01State);
+void onESP01Debug(const char *dbgStr);
+void ESP01_App_Task(void);
+
+void UNER_Rx_Task(void);
+void UNER_ProcessByte(uint8_t b);
+uint8_t UNER_Send(uint8_t cmd, const uint8_t *payload, uint8_t payload_len);
+uint8_t UNER_SendInt16(uint8_t cmd, int16_t value);
+void UNER_HandlePacket(uint8_t cmd, uint8_t *payload, uint8_t payload_len);
 /**
  * @brief buzzerSecuence:  				Máquina de estados para señales auditivas (Buzzer) no-bloqueante.
  * @param seq:			   				Estructura con tiempos de duración, intervalo y repeticiones.
@@ -476,13 +514,15 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-// Función pura para el filtro
+
 void buzzerSecuence(Buzzer_Seq_t *seq) {
     if (seq->repeat == 0) {
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET); // Asegurar apagado
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
         return;
     }
+
     uint32_t current_tick = HAL_GetTick();
+
     if (seq->state == 0 && (current_tick - seq->last_tick >= seq->interval)) {
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
         seq->state = 1;
@@ -492,45 +532,434 @@ void buzzerSecuence(Buzzer_Seq_t *seq) {
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
         seq->state = 0;
         seq->last_tick = current_tick;
-        seq->repeat--; // Descontamos un beep
+        seq->repeat--;
     }
 }
-void BS_tcpConnectSecuence() {
-    hBuzzer.duration = 100;  // Beep corto de 100ms
-    hBuzzer.interval = 50;   // Silencio de 50ms
-    hBuzzer.repeat = 2;      // bip bip
+
+void BS_tcpConnectSecuence(void) {
+    hBuzzer.duration = 100;
+    hBuzzer.interval = 50;
+    hBuzzer.repeat = 2;
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
 }
-void BS_Error()	{
-    hBuzzer.duration = 500;  // Beep largo de 800ms
+
+void BS_Error(void) {
+    hBuzzer.duration = 500;
     hBuzzer.interval = 100;
-    hBuzzer.repeat = 1;      //bip
-    hBuzzer.state = 0;
-    hBuzzer.last_tick = HAL_GetTick();
-	}
-void BS_ACK_NOT_FOUND(){
-	hBuzzer.duration = 200;  // Beep largo de 800ms
-	hBuzzer.interval = 50;
-	hBuzzer.repeat = 3;
-	hBuzzer.state = 0;
-	hBuzzer.last_tick = HAL_GetTick();
-}
-void BS_NEWPARAM_OK() {
-    hBuzzer.duration = 80;  // Beep corto de 100ms
-    hBuzzer.interval = 50;   // Silencio de 50ms
-    hBuzzer.repeat = 1;      // bip bip
+    hBuzzer.repeat = 1;
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
 }
-void BS_NEWPARAM_ISNOTOK() {
-    hBuzzer.duration = 800;  // Beep corto de 100ms
-    hBuzzer.interval = 1;   // Silencio de 50ms
-    hBuzzer.repeat = 1;      // bip bip
+
+void BS_ACK_NOT_FOUND(void) {
+    hBuzzer.duration = 200;
+    hBuzzer.interval = 50;
+    hBuzzer.repeat = 3;
     hBuzzer.state = 0;
     hBuzzer.last_tick = HAL_GetTick();
+}
+
+void BS_NEWPARAM_OK(void) {
+    hBuzzer.duration = 80;
+    hBuzzer.interval = 50;
+    hBuzzer.repeat = 1;
+    hBuzzer.state = 0;
+    hBuzzer.last_tick = HAL_GetTick();
+}
+
+void BS_NEWPARAM_ISNOTOK(void) {
+    hBuzzer.duration = 800;
+    hBuzzer.interval = 1;
+    hBuzzer.repeat = 1;
+    hBuzzer.state = 0;
+    hBuzzer.last_tick = HAL_GetTick();
+}
+
+/* ===================== [ ESP01 + UDP ALIVE ] ===================== */
+
+void setESP01_CHPD(uint8_t val)
+{
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, val ? GPIO_PIN_SET : GPIO_PIN_RESET);
+#if 0
+    /*
+     * Ajustar si EN/CH_PD del ESP-01 está en otro GPIO.
+     * Uso PB2 porque tu main ya lo levantaba durante inicialización.
+     */
+//    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, val ? GPIO_PIN_SET : GPIO_PIN_RESET);
+#endif
+}
+
+int ESP01_UART_Transmit(uint8_t val)
+{
+    /*
+     * TX no bloqueante byte a byte hacia ESP01.
+     * Más adelante se puede migrar a TX DMA.
+     */
+    if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE)) {
+        huart1.Instance->DR = val;
+        esp01_tx_count++;
+        return 1;
+    }
+
+    return 0;
+}
+
+void ESP01_Data_Received(uint8_t value)
+{
+    static char line[8];
+    static uint8_t index = 0;
+
+    if (index < sizeof(line)) {
+        line[index++] = (char)value;
+    } else {
+        index = 0;
+        return;
+    }
+
+    if (value == '\n') {
+        if (index == 7 && memcmp(line, "ALIVE\r\n", 7) == 0) {
+            esp01_alive_received = 1;
+        }
+
+        index = 0;
+    }
+
+    return;
+
+#if 0
+    /*
+     * Bytes útiles TCP recibidos desde ESP01.c después de parsear +IPD.
+     */
+    uint16_t next = ESP.uner_rx_write + 1;
+
+    if (next >= UNER_RX_RING_SIZE) {
+        next = 0;
+    }
+
+    if (next != ESP.uner_rx_read) {
+        ESP.uner_rx_ring[ESP.uner_rx_write] = value;
+        ESP.uner_rx_write = next;
+    }
+#endif
+}
+
+void onESP01ChangeState(_eESP01STATUS esp01State)
+{
+    switch (esp01State) {
+
+    case ESP01_WIFI_CONNECTED:
+        flagWIFI = 1;
+        break;
+
+    case ESP01_WIFI_NEW_IP:
+    {
+        char *ip = ESP01_GetLocalIP();
+
+        if (ip != NULL) {
+            strncpy(ip_address, ip, sizeof(ip_address) - 1);
+            ip_address[sizeof(ip_address) - 1] = '\0';
+            ip_received_flag = 1;
+        }
+
+        if (!ESP.udp_started) {
+            ESP.udp_started = 1;
+            ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
+        }
+        break;
+    }
+
+    case ESP01_UDPTCP_CONNECTED:
+        flagWIFI = 1;
+        ESP.udp_connected = 1;
+        esp01_udp_probe_pending = 1;
+        break;
+
+    case ESP01_UDPTCP_DISCONNECTED:
+        flagWIFI = 0;
+        ESP.udp_connected = 0;
+        ESP.udp_started = 0;
+        break;
+
+    case ESP01_WIFI_DISCONNECTED:
+        flagWIFI = 0;
+        ESP.udp_connected = 0;
+        ESP.udp_started = 0;
+        break;
+
+    default:
+        break;
+    }
+}
+
+void onESP01Debug(const char *dbgStr)
+{
+    if (dbgStr == NULL) {
+        return;
+    }
+
+    if (strncmp(dbgStr, "+&DBG", 5) == 0) {
+        dbgStr += 5;
+    }
+
+    strncpy(esp01_last_debug, dbgStr, sizeof(esp01_last_debug) - 1);
+    esp01_last_debug[sizeof(esp01_last_debug) - 1] = '\0';
+
+    for (uint8_t i = 0; esp01_last_debug[i] != '\0'; i++) {
+        if (esp01_last_debug[i] == '\r' || esp01_last_debug[i] == '\n') {
+            esp01_last_debug[i] = '\0';
+            break;
+        }
+    }
+}
+
+void ESP01_App_Task(void)
+{
+    static uint8_t ack[] = "ACK\r\n";
+    static uint8_t probe[] = "BOOT\r\n";
+    static uint32_t last_oled_update = 0;
+
+    ESP01_Task();
+
+    if ((HAL_GetTick() - last_oled_update) >= 500) {
+        last_oled_update = HAL_GetTick();
+        screenScheduler();
+    }
+
+    if (esp01_udp_probe_pending && ESP.udp_connected) {
+        if (ESP01_Send(probe, 0, sizeof(probe) - 1, sizeof(probe) - 1) == ESP01_SEND_READY) {
+            esp01_udp_probe_pending = 0;
+        }
+    }
+
+    if (esp01_alive_received && ESP.udp_connected) {
+        if (ESP01_Send(ack, 0, sizeof(ack) - 1, sizeof(ack) - 1) == ESP01_SEND_READY) {
+            esp01_alive_received = 0;
+        }
+    }
+}
+
+/* ===================== [ UNER mínimo: ALIVE -> ACK ] ===================== */
+
+uint8_t UNER_Send(uint8_t cmd, const uint8_t *payload, uint8_t payload_len)
+{
+    uint8_t frame[4 + 1 + 1 + 1 + 64 + 1];
+    uint16_t idx = 0;
+
+    if (payload_len > 64) {
+        return 0;
+    }
+
+    frame[idx++] = 'U';
+    frame[idx++] = 'N';
+    frame[idx++] = 'E';
+    frame[idx++] = 'R';
+
+    /*
+     * Len = CMD + Payload + Checksum.
+     * Token ':' queda fuera del Len, igual que en tu código original.
+     */
+    frame[idx++] = (uint8_t)(1 + payload_len + 1);
+    frame[idx++] = UNER_TOKEN;
+    frame[idx++] = cmd;
+
+    if (payload != NULL && payload_len > 0) {
+        memcpy(&frame[idx], payload, payload_len);
+        idx += payload_len;
+    }
+
+    uint8_t checksum = 0;
+
+    for (uint16_t i = 0; i < idx; i++) {
+        checksum ^= frame[i];
+    }
+
+    frame[idx++] = checksum;
+
+    return (ESP01_Send(frame, 0, idx, idx) == ESP01_SEND_READY);
+}
+
+uint8_t UNER_SendInt16(uint8_t cmd, int16_t value)
+{
+    uint8_t payload[2];
+
+    payload[0] = (uint8_t)(value & 0xFF);
+    payload[1] = (uint8_t)((value >> 8) & 0xFF);
+
+    return UNER_Send(cmd, payload, 2);
+}
+
+void UNER_Rx_Task(void)
+{
+    while (ESP.uner_rx_read != ESP.uner_rx_write) {
+        uint8_t b = ESP.uner_rx_ring[ESP.uner_rx_read];
+
+        ESP.uner_rx_read++;
+
+        if (ESP.uner_rx_read >= UNER_RX_RING_SIZE) {
+            ESP.uner_rx_read = 0;
+        }
+
+        UNER_ProcessByte(b);
+    }
+}
+
+void UNER_ProcessByte(uint8_t b)
+{
+    typedef enum {
+        UNER_ST_U,
+        UNER_ST_N,
+        UNER_ST_E,
+        UNER_ST_R,
+        UNER_ST_LEN,
+        UNER_ST_TOKEN,
+        UNER_ST_BODY
+    } UNER_State_t;
+
+    static UNER_State_t st = UNER_ST_U;
+    static uint8_t len = 0;
+    static uint8_t idx = 0;
+    static uint8_t body[1 + 64 + 1];
+
+    switch (st) {
+
+    case UNER_ST_U:
+        if (b == 'U') st = UNER_ST_N;
+        break;
+
+    case UNER_ST_N:
+        st = (b == 'N') ? UNER_ST_E : UNER_ST_U;
+        break;
+
+    case UNER_ST_E:
+        st = (b == 'E') ? UNER_ST_R : UNER_ST_U;
+        break;
+
+    case UNER_ST_R:
+        st = (b == 'R') ? UNER_ST_LEN : UNER_ST_U;
+        break;
+
+    case UNER_ST_LEN:
+        len = b;
+
+        if (len < 2 || len > sizeof(body)) {
+            st = UNER_ST_U;
+        } else {
+            idx = 0;
+            st = UNER_ST_TOKEN;
+        }
+        break;
+
+    case UNER_ST_TOKEN:
+        if (b == UNER_TOKEN) {
+            st = UNER_ST_BODY;
+        } else {
+            st = UNER_ST_U;
+        }
+        break;
+
+    case UNER_ST_BODY:
+        body[idx++] = b;
+
+        if (idx >= len) {
+            uint8_t checksum = 0;
+
+            checksum ^= 'U';
+            checksum ^= 'N';
+            checksum ^= 'E';
+            checksum ^= 'R';
+            checksum ^= len;
+            checksum ^= UNER_TOKEN;
+
+            for (uint8_t i = 0; i < (len - 1); i++) {
+                checksum ^= body[i];
+            }
+
+            if (checksum == body[len - 1]) {
+                uint8_t cmd = body[0];
+                uint8_t *payload = &body[1];
+                uint8_t payload_len = len - 2;
+
+                UNER_HandlePacket(cmd, payload, payload_len);
+            }
+
+            st = UNER_ST_U;
+        }
+        break;
+
+    default:
+        st = UNER_ST_U;
+        break;
+    }
+}
+
+void UNER_HandlePacket(uint8_t cmd, uint8_t *payload, uint8_t payload_len)
+{
+    (void)payload;
+    (void)payload_len;
+
+    switch (cmd) {
+
+    case CMD_ALIVE:
+        /*
+         * Qt manda CMD_ALIVE.
+         * STM32 responde CMD_ACK con payload int16 = 1.
+         */
+        UNER_SendInt16(CMD_ACK, 1);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void sendCMD(uint8_t cmd, uint16_t param)
+{
+    UNER_SendInt16(cmd, (int16_t)param);
+}
+
+/*
+ * IMPORTANTE:
+ * DataToQt queda desactivada para esta etapa.
+ * No debe mandar directo por HAL_UART_Transmit_DMA(&huart1),
+ * porque UART1 ahora se usa para comandos AT del ESP01.
+ */
+void DataToQt(void)
+{
+    /*
+     * Próxima etapa:
+     * reemplazar este cuerpo por UNER_Send(CMD_DATA, telemetria.buffer, sizeof(PayloadData_t)).
+     */
 }
 void screenScheduler(void){
+    if (!esp01_oled_ready) {
+        return;
+    }
+
+    SSD1306_Fill(SSD1306_COLOR_BLACK);
+    SSD1306_GotoXY(0, 0);
+    SSD1306_Puts("ESP01 UDP", &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(0, 10);
+    SSD1306_Puts("", &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(24, 10);
+    SSD1306_Puts(ip_address, &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(0, 20);
+    sprintf(msg, "W:%d U:%d", flagWIFI, ESP.udp_connected);
+    SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(0, 30);
+    sprintf(msg, "TX:%lu RX:%lu", (unsigned long)esp01_tx_count, (unsigned long)esp01_rx_count);
+    SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(0, 40);
+    SSD1306_Puts("DBG:", &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(28, 40);
+    SSD1306_Puts(esp01_last_debug, &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(0, 52);
+    SSD1306_Puts("RX:", &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(21, 52);
+    SSD1306_Puts(esp01_last_rx, &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_UpdateScreen();
+    return;
+
 	if (!oled_is_busy) {
 		SSD1306_Fill(SSD1306_COLOR_BLACK);
 			switch(flagOLED){
@@ -550,9 +979,7 @@ void screenScheduler(void){
 				SSD1306_GotoXY(1, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "EL:%d|RCS%d", error_linea, RC_steering);
-				SSD1306_GotoXY(1, 20);
-				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
 
 				sprintf(msg, "|%d|%d|%3.2f", sensores, lastSensores, multiplicadorYaw);
 				SSD1306_GotoXY(1, 30);
@@ -901,49 +1328,7 @@ void Procesar_Evasion_Obstaculo(void) {
             break;
     }*/
 }
-void sendCMD(uint8_t cmd, uint16_t param) {
-    uint8_t frame[10];
-    memcpy(&frame[0], "UNER", 4);     // [0-3] Header
-    frame[4] = 4;                     //
-   // frame[5] = 0xFD;                  // [5] Token
-    frame[5] = ':';                  // [5] Token
-    frame[6] = cmd;                   // [6] CMD
-    frame[7] = (uint8_t)(param & 0xFF);        // Byte Menos Significativo (LSB)
-    frame[8] = (uint8_t)((param >> 8) & 0xFF); // Byte Más Significativo (MSB)
-    uint8_t checksum = 0;
-    for(int i=0; i<9; i++) {
-        checksum ^= frame[i];
-    }
-    frame[9] = checksum;              // [9] Checksum al final
-    HAL_UART_Transmit_DMA(&huart1, frame, 10);
-}
-void DataToQt(){
-    if (huart1.gState != HAL_UART_STATE_READY) return; // El UART está ocupado
-    flagSendUNER = 0;
-    telemetria.data.acc_x       = (int16_t)accelx;
-    telemetria.data.acc_y       = (int16_t)accely;
-    telemetria.data.acc_z       = (int16_t)accelz;
-    telemetria.data.gyro_yaw    = (int16_t)giro_z;
-    telemetria.data.yaw_filtrado= output;
-    telemetria.data.pos_x       = P;
-    telemetria.data.pos_y       = I;
-    telemetria.data.velocidad   = D;
-    for(uint8_t i=0; i<8; i++)       telemetria.data.IR[i] = adc_buffer[i];
-    telemetria.data.modo = currentMode;
-    telemetria.data.infoAdicional = 1;
-    static uint8_t frame[56];
-    memcpy(&frame[0], "UNER", 4);
-    frame[4] = 50;                  // Length = CMD(1) + Payload(48) + CHK(1) = 50
-    frame[5] = ':';                 // TOKEN
-    frame[6] = CMD_DATA;                  // CMD_DATA
-    memcpy(&frame[7], telemetria.buffer, 48); // Copiamos los 48 bytes del payload
-    uint8_t checksum = 0;
-    for (int i = 0; i < 55; i++) {  // XOR de los primeros 55 bytes (índices 0 al 54)
-        checksum ^= frame[i];
-    }
-    frame[55] = checksum;           // Guardamos el checksum en el último byte (índice 55)
-    HAL_UART_Transmit_DMA(&huart1, frame, 56); // Transmitimos los 56 bytes
-}
+
 void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    if (speed_L > 0) speed_L += deadband_L;			// Aplicar Deadband (Zona muerta)
 	    else if (speed_L < 0) speed_L -= deadband_L;
@@ -959,12 +1344,15 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 		// __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)speed_L);
 	   } else {
 		if (speed_L >= 0) { // Motor 1 (PA8, PA9, PB4)
-			HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin,  GPIO_PIN_SET);
-			HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_RESET  );
+			HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_RESET );
+							HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_SET);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)speed_L);
 			} else {
-				HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_RESET );
-				HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_SET);
+
+
+
+				HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin,  GPIO_PIN_SET);
+							HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_RESET  );
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)(-speed_L));
 			}
 	   	   }
@@ -974,12 +1362,14 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	      //  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)speed_R);
 	    } else {
 		if (speed_R >= 0) {// Motor 2 (PB3, PA15, PB5)
-			HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_SET  );
+			HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_SET  );
+						HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin,  GPIO_PIN_RESET);
 			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)speed_R);
 		} else {
-			HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_SET  );
-			HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin,  GPIO_PIN_RESET);
+
+
+			HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_RESET);
+						HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_SET  );
 			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)(-speed_R));
 		}
 	    }
@@ -1031,263 +1421,64 @@ void MPU6050_Calibrate(void) {
         flagCalibrationIsReady = 1;
     }
 }
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	/*
-	 * Frecuencia del Timer: 72MHz
-	 * Conteo hasta el periodo (ARR): 999
-	 * Prescaler : 719
-	 * Resultado: interrupcion cada 10ms
-	 * */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
     if (htim->Instance == TIM4) {
-    	if (hi2c1.State == HAL_I2C_STATE_READY) {
-    		HAL_I2C_Mem_Read_DMA(&hi2c1, (0x68 << 1), 0x3B, 1, mpu_data, 14); // los datos tardan 0.38ms en ser leidos + 2ms retardo. Son 153 bits a 400k bits/s
-    	}
-        counterHB++;
-        counterDataToQt++;
-        if(counterHB > delayHB){
-            counterHB = 0;
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
-        	}
-        if(counterDataToQt > 10){
-        	counterDataToQt = 0;
-        	flagDataToQt=1;
-        	flagDisplay=1;
-        	}
 
-    }
-}
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
-	if (hi2c->Instance == I2C1) {
-		axRaw 		= (int16_t)(mpu_data[0] << 8 	| mpu_data[1]);
-		ayRaw 		= (int16_t)(mpu_data[2] << 8	| mpu_data[3]);
-		azRaw 		= (int16_t)(mpu_data[4] << 8 	| mpu_data[5]);
-		gyPitchRaw 	= (int16_t)(mpu_data[10] << 8 	| mpu_data[11]);
-		gzYawRaw 	= (int16_t)(mpu_data[12] << 8 	| mpu_data[13]);
-		flagPID = 1;
-		if (oled_update_requested) {
-			oled_is_busy = 1; // Bloqueamos el while(1) para que no pise la memoria
-			SSD1306_UpdatePage_DMA(oled_current_page);
-			oled_current_page++;				// Incrementamos para la próxima vez
-			if (oled_current_page >= 8) {
-				oled_current_page = 0;// Ya mandamos toda la pantalla. Terminamos el proceso.
-				oled_update_requested = 0;
-			}
-		}
-}
-}
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
-	if (hi2c->Instance == I2C1) {
-        if (oled_current_page == 0 && !oled_update_requested) {
-            oled_is_busy = 0; // Liberamos para que el while(1) pueda armar el siguiente frame
+        ESP01_Timeout10ms();
+
+        counterHB++;
+        if (counterHB >= 50) {
+            counterHB = 0;
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
         }
     }
 }
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
     if (huart->Instance == USART1) {
 
-        // --- 1. LÓGICA DE CAPTURA DE IP (TEXTO PLANO) ---
-        if (esperando_digitos_ip == 1) {
-            uint16_t ip_len = (Size > 15) ? 15 : Size;
-            memset(ip_address, 0, sizeof(ip_address));
-            strncpy(ip_address, (char*)rx_buffer_uart, ip_len);
+        for (uint16_t i = 0; i < Size; i++) {
+            uint8_t value = rx_buffer_uart[i];
 
-            // Limpieza de caracteres de control
-            for(int i = 0; i < 16; i++){
-                if(ip_address[i] == '\r' || ip_address[i] == '\n' || ip_address[i] == ' '){
-                    ip_address[i] = '\0';
-                    break;
+            esp01_rx_count++;
+
+            if (value == '\r' || value == '\n') {
+                size_t len = strlen(esp01_last_rx);
+
+                if (len < (sizeof(esp01_last_rx) - 1)) {
+                    esp01_last_rx[len] = '|';
+                    esp01_last_rx[len + 1] = '\0';
                 }
-            }
-            ip_received_flag = 1;
-            esperando_digitos_ip = 0;
-        }
-        else if (strncmp((char*)rx_buffer_uart, "IP:", 3) == 0) {
-            if (Size == 3) {
-                esperando_digitos_ip = 1;
-            } else {
-                uint16_t ip_len = (Size - 3 > 15) ? 15 : (Size - 3);
-                memset(ip_address, 0, sizeof(ip_address));
-                strncpy(ip_address, (char*)(rx_buffer_uart + 3), ip_len);
-                // Limpieza...
-                for(int i = 0; i < 16; i++){
-                    if(ip_address[i] == '\r' || ip_address[i] == '\n'){
-                        ip_address[i] = '\0';
-                        break;
-                    }
+            } else if (value >= 32 && value <= 126) {
+                size_t len = strlen(esp01_last_rx);
+
+                if (len >= (sizeof(esp01_last_rx) - 1)) {
+                    memmove(esp01_last_rx, &esp01_last_rx[1], sizeof(esp01_last_rx) - 2);
+                    esp01_last_rx[sizeof(esp01_last_rx) - 2] = '\0';
+                    len = strlen(esp01_last_rx);
                 }
-                ip_received_flag = 1;
+
+                esp01_last_rx[len] = (char)value;
+                esp01_last_rx[len + 1] = '\0';
             }
-            // Una vez procesada la IP, podríamos limpiar o continuar si hay más datos
+
+            ESP01_WriteRX(value);
         }
-        for (int i = 0; i <= (Size - 7); ) {
-            if (rx_buffer_uart[i]   == 'U' && rx_buffer_uart[i+1] == 'N' &&
-                rx_buffer_uart[i+2] == 'E' && rx_buffer_uart[i+3] == 'R') {
 
-                uint8_t len = rx_buffer_uart[i+4];
-                // El protocolo indica: Length = 1(CMD) + N(Payload) + 1(Checksum)
-                // Por lo tanto, el checksum está en: i + 5 (Header+Len+Token) + len
-                uint8_t pos_checksum = i + 5 + len;
-
-                if (pos_checksum < Size) {
-                    uint8_t checksum_recibido = rx_buffer_uart[pos_checksum];
-                    uint8_t checksum_calc = 0;
-
-                    for(int k = i; k < pos_checksum; k++) {
-                        checksum_calc ^= rx_buffer_uart[k];
-                    }
-
-                    if (checksum_calc == checksum_recibido) {
-                        uint8_t cmd = rx_buffer_uart[i+6];
-                        uint8_t *payload_ptr = &rx_buffer_uart[i+7];
-                        int16_t payloadInt16 = 0;
-                        float   payloadFloat = 0;
-                        switch(cmd){
-						case CMD_SET_HB:
-							 delayHB = payload_ptr[0];
-							 break;
-						case CMD_CALIBRATE:
-							 Robot_Drive(0, 0);
-							 flagCalibrationIsReady=0;
-							 break;
-						default:
-						case CMD_ALIVE:
-							sendCMD(CMD_ACK, 0); // te devuelvo un alive
-							break;
-						case CMD_ACK:
-							break;
-						case CMD_CHANGE_MODE:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							currentMode = payloadInt16;
-							break;
-						case CMD_ONOFFMOTORS:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							BS_NEWPARAM_OK();
-							flagMotorsAreOn = payloadInt16;
-							break;
-						case CMD_TCP_CONNECTED:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							if(payloadInt16){	//conectado
-								BS_tcpConnectSecuence();
-								flagWIFI=1;
-							}
-							else if(payloadInt16 ==0){				//desconectado
-								BS_Error();
-								flagWIFI=0;
-							}
-							break;
-						case CMD_CHANGE_DEADLINE_LEFT:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							deadband_L = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_CHANGE_DEADLINE_RIGHT:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							deadband_R = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_CHANGE_OLED_SCREEN:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							flagOLED = payloadInt16;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_PITCH_KP:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							Kp = payloadFloat;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_PITCH_KD:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							Kd = payloadFloat;
-							BS_NEWPARAM_OK();
-							break;
-						case CMD_PID_PITCH_KI:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-							Ki = payloadFloat;
-							BS_NEWPARAM_OK();
-							break;
-							case CMD_PID_YAW_KP:
-								memcpy(&payloadFloat, payload_ptr, sizeof(float));
-								//Kp_yaw = payloadFloat;
-								Kp_Agresivo = payloadFloat;
-								BS_NEWPARAM_OK();
-								break;
-							case CMD_PID_YAW_KD:
-								memcpy(&payloadFloat, payload_ptr, sizeof(float));
-								Kd_yaw = payloadFloat;
-								BS_NEWPARAM_OK();
-								break;
-							case CMD_PID_YAW_SP:
-								memcpy(&payloadFloat, payload_ptr, sizeof(float));
-								multiplicadorYaw = payloadFloat;
-								BS_NEWPARAM_OK();
-								break;
-						case CMD_CHANGE_SETPOINT:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							setpoint = ((float)payloadInt16)/10;
-							break;
-						case CMD_DEFINE_ZERO_SETPOINT:
-//									setpointDeEquilibrio = setpoint;
-//									setpoint = 0;
-							break;
-						case CMD_PID_ALPHA:
-							memcpy(&payloadFloat, payload_ptr, sizeof(float));
-//									ALPHA_PID = payloadFloat;
-//									BS_NEWPARAM_ISNOTOK();
-						//	Kp_vel= payloadFloat;
-							prescaler = payloadFloat;
-							break;
-						case CMD_RC:{
-							flag_RC_active = payload_ptr[0];
-							if (flag_RC_active) {
-								// Casteamos a int8_t para recuperar el signo negativo, luego a float y dividimos.
-								RC_setpoint = (float)((int8_t)payload_ptr[1]) / 10.0f;
-
-								// El steering ya era int16_t, así que reconstruimos y el signo se mantiene bien
-								RC_steering = (int16_t)((uint16_t)payload_ptr[2] << 8 | (uint16_t)payload_ptr[3]);
-							} else {
-								RC_setpoint = 0.0f;
-								RC_steering = 0.0f;
-							}
-						}
-						break;
-						case CMD_IR_INICIAR_CALIBRACION:
-							Iniciar_Calibracion_Linea();
-//									HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
-							break;
-						case CMD_IR_DETENER_CALIBRACION:
-							Finalizar_Calibracion_Linea();
-							currentMode = MODO_FL_BUSQUEDA_INICIAL;
-//									HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Heartbeat LED
-							break;
-						case CMD_PID_PITCH_CORECCION_RCSP:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							correccionRCSP = ((float)payloadInt16)/100;
-							break;
-						case CMD_PID_PITCH_LIM_INCLI:
-							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-							limite_inclinacion = ((float)payloadInt16)/100;
-							break;
-						case CMD_RC_MOVE_5_CM:
-//							memcpy(&payloadInt16, payload_ptr, sizeof(int16_t));
-//							limite_inclinacion = ((float)payloadInt16)/100;
-							break;
-					}
-			i = pos_checksum + 1; // Saltamos al final del paquete procesado
-			continue;
-		}
-		}
-	}
-	i++; // Si no hay cabecera, avanzamos un byte
-}
-HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
-__HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); // Desactivar interrupción de Half Transfer
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, sizeof(rx_buffer_uart));
+        __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
     }
 }
+
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-    // Si hubo ruido o error de trama (común al arrancar el ESP)
-    if (huart->Instance == USART1){
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);
+    if (huart->Instance == USART1) {
+        __HAL_UART_CLEAR_OREFLAG(huart);
+
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, sizeof(rx_buffer_uart));
+        __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
     }
 }
 /* USER CODE END 0 */
@@ -1322,33 +1513,39 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_TIM3_Init();
   MX_I2C1_Init();
-  MX_TIM2_Init();
-  MX_USB_DEVICE_Init();
   MX_TIM4_Init();
   MX_USART1_UART_Init();
-  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-	if (SSD1306_Init() != 1) 		Error_Handler();
-	SSD1306_Fill(SSD1306_COLOR_BLACK);
-	SSD1306_UpdateScreen();
-	HAL_Delay(100);
-	MPU6050_Init(&hi2c1);
-	HAL_Delay(500);
-	MPU6050_Calibrate();
-	if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 8) != HAL_OK) {
-		Error_Handler();
-	}
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, 256);  // Preparamos la recepción DMA para la Comunicación Inalámbrica (ESP8266)[cite: 15].
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET); // (Asumo que es el Enable del TB6612FNG o un LED)
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-	HAL_TIM_Base_Start_IT(&htim4);
-//	Iniciar_Calibracion_Linea();
-//	Leer_Linea_Digital() ;
-	Finalizar_Calibracion_Linea();
+      /* ================= [ ESP01 AT OFICIAL ] ================= */
 
+      memset(ip_address, 0, sizeof(ip_address));
+      strncpy(ip_address, "0.0.0.0", sizeof(ip_address) - 1);
+
+      if (SSD1306_Init() == 1) {
+          esp01_oled_ready = 1;
+          screenScheduler();
+      }
+
+      ESP.uner_rx_read = 0;
+      ESP.uner_rx_write = 0;
+      ESP.udp_started = 0;
+      ESP.udp_connected = 0;
+
+      ESP.Config.DoCHPD = setESP01_CHPD;
+      ESP.Config.WriteUSARTByte = ESP01_UART_Transmit;
+      ESP.Config.WriteByteToBufRX = ESP01_Data_Received;
+
+      ESP01_Init(&ESP.Config);
+      ESP01_AttachChangeState(&onESP01ChangeState);
+      ESP01_AttachDebugStr(&onESP01Debug);
+
+      HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, sizeof(rx_buffer_uart));
+      __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
+
+      ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
+
+      HAL_TIM_Base_Start_IT(&htim4);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -1358,17 +1555,23 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	buzzerSecuence(&hBuzzer);
-	//Funciones INDEPENDIENTES al modo del robot
-	if(flagDataToQt){	flagDataToQt = 0;	DataToQt();		}
-	if(flagDisplay){	flagDisplay=0;		screenScheduler();}
-	if(flagPID){
-	    flagPID = 0;
-	    Filtrar_Sensores_IR();
-	    Leer_Linea_Digital(); // Vital para los cambios de estado
-	    switch(currentMode){
+	    ESP01_App_Task();
+	    continue;
+	    /*
+	     * Telemetría desactivada en esta etapa.
+	     * DataToQt() ya no debe escribir directo por UART1.
+	     */
+	    if (flagDataToQt) 	        flagDataToQt = 0; // DataToQt();
+	    if (flagDisplay) {
+	        flagDisplay = 0;
+	        screenScheduler();
+	    	}
+	    if (flagPID) {
+	        flagPID = 0;
+	        Filtrar_Sensores_IR();
+	        Leer_Linea_Digital();
+	        switch (currentMode) {
 	        case MODO_IDDLE:
-//	        	Robot_Drive(deadband_L, deadband_R);
 	            break;
 	        case MODO_RC:
 	            break;
@@ -1379,130 +1582,58 @@ int main(void)
 	            RC_steering = 0.0f;
 	            if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
 	                currentMode = MODO_FL_SIGUIENDO;
-	            	}
+	            }
 	            break;
 	        case MODO_FL_SIGUIENDO:
-					if (adc_buffer[5] < UMBRAL_FRENTE_CHOQUE) {
-						break;
-					}
-					// PERDIMOS LA LÍNEA
-//					if (!estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2]) {
-//						currentMode = MODO_FL_RESCATE;
-//						timer_rescate = HAL_GetTick(); // Guardamos el tiempo de pérdida
-//						// Reseteo rápido del integral para no arrastrar la memoria tóxica de la curva
-//						integral = 0.0f;
-//						break;
-//					}
-					// --- 1. CÁLCULO DE DIRECCIÓN ---
-					error_linea = calcularErrorYawContinuo();
-					RC_steering = Calcular_PID_YAW(error_linea);
-					// --- 2. LA MAGIA PARA LA PISTA CIRCULAR ---
+	        {
+	            if (adc_buffer[5] < UMBRAL_FRENTE_CHOQUE) {
+	                break;
+	            }
 
-					float abs_steering = (RC_steering < 0) ? -RC_steering : RC_steering;
+	            error_linea = calcularErrorYawContinuo();
+	            RC_steering = Calcular_PID_YAW(error_linea);
 
-					// A) REDUCCIÓN DE VELOCIDAD DINÁMICA
-					// Velocidad base en recta: ej 0.8f. Le restamos un proporcional al giro.
-					// Ajustá el multiplicador (ej: 0.005f) hasta que el robot frene notablemente al doblar.
+	            float abs_steering = (RC_steering < 0) ? -RC_steering : RC_steering;
 
-					RC_setpoint = RC_setpoint_base - (abs_steering * multiplicadorYaw);
+	            RC_setpoint = RC_setpoint_base - (abs_steering * multiplicadorYaw);
 
-					// Límite de seguridad: Que no frene a cero ni vaya marcha atrás por culpa de la curva
+	            if (RC_setpoint < 0.2f) {
+	                RC_setpoint = 0.2f;
+	            }
 
-					if (RC_setpoint < 0.2f) {
-						RC_setpoint = 0.2f;
-					}
-					// B) COMPENSACIÓN DE YAW (ANTI-INYECCIÓN)
-					// Si el volante (steering) es muy alto, el robot "pierde" empuje total y se cae de trompa.
-					// Le restamos grados al setpoint (lo tiramos para atrás) proporcionalmente a la curva.
-					// Ajustá este valor (ej: 0.002f) si ves que al doblar "cabecea" hacia adelante.
+	            float compensacion_anti_caida = abs_steering * multiplicadorYaw;
+	            RC_setpoint = RC_setpoint - compensacion_anti_caida;
+	            break;
+	        }
 
-					float compensacion_anti_caida = abs_steering * multiplicadorYaw;
-					RC_setpoint = RC_setpoint - compensacion_anti_caida;
-					break;
-				case MODO_FL_RESCATE:
-					// Soltamos el acelerador para el giro sobre su eje
-					RC_setpoint_base = 0.0f;
-					error_linea = 0.0f;
+	        case MODO_FL_RESCATE:
+	            RC_setpoint_base = 0.0f;
+	            error_linea = 0.0f;
 
-					// Giro controlado de búsqueda (no uses 250 para no derrapar inútilmente)
-					if (last_state_linea < 0.0f) {
-						RC_steering = 0;//350.0f; // Izquierda
-					} else {
-						RC_steering = 0;//-350.0f; // Derecha
-					}
-					// Si vemos la línea, volvemos a seguirla
-					if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
-						currentMode = MODO_FL_SIGUIENDO;
-						// Reseteo rápido del integral de Yaw para que no dé un volantazo al reengancharse
-						// (Asumo que tus variables se llaman integral_yaw o I_yaw. Ajustalas).
-//	        					integral_yaw = 0.0f;
-						break;
-					}
+	            if (last_state_linea < 0.0f) {
+	                RC_steering = 0;
+	            } else {
+	                RC_steering = 0;
+	            }
 
-//					if (HAL_GetTick() - timer_rescate > 2000) {	// Rendición a los 2 segundos
-//						currentMode = MODO_FL_PERDIDO_FAILSAFE;
-//					}
-					break;
-//	        case MODO_FL_INGRESO_A_90:
-//	        	 RC_steering = 250.0f; // Giro  Izquierda
-//				if (HAL_GetTick() - timer_rescate > 500) {	// DESPUES DE 15 SEGUNDOS SIN ENCONTRAR LA LINEA NOS REDNIMOS
-//					currentMode = MODO_FL_RESCATE;
-//					}
-//	        	break;
-//	        case MODO_FL_PERDIDO_FAILSAFE:         // Se rinde. Se queda haciendo equilibrio en el lugar.
-//	        	 if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
-//					currentMode = MODO_FL_SIGUIENDO;// Aunque el robot este rendido, si vuelve a tocar la linea, vuelve a la normalidad. Esto esta hecho para que pueda moverlo manualmetne hacia la linea
-//					break;
-//				}
-//	        	RC_setpoint = 0.0f;
-//	            RC_steering = 0.0f;
-//	            break;
-//	        case MODO_FL_ESQUIVAR_OBSTACULO:
-//	            Procesar_Evasion_Obstaculo();
-//	            // Adentro de esta función, si toca la línea, acordate de cambiar a MODO_FL_SIGUIENDO
-//	            break;
+	            if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
+	                currentMode = MODO_FL_SIGUIENDO;
+	                break;
+	            }
+	            break;
+
+	        default:
+	            break;
+	        }
+
+	        PID_PITCH();
+
+	        if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
+	            ultimo_estado_sensores[0] = estado_sensores[0];
+	            ultimo_estado_sensores[1] = estado_sensores[1];
+	            ultimo_estado_sensores[2] = estado_sensores[2];
+	        }
 	    }
-	    PID_PITCH();
-	    if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) { // SI AL MENOS UNA LINEA ES NEGRA ALMACENAMOS LA VARIABLE
-			ultimo_estado_sensores[0] = estado_sensores[0];
-			ultimo_estado_sensores[1] = estado_sensores[1];
-			ultimo_estado_sensores[2] = estado_sensores[2];
-			}
-	}
-
-
-	/*
-	if(flagPID){
-		flagPID = 0;
-		switch(currentMode){
-			case MODO_IDDLE:
-				//calibración de sensores, ajustes de PID, demas.
-				break;
-			case MODO_RC:
-				//posibilidad de maniobrar a voluntad
-				break;
-			case MODO_FL_INICIO:
-				Filtrar_Sensores_IR();
-				Procesar_Calibracion_Linea(); // Solo calibramos si estamos en este modo
-				Leer_Linea_Digital();
-				if (adc_buffer[5] < UMBRAL_FRENTE_CHOQUE) {
-					currentMode = MODO_FL_ESQUIVAR_OBSTACULO; // MODO_EVASION (Acordate de sincronizar currentMode con telemetria.data.modo)
-					estado_evasion = EVA_DETECTADO;
-					}
-				else {
-					float error_linea = calcularErrorYawContinuo();
-					RC_steering = Calcular_PID_YAW(error_linea);
-					// FL_setpoint = 0.9f;
-					}
-				break;
-			case MODO_FL_ESQUIVAR_OBSTACULO:
-				Procesar_Evasion_Obstaculo();
-				break;
-		}
-		PID_PITCH();
-	}*/
-
-
   }
   /* USER CODE END 3 */
 }

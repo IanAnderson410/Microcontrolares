@@ -30,10 +30,10 @@ extern UART_HandleTypeDef huart1;
 /* Private macro -------------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-extern float Kp, Ki, Kd;             // Traemos las variables del main
-extern int16_t deadband_L, deadband_R;
-extern char rx_buffer[20];
-extern uint8_t rx_index;
+//extern float Kp_pitch, Ki_pitch, Kd_pitch;             // Traemos las variables del main
+//extern int16_t deadband_L, deadband_R;
+//extern char rx_buffer[20];
+//extern uint8_t rx_index;
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE END PV */
@@ -265,22 +265,22 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
-	for (uint32_t i = 0; i < *Len; i++) {
-	      if (Buf[i] == '\n' || Buf[i] == '\r') {
-	          rx_buffer[rx_index] = '\0';
-
-	          // Procesar Comandos
-	          if (rx_buffer[0] == 'P') Kp = atof(&rx_buffer[1]);
-	          if (rx_buffer[0] == 'D') Kd = atof(&rx_buffer[1]);
-	          if (rx_buffer[0] == 'I') Ki = atof(&rx_buffer[1]);
-	          if (rx_buffer[0] == 'L') deadband_L = atoi(&rx_buffer[1]);
-	          if (rx_buffer[0] == 'R') deadband_R = atoi(&rx_buffer[1]);
-
-	          rx_index = 0;
-	      } else {
-	          if (rx_index < 19) rx_buffer[rx_index++] = Buf[i];
-	      }
-	  }
+//	for (uint32_t i = 0; i < *Len; i++) {
+//	      if (Buf[i] == '\n' || Buf[i] == '\r') {
+////	          rx_buffer[rx_index] = '\0';
+////
+////	          // Procesar Comandos
+////	          if (rx_buffer[0] == 'P') Kp_pitch = atof(&rx_buffer[1]);
+////	          if (rx_buffer[0] == 'D') Kd_pitch = atof(&rx_buffer[1]);
+////	          if (rx_buffer[0] == 'I') Ki_pitch = atof(&rx_buffer[1]);
+////	          if (rx_buffer[0] == 'L') deadband_L = atoi(&rx_buffer[1]);
+////	          if (rx_buffer[0] == 'R') deadband_R = atoi(&rx_buffer[1]);
+//
+//	          rx_index = 0;
+//	      } else {
+//	          if (rx_index < 19) rx_buffer[rx_index++] = Buf[i];
+//	      }
+//	  }
 
 	  // No olvides esta línea para rearmar la recepción
 	  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
