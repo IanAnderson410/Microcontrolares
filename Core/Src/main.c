@@ -402,6 +402,7 @@ volatile uint8_t uner_ack_pending = 0;
 volatile uint8_t uner_ack_cmd = 0;
 volatile uint8_t uner_ack_seq = 0;
 volatile uint8_t uner_ack_status = 0;
+volatile uint8_t uner_telemetry_enabled = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
@@ -808,7 +809,7 @@ void ESP01_App_Task(void)
         }
     }
 
-    if (!uner_ack_pending && ESP.udp_connected && (HAL_GetTick() - last_telemetry) >= 50) {
+    if (uner_telemetry_enabled && !uner_ack_pending && ESP.udp_connected && (HAL_GetTick() - last_telemetry) >= 200) {
         if (UNER_SendTelemetryV1()) {
             last_telemetry = HAL_GetTick();
         }
@@ -1199,6 +1200,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 
     case CMD_ALIVE:
         esp01_alive_count++;
+        uner_telemetry_enabled = 1;
         uner_ack_cmd = CMD_ALIVE;
         uner_ack_seq = seq;
         uner_ack_status = 0;
