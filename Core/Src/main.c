@@ -215,12 +215,24 @@ ESP01_App_t ESP = {0};
 
 #define     ESP01_UDP_LOCAL_PORT       8888
 #define     ESP01_QT_REMOTE_PORT       8888
-#define     ESP01_QT_REMOTE_IP         "172.23.224.234"
 #define     ESP01_RX_DMA_SIZE          256
 #define     UNER_RX_RING_SIZE          128
 
+#define     ESP01_WIFI_PROFILE_UNIVERSITY  0
+#define     ESP01_WIFI_PROFILE_HOME        1
+#define     ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_HOME
+
+#if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
+#define     WIFI_SSID                  "InternetPlus_872f10"
+#define     WIFI_PASSWORD              "wlan78d0ef"
+#define     ESP01_QT_REMOTE_IP         "192.168.1.3"
+#elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_UNIVERSITY
 #define     WIFI_SSID                  "FCAL"
 #define     WIFI_PASSWORD              "fcalconcordia.06-2019"
+#define     ESP01_QT_REMOTE_IP         "172.23.224.234"
+#else
+#error "Seleccionar un perfil WiFi valido para ESP01_WIFI_PROFILE"
+#endif
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -356,9 +368,11 @@ char ip_address[16] = "0.0.0.0";
 volatile uint8_t ip_received_flag = 0;
 volatile uint8_t esp01_alive_received = 0;
 volatile uint8_t esp01_oled_ready = 0;
-volatile uint8_t esp01_udp_probe_pending = 0;
 volatile uint32_t esp01_tx_count = 0;
 volatile uint32_t esp01_rx_count = 0;
+volatile uint32_t esp01_payload_count = 0;
+volatile uint32_t esp01_alive_count = 0;
+volatile uint32_t esp01_ack_count = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
@@ -610,6 +624,8 @@ void ESP01_Data_Received(uint8_t value)
     static char line[8];
     static uint8_t index = 0;
 
+    esp01_payload_count++;
+
     if (index < sizeof(line)) {
         line[index++] = (char)value;
     } else {
@@ -620,6 +636,7 @@ void ESP01_Data_Received(uint8_t value)
     if (value == '\n') {
         if (index == 7 && memcmp(line, "ALIVE\r\n", 7) == 0) {
             esp01_alive_received = 1;
+            esp01_alive_count++;
         }
 
         index = 0;
@@ -672,7 +689,6 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
     case ESP01_UDPTCP_CONNECTED:
         flagWIFI = 1;
         ESP.udp_connected = 1;
-        esp01_udp_probe_pending = 1;
         break;
 
     case ESP01_UDPTCP_DISCONNECTED:
@@ -716,7 +732,6 @@ void onESP01Debug(const char *dbgStr)
 void ESP01_App_Task(void)
 {
     static uint8_t ack[] = "ACK\r\n";
-    static uint8_t probe[] = "BOOT\r\n";
     static uint32_t last_oled_update = 0;
 
     ESP01_Task();
@@ -726,15 +741,10 @@ void ESP01_App_Task(void)
         screenScheduler();
     }
 
-    if (esp01_udp_probe_pending && ESP.udp_connected) {
-        if (ESP01_Send(probe, 0, sizeof(probe) - 1, sizeof(probe) - 1) == ESP01_SEND_READY) {
-            esp01_udp_probe_pending = 0;
-        }
-    }
-
     if (esp01_alive_received && ESP.udp_connected) {
         if (ESP01_Send(ack, 0, sizeof(ack) - 1, sizeof(ack) - 1) == ESP01_SEND_READY) {
             esp01_alive_received = 0;
+            esp01_ack_count++;
         }
     }
 }
@@ -950,9 +960,11 @@ void screenScheduler(void){
     sprintf(msg, "TX:%lu RX:%lu", (unsigned long)esp01_tx_count, (unsigned long)esp01_rx_count);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 40);
-    SSD1306_Puts("DBG:", &Font_7x10, SSD1306_COLOR_WHITE);
-    SSD1306_GotoXY(28, 40);
-    SSD1306_Puts(esp01_last_debug, &Font_7x10, SSD1306_COLOR_WHITE);
+    sprintf(msg, "P:%lu A:%lu K:%lu",
+            (unsigned long)esp01_payload_count,
+            (unsigned long)esp01_alive_count,
+            (unsigned long)esp01_ack_count);
+    SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 52);
     SSD1306_Puts("RX:", &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(21, 52);
