@@ -98,6 +98,19 @@ typedef union {
     uint8_t 		buffer[sizeof(PayloadData_t)]; // 27 bytes totales
 } PayloadUNER_t;
 
+typedef struct __attribute__((packed)) {
+    int16_t     acc_x, acc_y, acc_z;
+    int16_t     gyro_pitch, gyro_yaw;
+    int16_t     pitch_cdeg;
+    int16_t     yaw_cdeg;
+    int32_t     pos_x_mm;
+    int32_t     pos_y_mm;
+    int16_t     velocidad_mm_s;
+    uint8_t     modo;
+    uint16_t    IR[8];
+    uint8_t     infoAdicional;
+} PayloadDataV1_t;
+
 typedef struct {
     uint8_t header[4];      // "UNER"
     uint8_t length;         // CMD + N_Payload + Checksum
@@ -217,15 +230,24 @@ ESP01_App_t ESP = {0};
 #define     ESP01_QT_REMOTE_PORT       8888
 #define     ESP01_RX_DMA_SIZE          256
 #define     UNER_RX_RING_SIZE          128
+#define     UNER_V1_VERSION            1
+#define     UNER_V1_MAX_PAYLOAD        64
+#define     UNER_V1_FLAG_ACK_REQUIRED  0x01
+#define     UNER_V1_FLAG_ACK           0x02
 
 #define     ESP01_WIFI_PROFILE_UNIVERSITY  0
 #define     ESP01_WIFI_PROFILE_HOME        1
-#define     ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_HOME
+#define     ESP01_WIFI_PROFILE_LAB         2
+#define     ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_LAB
 
 #if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
 #define     WIFI_SSID                  "InternetPlus_872f10"
 #define     WIFI_PASSWORD              "wlan78d0ef"
 #define     ESP01_QT_REMOTE_IP         "192.168.1.3"
+#elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_LAB
+#define     WIFI_SSID                  "LabPrototip"
+#define     WIFI_PASSWORD              "labproto"
+#define     ESP01_QT_REMOTE_IP         "172.24.150.89"
 #elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_UNIVERSITY
 #define     WIFI_SSID                  "FCAL"
 #define     WIFI_PASSWORD              "fcalconcordia.06-2019"
@@ -373,6 +395,10 @@ volatile uint32_t esp01_rx_count = 0;
 volatile uint32_t esp01_payload_count = 0;
 volatile uint32_t esp01_alive_count = 0;
 volatile uint32_t esp01_ack_count = 0;
+volatile uint8_t uner_ack_pending = 0;
+volatile uint8_t uner_ack_cmd = 0;
+volatile uint8_t uner_ack_seq = 0;
+volatile uint8_t uner_ack_status = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
@@ -427,9 +453,13 @@ void ESP01_App_Task(void);
 
 void UNER_Rx_Task(void);
 void UNER_ProcessByte(uint8_t b);
-uint8_t UNER_Send(uint8_t cmd, const uint8_t *payload, uint8_t payload_len);
+void UNER_ProcessByteV1(uint8_t b);
+uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len);
+uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t payload_len);
+uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status);
+uint8_t UNER_SendTelemetryV1(void);
 uint8_t UNER_SendInt16(uint8_t cmd, int16_t value);
-void UNER_HandlePacket(uint8_t cmd, uint8_t *payload, uint8_t payload_len);
+void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len);
 /**
  * @brief buzzerSecuence:  				Máquina de estados para señales auditivas (Buzzer) no-bloqueante.
  * @param seq:			   				Estructura con tiempos de duración, intervalo y repeticiones.
@@ -626,6 +656,17 @@ void ESP01_Data_Received(uint8_t value)
 
     esp01_payload_count++;
 
+    uint16_t next = ESP.uner_rx_write + 1;
+
+    if (next >= UNER_RX_RING_SIZE) {
+        next = 0;
+    }
+
+    if (next != ESP.uner_rx_read) {
+        ESP.uner_rx_ring[ESP.uner_rx_write] = value;
+        ESP.uner_rx_write = next;
+    }
+
     if (index < sizeof(line)) {
         line[index++] = (char)value;
     } else {
@@ -733,8 +774,10 @@ void ESP01_App_Task(void)
 {
     static uint8_t ack[] = "ACK\r\n";
     static uint32_t last_oled_update = 0;
+    static uint32_t last_telemetry = 0;
 
     ESP01_Task();
+    UNER_Rx_Task();
 
     if ((HAL_GetTick() - last_oled_update) >= 500) {
         last_oled_update = HAL_GetTick();
@@ -747,9 +790,109 @@ void ESP01_App_Task(void)
             esp01_ack_count++;
         }
     }
+
+    if (uner_ack_pending && ESP.udp_connected) {
+        if (UNER_SendAckV1(uner_ack_cmd, uner_ack_seq, uner_ack_status)) {
+            uner_ack_pending = 0;
+            esp01_ack_count++;
+        }
+    }
+
+    if (!uner_ack_pending && ESP.udp_connected && (HAL_GetTick() - last_telemetry) >= 50) {
+        if (UNER_SendTelemetryV1()) {
+            last_telemetry = HAL_GetTick();
+        }
+    }
 }
 
 /* ===================== [ UNER mínimo: ALIVE -> ACK ] ===================== */
+
+uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len)
+{
+    uint16_t crc = 0xFFFF;
+
+    for (uint16_t i = 0; i < len; i++) {
+        crc ^= ((uint16_t)data[i] << 8);
+
+        for (uint8_t bit = 0; bit < 8; bit++) {
+            if (crc & 0x8000) {
+                crc = (uint16_t)((crc << 1) ^ 0x1021);
+            } else {
+                crc <<= 1;
+            }
+        }
+    }
+
+    return crc;
+}
+
+uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t payload_len)
+{
+    static uint8_t seq = 0;
+    uint8_t frame[4 + 1 + 1 + 1 + 1 + 1 + UNER_V1_MAX_PAYLOAD + 2];
+    uint16_t idx = 0;
+
+    if (payload_len > UNER_V1_MAX_PAYLOAD) {
+        return 0;
+    }
+
+    frame[idx++] = 'U';
+    frame[idx++] = 'N';
+    frame[idx++] = 'E';
+    frame[idx++] = 'R';
+    frame[idx++] = UNER_V1_VERSION;
+    frame[idx++] = cmd;
+    frame[idx++] = flags;
+    frame[idx++] = seq++;
+    frame[idx++] = payload_len;
+
+    if (payload != NULL && payload_len > 0) {
+        memcpy(&frame[idx], payload, payload_len);
+        idx += payload_len;
+    }
+
+    uint16_t crc = UNER_Crc16Ccitt(frame, idx);
+    frame[idx++] = (uint8_t)(crc & 0xFF);
+    frame[idx++] = (uint8_t)((crc >> 8) & 0xFF);
+
+    return (ESP01_Send(frame, 0, idx, idx) == ESP01_SEND_READY);
+}
+
+uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status)
+{
+    uint8_t payload[3];
+
+    payload[0] = acked_cmd;
+    payload[1] = acked_seq;
+    payload[2] = status;
+
+    return UNER_SendV1(CMD_ACK, UNER_V1_FLAG_ACK, payload, sizeof(payload));
+}
+
+uint8_t UNER_SendTelemetryV1(void)
+{
+    PayloadDataV1_t payload;
+
+    payload.acc_x = (int16_t)accelx;
+    payload.acc_y = (int16_t)accely;
+    payload.acc_z = (int16_t)accelz;
+    payload.gyro_pitch = (int16_t)giro;
+    payload.gyro_yaw = (int16_t)giro_z;
+    payload.pitch_cdeg = (int16_t)(angle_y * 100.0f);
+    payload.yaw_cdeg = (int16_t)(error_linea * 100.0f);
+    payload.pos_x_mm = 0;
+    payload.pos_y_mm = 0;
+    payload.velocidad_mm_s = (int16_t)(velocidad_objetivo * 1000.0f);
+    payload.modo = currentMode;
+
+    for (uint8_t i = 0; i < 8; i++) {
+        payload.IR[i] = (i < 4) ? adc_filtrado[i] : 0;
+    }
+
+    payload.infoAdicional = flagCalibrationIsReady;
+
+    return UNER_SendV1(CMD_DATA, 0, (const uint8_t *)&payload, sizeof(payload));
+}
 
 uint8_t UNER_Send(uint8_t cmd, const uint8_t *payload, uint8_t payload_len)
 {
@@ -796,7 +939,7 @@ uint8_t UNER_SendInt16(uint8_t cmd, int16_t value)
     payload[0] = (uint8_t)(value & 0xFF);
     payload[1] = (uint8_t)((value >> 8) & 0xFF);
 
-    return UNER_Send(cmd, payload, 2);
+    return UNER_SendV1(cmd, 0, payload, 2);
 }
 
 void UNER_Rx_Task(void)
@@ -810,7 +953,140 @@ void UNER_Rx_Task(void)
             ESP.uner_rx_read = 0;
         }
 
-        UNER_ProcessByte(b);
+        UNER_ProcessByteV1(b);
+    }
+}
+
+void UNER_ProcessByteV1(uint8_t b)
+{
+    typedef enum {
+        UNER_V1_ST_U,
+        UNER_V1_ST_N,
+        UNER_V1_ST_E,
+        UNER_V1_ST_R,
+        UNER_V1_ST_VERSION,
+        UNER_V1_ST_CMD,
+        UNER_V1_ST_FLAGS,
+        UNER_V1_ST_SEQ,
+        UNER_V1_ST_LEN,
+        UNER_V1_ST_PAYLOAD,
+        UNER_V1_ST_CRC0,
+        UNER_V1_ST_CRC1
+    } UNER_V1_State_t;
+
+    static UNER_V1_State_t st = UNER_V1_ST_U;
+    static uint8_t frame[4 + 1 + 1 + 1 + 1 + 1 + UNER_V1_MAX_PAYLOAD];
+    static uint8_t idx = 0;
+    static uint8_t payload_len = 0;
+    static uint8_t payload_idx = 0;
+    static uint8_t crc0 = 0;
+
+    switch (st) {
+    case UNER_V1_ST_U:
+        if (b == 'U') {
+            idx = 0;
+            frame[idx++] = b;
+            st = UNER_V1_ST_N;
+        }
+        break;
+
+    case UNER_V1_ST_N:
+        if (b == 'N') {
+            frame[idx++] = b;
+            st = UNER_V1_ST_E;
+        } else {
+            st = UNER_V1_ST_U;
+        }
+        break;
+
+    case UNER_V1_ST_E:
+        if (b == 'E') {
+            frame[idx++] = b;
+            st = UNER_V1_ST_R;
+        } else {
+            st = UNER_V1_ST_U;
+        }
+        break;
+
+    case UNER_V1_ST_R:
+        if (b == 'R') {
+            frame[idx++] = b;
+            st = UNER_V1_ST_VERSION;
+        } else {
+            st = UNER_V1_ST_U;
+        }
+        break;
+
+    case UNER_V1_ST_VERSION:
+        if (b == UNER_V1_VERSION) {
+            frame[idx++] = b;
+            st = UNER_V1_ST_CMD;
+        } else {
+            st = UNER_V1_ST_U;
+        }
+        break;
+
+    case UNER_V1_ST_CMD:
+        frame[idx++] = b;
+        st = UNER_V1_ST_FLAGS;
+        break;
+
+    case UNER_V1_ST_FLAGS:
+        frame[idx++] = b;
+        st = UNER_V1_ST_SEQ;
+        break;
+
+    case UNER_V1_ST_SEQ:
+        frame[idx++] = b;
+        st = UNER_V1_ST_LEN;
+        break;
+
+    case UNER_V1_ST_LEN:
+        payload_len = b;
+        if (payload_len > UNER_V1_MAX_PAYLOAD) {
+            st = UNER_V1_ST_U;
+            break;
+        }
+
+        frame[idx++] = b;
+        payload_idx = 0;
+        st = (payload_len == 0) ? UNER_V1_ST_CRC0 : UNER_V1_ST_PAYLOAD;
+        break;
+
+    case UNER_V1_ST_PAYLOAD:
+        frame[idx++] = b;
+        payload_idx++;
+        if (payload_idx >= payload_len) {
+            st = UNER_V1_ST_CRC0;
+        }
+        break;
+
+    case UNER_V1_ST_CRC0:
+        crc0 = b;
+        st = UNER_V1_ST_CRC1;
+        break;
+
+    case UNER_V1_ST_CRC1:
+    {
+        uint16_t crc_rx = (uint16_t)crc0 | ((uint16_t)b << 8);
+        uint16_t crc_calc = UNER_Crc16Ccitt(frame, idx);
+
+        if (crc_rx == crc_calc) {
+            uint8_t cmd = frame[5];
+            uint8_t flags = frame[6];
+            uint8_t seq = frame[7];
+            uint8_t *payload = &frame[9];
+
+            UNER_HandlePacket(cmd, flags, seq, payload, payload_len);
+        }
+
+        st = UNER_V1_ST_U;
+        break;
+    }
+
+    default:
+        st = UNER_V1_ST_U;
+        break;
     }
 }
 
@@ -890,7 +1166,7 @@ void UNER_ProcessByte(uint8_t b)
                 uint8_t *payload = &body[1];
                 uint8_t payload_len = len - 2;
 
-                UNER_HandlePacket(cmd, payload, payload_len);
+                UNER_HandlePacket(cmd, 0, 0, payload, payload_len);
             }
 
             st = UNER_ST_U;
@@ -903,7 +1179,7 @@ void UNER_ProcessByte(uint8_t b)
     }
 }
 
-void UNER_HandlePacket(uint8_t cmd, uint8_t *payload, uint8_t payload_len)
+void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len)
 {
     (void)payload;
     (void)payload_len;
@@ -911,14 +1187,20 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t *payload, uint8_t payload_len)
     switch (cmd) {
 
     case CMD_ALIVE:
-        /*
-         * Qt manda CMD_ALIVE.
-         * STM32 responde CMD_ACK con payload int16 = 1.
-         */
-        UNER_SendInt16(CMD_ACK, 1);
+        esp01_alive_count++;
+        uner_ack_cmd = CMD_ALIVE;
+        uner_ack_seq = seq;
+        uner_ack_status = 0;
+        uner_ack_pending = 1;
         break;
 
     default:
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = cmd;
+            uner_ack_seq = seq;
+            uner_ack_status = 0;
+            uner_ack_pending = 1;
+        }
         break;
     }
 }
