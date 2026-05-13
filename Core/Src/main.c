@@ -102,6 +102,7 @@ typedef struct __attribute__((packed)) {
     int16_t     acc_x, acc_y, acc_z;
     int16_t     gyro_pitch, gyro_yaw;
     int16_t     pitch_cdeg;
+    int16_t     roll_cdeg;
     int16_t     yaw_cdeg;
     int32_t     pos_x_mm;
     int32_t     pos_y_mm;
@@ -324,6 +325,8 @@ volatile 	uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estam
 uint8_t sentidoDeGiro=0; // 0 horario, 1 anti-horario
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y 	= 0;
+			float           angle_roll  = 0;
+			float           angle_yaw   = 0;
 // =================[ Variables de Calibración ] =================//
 			float 			accel_bias_x;
 			float 			accel_bias_y ;
@@ -460,6 +463,7 @@ uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status);
 uint8_t UNER_SendTelemetryV1(void);
 uint8_t UNER_SendInt16(uint8_t cmd, int16_t value);
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len);
+void Telemetry_UpdateMPU(void);
 /**
  * @brief buzzerSecuence:  				Máquina de estados para señales auditivas (Buzzer) no-bloqueante.
  * @param seq:			   				Estructura con tiempos de duración, intervalo y repeticiones.
@@ -774,10 +778,16 @@ void ESP01_App_Task(void)
 {
     static uint8_t ack[] = "ACK\r\n";
     static uint32_t last_oled_update = 0;
+    static uint32_t last_mpu_update = 0;
     static uint32_t last_telemetry = 0;
 
     ESP01_Task();
     UNER_Rx_Task();
+
+    if ((HAL_GetTick() - last_mpu_update) >= 10) {
+        last_mpu_update = HAL_GetTick();
+        Telemetry_UpdateMPU();
+    }
 
     if ((HAL_GetTick() - last_oled_update) >= 500) {
         last_oled_update = HAL_GetTick();
@@ -879,7 +889,8 @@ uint8_t UNER_SendTelemetryV1(void)
     payload.gyro_pitch = (int16_t)giro;
     payload.gyro_yaw = (int16_t)giro_z;
     payload.pitch_cdeg = (int16_t)(angle_y * 100.0f);
-    payload.yaw_cdeg = (int16_t)(error_linea * 100.0f);
+    payload.roll_cdeg = (int16_t)(angle_roll * 100.0f);
+    payload.yaw_cdeg = (int16_t)(angle_yaw * 100.0f);
     payload.pos_x_mm = 0;
     payload.pos_y_mm = 0;
     payload.velocidad_mm_s = (int16_t)(velocidad_objetivo * 1000.0f);
@@ -1223,6 +1234,55 @@ void DataToQt(void)
      * reemplazar este cuerpo por UNER_Send(CMD_DATA, telemetria.buffer, sizeof(PayloadData_t)).
      */
 }
+
+void Telemetry_UpdateMPU(void)
+{
+    uint8_t buffer[14];
+
+    if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, 0x3B, 1, buffer, sizeof(buffer), 2) != HAL_OK) {
+        return;
+    }
+
+    axRaw = (int16_t)((buffer[0] << 8) | buffer[1]);
+    ayRaw = (int16_t)((buffer[2] << 8) | buffer[3]);
+    azRaw = (int16_t)((buffer[4] << 8) | buffer[5]);
+    gyPitchRaw = (int16_t)((buffer[10] << 8) | buffer[11]);
+    gzYawRaw = (int16_t)((buffer[12] << 8) | buffer[13]);
+
+    float gyro_pitch_rate = -(((float)gyPitchRaw - gyro_bias_y) / 131.0f);
+    float gyro_yaw_rate = (((float)gzYawRaw - gyro_bias_z) / 131.0f);
+    float pitch_accel = atan2f((float)axRaw - accel_bias_x, (float)azRaw - accel_bias_z) * 57.2957f;
+    float roll_accel = atan2f((float)ayRaw - accel_bias_y, (float)azRaw - accel_bias_z) * 57.2957f;
+
+    giro = gyro_pitch_rate;
+    giro_z = gyro_yaw_rate;
+    accelGiro = pitch_accel;
+    angle_y = ALPHA_PID * (angle_y + gyro_pitch_rate * DT_PID) + (1.0f - ALPHA_PID) * pitch_accel;
+    angle_roll = ALPHA_PID * angle_roll + (1.0f - ALPHA_PID) * roll_accel;
+    angle_yaw += gyro_yaw_rate * DT_PID;
+
+    accelx = axRaw;
+    accely = ayRaw;
+    accelz = azRaw;
+
+    telemetria.data.acc_x = axRaw;
+    telemetria.data.acc_y = ayRaw;
+    telemetria.data.acc_z = azRaw;
+    telemetria.data.gyro_pitch = (int16_t)gyro_pitch_rate;
+    telemetria.data.gyro_yaw = (int16_t)gyro_yaw_rate;
+    telemetria.data.pitch_filtrado = angle_y;
+    telemetria.data.yaw_filtrado = angle_yaw;
+    telemetria.data.pos_x = 0.0f;
+    telemetria.data.pos_y = 0.0f;
+    telemetria.data.velocidad = velocidad_objetivo;
+    telemetria.data.modo = currentMode;
+    telemetria.data.infoAdicional = flagCalibrationIsReady;
+
+    for (uint8_t i = 0; i < 8; i++) {
+        telemetria.data.IR[i] = (i < 4) ? adc_filtrado[i] : 0;
+    }
+}
+
 void screenScheduler(void){
     if (!esp01_oled_ready) {
         return;
@@ -1820,6 +1880,8 @@ int main(void)
           esp01_oled_ready = 1;
           screenScheduler();
       }
+
+      MPU6050_Init(&hi2c1);
 
       ESP.uner_rx_read = 0;
       ESP.uner_rx_write = 0;
