@@ -1371,6 +1371,31 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_pending = 1;
         break;
 
+    case CMD_SET_HB:
+        if (payload_len >= 1) {
+            uint16_t requested_delay = payload[0];
+
+            if (payload_len >= 2) {
+                requested_delay = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
+            }
+
+            if (requested_delay >= 1 && requested_delay <= 200) {
+                delayHB = requested_delay;
+                uner_ack_status = 0;
+            } else {
+                uner_ack_status = 1;
+            }
+        } else {
+            uner_ack_status = 2;
+        }
+
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_SET_HB;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
     case CMD_CHANGE_MODE:
         if (payload_len >= 2) {
             int16_t requested_mode = (int16_t)((uint16_t)payload[0] | ((uint16_t)payload[1] << 8));
@@ -1387,6 +1412,32 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_CHANGE_MODE;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_CHANGE_OLED_SCREEN:
+        if (payload_len >= 1) {
+            uint16_t requested_page = payload[0];
+
+            if (payload_len >= 2) {
+                requested_page = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
+            }
+
+            if (requested_page <= 3) {
+                flagOLED = (uint8_t)requested_page;
+                flagDisplay = 1;
+                uner_ack_status = 0;
+            } else {
+                uner_ack_status = 1;
+            }
+        } else {
+            uner_ack_status = 2;
+        }
+
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CHANGE_OLED_SCREEN;
             uner_ack_seq = seq;
             uner_ack_pending = 1;
         }
@@ -1476,6 +1527,44 @@ void screenScheduler(void){
     }
 
     SSD1306_Fill(SSD1306_COLOR_BLACK);
+
+    if (flagOLED == 0) {
+        SSD1306_UpdateScreen();
+        return;
+    }
+
+    if (flagOLED == 1) {
+        SSD1306_GotoXY(0, 0);
+        SSD1306_Puts("PID/MODO", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 12);
+        sprintf(msg, "M:%d P:%3.1f", currentMode, Kp);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 24);
+        sprintf(msg, "D:%3.1f Y:%3.1f", Kd, Kp_yaw);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 36);
+        sprintf(msg, "SP:%3.1f", setpoint);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_UpdateScreen();
+        return;
+    }
+
+    if (flagOLED == 3) {
+        SSD1306_GotoXY(0, 0);
+        SSD1306_Puts("IR/MPU", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 12);
+        sprintf(msg, "P:%3.1f Y:%3.1f", angle_y, angle_yaw);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 24);
+        sprintf(msg, "IR:%4u %4u", adc_filtrado[0], adc_filtrado[1]);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 36);
+        sprintf(msg, "IR:%4u %4u", adc_filtrado[2], adc_filtrado[3]);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_UpdateScreen();
+        return;
+    }
+
     SSD1306_GotoXY(0, 0);
     SSD1306_Puts("ESP01 UDP", &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 10);
@@ -1971,7 +2060,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         ESP01_Timeout10ms();
 
         counterHB++;
-        if (counterHB >= 50) {
+        if (counterHB >= delayHB) {
             counterHB = 0;
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
         }
