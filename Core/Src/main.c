@@ -174,7 +174,9 @@ enum {
        CMD_IR_DETENER_CALIBRACION  = 45, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Yaw*/
        //NETWORK
        CMD_NETWORK_CHANGE_SSID		= 50,
-       CMD_NETWORK_CHANGE_PASSWORD	= 51
+       CMD_NETWORK_CHANGE_PASSWORD	= 51,
+       CMD_TELEMETRY_START          = 60,
+       CMD_TELEMETRY_STOP           = 61
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -239,7 +241,7 @@ ESP01_App_t ESP = {0};
 #define     ESP01_WIFI_PROFILE_UNIVERSITY  0
 #define     ESP01_WIFI_PROFILE_HOME        1
 #define     ESP01_WIFI_PROFILE_LAB         2
-#define     ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_LAB
+#define     ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_HOME
 
 #if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
 #define     WIFI_SSID                  "InternetPlus_872f10"
@@ -409,6 +411,8 @@ volatile uint32_t uner_tx_busy_count = 0;
 volatile uint32_t uner_tx_ok_count = 0;
 volatile uint32_t uner_tx_last_try_tick = 0;
 volatile uint32_t uner_tx_last_ok_tick = 0;
+volatile uint32_t uner_tx_recover_count = 0;
+volatile uint8_t uner_recovering_udp = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
@@ -742,7 +746,9 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
     case ESP01_UDPTCP_CONNECTED:
         flagWIFI = 1;
         ESP.udp_connected = 1;
+        ESP.udp_started = 1;
         uner_tx_busy = 0;
+        uner_recovering_udp = 0;
         break;
 
     case ESP01_UDPTCP_DISCONNECTED:
@@ -750,6 +756,7 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
         ESP.udp_connected = 0;
         ESP.udp_started = 0;
         uner_tx_busy = 0;
+        uner_recovering_udp = 0;
         break;
 
     case ESP01_WIFI_DISCONNECTED:
@@ -757,6 +764,7 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
         ESP.udp_connected = 0;
         ESP.udp_started = 0;
         uner_tx_busy = 0;
+        uner_recovering_udp = 0;
         break;
 
     case ESP01_SEND_OK:
@@ -796,18 +804,29 @@ void ESP01_App_Task(void)
     static uint32_t last_oled_update = 0;
     static uint32_t last_mpu_update = 0;
     static uint32_t last_telemetry = 0;
+    uint32_t now = HAL_GetTick();
 
     ESP01_Task();
     UNER_Rx_Task();
 
-    if ((HAL_GetTick() - last_mpu_update) >= 10) {
-        last_mpu_update = HAL_GetTick();
+    if (uner_tx_busy && (now - uner_tx_last_try_tick) > 1500) {
+        uner_tx_busy = 0;
+        uner_ack_pending = 0;
+        ESP.udp_connected = 0;
+        ESP.udp_started = 0;
+        uner_recovering_udp = 1;
+        uner_tx_recover_count++;
+        ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
+    }
+
+    if ((now - last_mpu_update) >= 10) {
+        last_mpu_update = now;
         Telemetry_UpdateMPU();
         Filtrar_Sensores_IR();
     }
 
-    if ((HAL_GetTick() - last_oled_update) >= 500) {
-        last_oled_update = HAL_GetTick();
+    if ((now - last_oled_update) >= 500) {
+        last_oled_update = now;
         screenScheduler();
     }
 
@@ -818,9 +837,9 @@ void ESP01_App_Task(void)
         }
     }
 
-    if (uner_telemetry_enabled && !uner_ack_pending && ESP.udp_connected && (HAL_GetTick() - last_telemetry) >= 80) {
+    if (uner_telemetry_enabled && !uner_ack_pending && !uner_recovering_udp && ESP.udp_connected && (now - last_telemetry) >= 120) {
         if (UNER_SendTelemetryV1()) {
-            last_telemetry = HAL_GetTick();
+            last_telemetry = now;
         }
     }
 }
@@ -1229,8 +1248,23 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 
     case CMD_ALIVE:
         esp01_alive_count++;
-        uner_telemetry_enabled = 1;
         uner_ack_cmd = CMD_ALIVE;
+        uner_ack_seq = seq;
+        uner_ack_status = 0;
+        uner_ack_pending = 1;
+        break;
+
+    case CMD_TELEMETRY_START:
+        uner_telemetry_enabled = 1;
+        uner_ack_cmd = CMD_TELEMETRY_START;
+        uner_ack_seq = seq;
+        uner_ack_status = 0;
+        uner_ack_pending = 1;
+        break;
+
+    case CMD_TELEMETRY_STOP:
+        uner_telemetry_enabled = 0;
+        uner_ack_cmd = CMD_TELEMETRY_STOP;
         uner_ack_seq = seq;
         uner_ack_status = 0;
         uner_ack_pending = 1;
@@ -1339,9 +1373,9 @@ void screenScheduler(void){
             (unsigned long)uner_tx_ok_count);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 52);
-    sprintf(msg, "P:%lu B:%lu",
-            (unsigned long)esp01_payload_count,
-            (unsigned long)uner_tx_busy_count);
+    sprintf(msg, "B:%lu R:%lu",
+            (unsigned long)uner_tx_busy_count,
+            (unsigned long)uner_tx_recover_count);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_UpdateScreen();
     return;
