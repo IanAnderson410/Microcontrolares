@@ -310,7 +310,7 @@ volatile    float 		FL_setpoint = 0.0f;
 			float 		error_linea;
 			uint32_t	timer_rescate=0;
 volatile 	uint16_t 	adc_raw[4]= {0, 0, 0, 0};
-volatile 	uint16_t 	adc_filtrado[4] = {2000, 2000, 2000, 2000};
+volatile 	uint16_t 	adc_filtrado[8] = {2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000};
 volatile 	uint8_t 	estado_sensores[4]	= {0, 0, 0, 0};
 volatile 	uint8_t 	ultimo_estado_sensores[4] = {0, 0, 0, 0};
 volatile 	uint16_t 	sensor_min[4]= {0, 0, 0, 0};
@@ -403,6 +403,12 @@ volatile uint8_t uner_ack_cmd = 0;
 volatile uint8_t uner_ack_seq = 0;
 volatile uint8_t uner_ack_status = 0;
 volatile uint8_t uner_telemetry_enabled = 0;
+volatile uint8_t uner_tx_busy = 0;
+volatile uint32_t uner_tx_ready_count = 0;
+volatile uint32_t uner_tx_busy_count = 0;
+volatile uint32_t uner_tx_ok_count = 0;
+volatile uint32_t uner_tx_last_try_tick = 0;
+volatile uint32_t uner_tx_last_ok_tick = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
@@ -465,6 +471,7 @@ uint8_t UNER_SendTelemetryV1(void);
 uint8_t UNER_SendInt16(uint8_t cmd, int16_t value);
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len);
 void Telemetry_UpdateMPU(void);
+void Filtrar_Sensores_IR(void);
 /**
  * @brief buzzerSecuence:  				Máquina de estados para señales auditivas (Buzzer) no-bloqueante.
  * @param seq:			   				Estructura con tiempos de duración, intervalo y repeticiones.
@@ -735,18 +742,27 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
     case ESP01_UDPTCP_CONNECTED:
         flagWIFI = 1;
         ESP.udp_connected = 1;
+        uner_tx_busy = 0;
         break;
 
     case ESP01_UDPTCP_DISCONNECTED:
         flagWIFI = 0;
         ESP.udp_connected = 0;
         ESP.udp_started = 0;
+        uner_tx_busy = 0;
         break;
 
     case ESP01_WIFI_DISCONNECTED:
         flagWIFI = 0;
         ESP.udp_connected = 0;
         ESP.udp_started = 0;
+        uner_tx_busy = 0;
+        break;
+
+    case ESP01_SEND_OK:
+        uner_tx_busy = 0;
+        uner_tx_ok_count++;
+        uner_tx_last_ok_tick = HAL_GetTick();
         break;
 
     default:
@@ -777,7 +793,6 @@ void onESP01Debug(const char *dbgStr)
 
 void ESP01_App_Task(void)
 {
-    static uint8_t ack[] = "ACK\r\n";
     static uint32_t last_oled_update = 0;
     static uint32_t last_mpu_update = 0;
     static uint32_t last_telemetry = 0;
@@ -788,18 +803,12 @@ void ESP01_App_Task(void)
     if ((HAL_GetTick() - last_mpu_update) >= 10) {
         last_mpu_update = HAL_GetTick();
         Telemetry_UpdateMPU();
+        Filtrar_Sensores_IR();
     }
 
     if ((HAL_GetTick() - last_oled_update) >= 500) {
         last_oled_update = HAL_GetTick();
         screenScheduler();
-    }
-
-    if (esp01_alive_received && ESP.udp_connected) {
-        if (ESP01_Send(ack, 0, sizeof(ack) - 1, sizeof(ack) - 1) == ESP01_SEND_READY) {
-            esp01_alive_received = 0;
-            esp01_ack_count++;
-        }
     }
 
     if (uner_ack_pending && ESP.udp_connected) {
@@ -809,7 +818,7 @@ void ESP01_App_Task(void)
         }
     }
 
-    if (uner_telemetry_enabled && !uner_ack_pending && ESP.udp_connected && (HAL_GetTick() - last_telemetry) >= 200) {
+    if (uner_telemetry_enabled && !uner_ack_pending && ESP.udp_connected && (HAL_GetTick() - last_telemetry) >= 80) {
         if (UNER_SendTelemetryV1()) {
             last_telemetry = HAL_GetTick();
         }
@@ -842,8 +851,18 @@ uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t 
     static uint8_t seq = 0;
     uint8_t frame[4 + 1 + 1 + 1 + 1 + 1 + UNER_V1_MAX_PAYLOAD + 2];
     uint16_t idx = 0;
+    uint32_t now = HAL_GetTick();
 
     if (payload_len > UNER_V1_MAX_PAYLOAD) {
+        return 0;
+    }
+
+    if (uner_tx_busy) {
+        uner_tx_busy_count++;
+        return 0;
+    }
+
+    if ((now - uner_tx_last_try_tick) < 40) {
         return 0;
     }
 
@@ -854,7 +873,7 @@ uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t 
     frame[idx++] = UNER_V1_VERSION;
     frame[idx++] = cmd;
     frame[idx++] = flags;
-    frame[idx++] = seq++;
+    frame[idx++] = seq;
     frame[idx++] = payload_len;
 
     if (payload != NULL && payload_len > 0) {
@@ -866,7 +885,17 @@ uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t 
     frame[idx++] = (uint8_t)(crc & 0xFF);
     frame[idx++] = (uint8_t)((crc >> 8) & 0xFF);
 
-    return (ESP01_Send(frame, 0, idx, idx) == ESP01_SEND_READY);
+    uner_tx_last_try_tick = now;
+
+    if (ESP01_Send(frame, 0, idx, idx) == ESP01_SEND_READY) {
+        seq++;
+        uner_tx_busy = 1;
+        uner_tx_ready_count++;
+        return 1;
+    }
+
+    uner_tx_busy_count++;
+    return 0;
 }
 
 uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status)
@@ -898,7 +927,7 @@ uint8_t UNER_SendTelemetryV1(void)
     payload.modo = currentMode;
 
     for (uint8_t i = 0; i < 8; i++) {
-        payload.IR[i] = (i < 4) ? adc_filtrado[i] : 0;
+        payload.IR[i] = adc_filtrado[i];
     }
 
     payload.infoAdicional = flagCalibrationIsReady;
@@ -1281,7 +1310,7 @@ void Telemetry_UpdateMPU(void)
     telemetria.data.infoAdicional = flagCalibrationIsReady;
 
     for (uint8_t i = 0; i < 8; i++) {
-        telemetria.data.IR[i] = (i < 4) ? adc_filtrado[i] : 0;
+        telemetria.data.IR[i] = adc_filtrado[i];
     }
 }
 
@@ -1304,15 +1333,16 @@ void screenScheduler(void){
     sprintf(msg, "TX:%lu RX:%lu", (unsigned long)esp01_tx_count, (unsigned long)esp01_rx_count);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 40);
-    sprintf(msg, "P:%lu A:%lu K:%lu",
-            (unsigned long)esp01_payload_count,
+    sprintf(msg, "A:%lu K:%lu O:%lu",
             (unsigned long)esp01_alive_count,
-            (unsigned long)esp01_ack_count);
+            (unsigned long)esp01_ack_count,
+            (unsigned long)uner_tx_ok_count);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 52);
-    SSD1306_Puts("RX:", &Font_7x10, SSD1306_COLOR_WHITE);
-    SSD1306_GotoXY(21, 52);
-    SSD1306_Puts(esp01_last_rx, &Font_7x10, SSD1306_COLOR_WHITE);
+    sprintf(msg, "P:%lu B:%lu",
+            (unsigned long)esp01_payload_count,
+            (unsigned long)uner_tx_busy_count);
+    SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_UpdateScreen();
     return;
 
@@ -1461,7 +1491,7 @@ void screenScheduler(void){
 	    }
 }
 void Filtrar_Sensores_IR(void) {
-    for(int i = 0; i < 3; i++) {
+    for(int i = 0; i < 8; i++) {
         // Ahora es 90% historia y 10% dato nuevo
         adc_filtrado[i] = (adc_filtrado[i] * 9 + adc_buffer[i]) / 10;
     }
@@ -1872,6 +1902,7 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM4_Init();
   MX_USART1_UART_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
       /* ================= [ ESP01 AT OFICIAL ] ================= */
 
@@ -1884,6 +1915,7 @@ int main(void)
       }
 
       MPU6050_Init(&hi2c1);
+      HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_buffer, 8);
 
       ESP.uner_rx_read = 0;
       ESP.uner_rx_write = 0;
