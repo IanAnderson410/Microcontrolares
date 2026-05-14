@@ -1,0 +1,2 @@
+../Core/Src/control_systems.c:3:6:PID_PITCH	14
+../Core/Src/control_systems.c:77:9:Calcular_PID_YAW	3

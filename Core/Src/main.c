@@ -73,6 +73,8 @@
 #include "fonts.h"
 #include "line_sensors.h"
 #include "control_systems.h"
+#include "buzzer_app.h"
+#include "mpu6050_app.h"
 #include "math.h"
 
 #include "ESP01.h"
@@ -215,15 +217,6 @@ typedef enum {
     FILTRO_SOLO_ACCEL = 2 		/*!< Desactivar filtro */
 } FiltroTipo_t;
 
-typedef struct {
-    uint16_t duration;  // Cuánto tiempo suena (ms)
-    uint16_t interval;  // Cuánto tiempo de silencio entre beeps (ms)
-    uint8_t repeat;    // Cuántos beeps faltan por sonar
-    uint32_t last_tick; // Auxiliar para el tiempo
-    uint8_t state;      // 0 = Silencio, 1 = Sonando
-} Buzzer_Seq_t;
-
-
 // ================= [ ESP01 / UDP ALIVE TEST ] ================= //
 typedef struct {
     _sESP01Handle Config;
@@ -252,8 +245,6 @@ ESP01_App_t ESP = {0};
 //#define 	ALPHA_PID 			0.98f    // Suaviza las vibraciones del acelerómetro
 #define 	DT_PID 				0.01f
 // ================= [ Periféricos ] ================= //
-#define 	MPU6050_ADDR 	(0x68 << 1) // Dirección I2C desplazada
-
     #define KEY_GPIO_PORT        GPIOA
     #define KEY_GPIO_PIN         GPIO_PIN_0
     #define KEY_ACTIVE_STATE     GPIO_PIN_SET
@@ -505,10 +496,6 @@ static void MX_TIM4_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
-void buzzerSecuence(Buzzer_Seq_t *seq);
-void BS_tcpConnectSecuence(void);
-void BS_Error(void);
-
 void setESP01_CHPD(uint8_t val);
 int ESP01_UART_Transmit(uint8_t val);
 void ESP01_Data_Received(uint8_t value);
@@ -531,23 +518,6 @@ uint8_t UNER_SendTelemetryV1(void);
 uint8_t UNER_SendInt16(uint8_t cmd, int16_t value);
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len);
 void Telemetry_UpdateMPU(void);
-/**
- * @brief buzzerSecuence:  				Máquina de estados para señales auditivas (Buzzer) no-bloqueante.
- * @param seq:			   				Estructura con tiempos de duración, intervalo y repeticiones.
- */
-void buzzerSecuence(Buzzer_Seq_t *seq);
-/**
- * @brief BS_tcpConnectSecuence:		Secuencia para la conexión del servidor.
- */
-void BS_tcpConnectSecuence();
-/**
- * @brief BS_Error:						Secuencia para indicar un error general
- */
-void BS_Error();
-/**
- * @brief BS_ACK_NOT_FOUND: 			Secuencia para indicar un error al no recibir el ACK
- */
-void BS_ACK_NOT_FOUND();
 void screenScheduler(void);
 void KEY_CalibrationTask(void);
 /**
@@ -576,17 +546,6 @@ void DataToQt();
  * @param speed_R: 						Velocidad motor derecho (-3599 a 3599).
  * @note 								Aplica deadband para vencer la inercia mecánica de los motores.
  */
-/**
- * @brief MPU6050_Init:					Inicializa el MPU6050 con configuración específica para equilibrio.
- * @details								Configura Full Scale: Accel +/- 2g, Gyro +/- 500 dps y DLPF a 42Hz.
- */
-void MPU6050_Init(I2C_HandleTypeDef *hi2c);
-/**
- * @brief MPU6050_Calibrate:			Función calibrante del MPU6050
- * @details 							Calibra el MPU6050 cargado datos a las variables terminadas en byas para restarla
- * 										a las mediciones realizadas con el sensor
- */
-void MPU6050_Calibrate(void);
 /**
  * @brief HAL_TIM_PeriodElapsedCallback:Interrupción provocada por un timer
  * @param htim: 						manejador al timer utilizado
@@ -621,67 +580,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-void buzzerSecuence(Buzzer_Seq_t *seq) {
-    if (seq->repeat == 0) {
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
-        return;
-    }
-
-    uint32_t current_tick = HAL_GetTick();
-
-    if (seq->state == 0 && (current_tick - seq->last_tick >= seq->interval)) {
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
-        seq->state = 1;
-        seq->last_tick = current_tick;
-    }
-    else if (seq->state == 1 && (current_tick - seq->last_tick >= seq->duration)) {
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
-        seq->state = 0;
-        seq->last_tick = current_tick;
-        seq->repeat--;
-    }
-}
-
-void BS_tcpConnectSecuence(void) {
-    hBuzzer.duration = 100;
-    hBuzzer.interval = 50;
-    hBuzzer.repeat = 2;
-    hBuzzer.state = 0;
-    hBuzzer.last_tick = HAL_GetTick();
-}
-
-void BS_Error(void) {
-    hBuzzer.duration = 500;
-    hBuzzer.interval = 100;
-    hBuzzer.repeat = 1;
-    hBuzzer.state = 0;
-    hBuzzer.last_tick = HAL_GetTick();
-}
-
-void BS_ACK_NOT_FOUND(void) {
-    hBuzzer.duration = 200;
-    hBuzzer.interval = 50;
-    hBuzzer.repeat = 3;
-    hBuzzer.state = 0;
-    hBuzzer.last_tick = HAL_GetTick();
-}
-
-void BS_NEWPARAM_OK(void) {
-    hBuzzer.duration = 80;
-    hBuzzer.interval = 50;
-    hBuzzer.repeat = 1;
-    hBuzzer.state = 0;
-    hBuzzer.last_tick = HAL_GetTick();
-}
-
-void BS_NEWPARAM_ISNOTOK(void) {
-    hBuzzer.duration = 800;
-    hBuzzer.interval = 1;
-    hBuzzer.repeat = 1;
-    hBuzzer.state = 0;
-    hBuzzer.last_tick = HAL_GetTick();
-}
 
 /* ===================== [ ESP01 + UDP ALIVE ] ===================== */
 
@@ -2314,53 +2212,6 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)(-speed_R));
 		}
 	    }
-}
-void MPU6050_Init(I2C_HandleTypeDef *hi2c) {
-    uint8_t check, data;
-    // 1. Verificamos si el sensor responde (Who Am I)
-    HAL_I2C_Mem_Read(hi2c, MPU6050_ADDR, 0x75, 1, &check, 1, 100);
-    if (check == 0x68) { // El valor por defecto del registro WHO_AM_I es 0x68
-        // 2. Power Management: Salir de Sleep Mode
-        data = 0x00;
-        HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x6B, 1, &data, 1, 100);
-        // 3. Configurar Acelerómetro (+/- 2g)
-        data = 0x00;
-        HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1C, 1, &data, 1, 100);
-        // 4. Configurar Giroscopio (+/- 250 dps)
-        data = 0x00;
-        HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1B, 1, &data, 1, 100);
-        data = 0x04; // Filtro de ~42Hz. Limpia basura del sensor. 0x02 agrega un retardo de 2 ms a la medicion el cual se suma al retardo de la lectura
-        HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1A, 1, &data, 1, 100);
-        data = 0x00;
-        HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x19, 1, &data, 1, 100);
-    }
-}
-void MPU6050_Calibrate(void) {
-    if (flagCalibrationIsReady == 0) {
-        int32_t axS = 0, ayS = 0, azS = 0;
-        int32_t gxS = 0, gyS = 0, gzS = 0;
-        int num_samples = 200;
-        uint8_t buffer[14];
-        for (int i = 0; i < num_samples; i++) {
-            if (HAL_I2C_Mem_Read(&hi2c1, (0x68 << 1), 0x3B, 1, buffer, 14, 100) != HAL_OK) {
-                Error_Handler(); // O prendé un LED rojo para avisarte
-            }
-            axS += (int16_t)(buffer[0] << 8 | buffer[1]);
-            ayS += (int16_t)(buffer[2] << 8 | buffer[3]);
-            azS += (int16_t)(buffer[4] << 8 | buffer[5]);
-            gxS += (int16_t)(buffer[8] << 8 | buffer[9]);
-            gyS += (int16_t)(buffer[10] << 8 | buffer[11]);
-            gzS += (int16_t)(buffer[12] << 8 | buffer[13]);
-            HAL_Delay(11);
-        }
-        accel_bias_x = (float)axS / num_samples;
-        accel_bias_y = (float)ayS / num_samples;
-        accel_bias_z = ((float)azS / num_samples) - 16384.0f;	// se le resta el valor de la gravedad en crudo
-      //  gyro_bias_x = (float)gxS / num_samples;
-        gyro_bias_y = (float)gyS / num_samples;
-       // gyro_bias_z = (float)gzS / num_samples;
-        flagCalibrationIsReady = 1;
-    }
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {

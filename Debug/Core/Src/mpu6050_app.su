@@ -1,0 +1,2 @@
+../Core/Src/mpu6050_app.c:3:6:MPU6050_Init	40	static
+../Core/Src/mpu6050_app.c:26:6:MPU6050_Calibrate	72	static

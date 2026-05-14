@@ -1,0 +1,6 @@
+../Core/Src/buzzer_app.c:3:6:buzzerSecuence	6
+../Core/Src/buzzer_app.c:24:6:BS_tcpConnectSecuence	1
+../Core/Src/buzzer_app.c:33:6:BS_Error	1
+../Core/Src/buzzer_app.c:42:6:BS_ACK_NOT_FOUND	1
+../Core/Src/buzzer_app.c:51:6:BS_NEWPARAM_OK	1
+../Core/Src/buzzer_app.c:60:6:BS_NEWPARAM_ISNOTOK	1
