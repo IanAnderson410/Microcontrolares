@@ -449,6 +449,7 @@ volatile uint32_t uner_tx_last_ok_tick = 0;
 volatile uint32_t uner_tx_recover_count = 0;
 volatile uint8_t uner_recovering_udp = 0;
 volatile uint32_t uner_next_telemetry_tick = 0;
+volatile uint8_t mpu_calibration_requested = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
@@ -533,7 +534,7 @@ void BS_Error();
 void BS_ACK_NOT_FOUND();
 void screenScheduler(void);
 void Iniciar_Calibracion_Linea(void);
-void Iniciar_Calibracion_Linea(void);
+void Finalizar_Calibracion_Linea(void);
 void Procesar_Calibracion_Linea(void);
 void Leer_Linea_Digital(void);
 /**
@@ -1342,6 +1343,23 @@ void UNER_ProcessByte(uint8_t b)
     }
 }
 
+static int16_t UNER_ReadInt16LE(const uint8_t *payload)
+{
+    return (int16_t)((uint16_t)payload[0] | ((uint16_t)payload[1] << 8));
+}
+
+static float UNER_ReadFloatLE(const uint8_t *payload)
+{
+    uint32_t raw = (uint32_t)payload[0] |
+                   ((uint32_t)payload[1] << 8) |
+                   ((uint32_t)payload[2] << 16) |
+                   ((uint32_t)payload[3] << 24);
+    float value;
+
+    memcpy(&value, &raw, sizeof(value));
+    return value;
+}
+
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len)
 {
     switch (cmd) {
@@ -1369,6 +1387,17 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_seq = seq;
         uner_ack_status = 0;
         uner_ack_pending = 1;
+        break;
+
+    case CMD_CALIBRATE:
+        flagCalibrationIsReady = 0;
+        mpu_calibration_requested = 1;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CALIBRATE;
+            uner_ack_seq = seq;
+            uner_ack_status = 0;
+            uner_ack_pending = 1;
+        }
         break;
 
     case CMD_SET_HB:
@@ -1417,6 +1446,65 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         }
         break;
 
+    case CMD_CHANGE_DEADLINE_LEFT:
+        if (payload_len >= 2) {
+            deadband_L = UNER_ReadInt16LE(payload);
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CHANGE_DEADLINE_LEFT;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_CHANGE_DEADLINE_RIGHT:
+        if (payload_len >= 2) {
+            deadband_R = UNER_ReadInt16LE(payload);
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CHANGE_DEADLINE_RIGHT;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_CHANGE_SETPOINT:
+        if (payload_len >= 4) {
+            setpoint = UNER_ReadFloatLE(payload);
+            uner_ack_status = 0;
+        } else if (payload_len >= 2) {
+            setpoint = (float)UNER_ReadInt16LE(payload);
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CHANGE_SETPOINT;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_DEFINE_ZERO_SETPOINT:
+        if (payload_len >= 4) {
+            setpointDeEquilibrio = UNER_ReadFloatLE(payload);
+        } else {
+            setpointDeEquilibrio = angle_y;
+        }
+        uner_ack_status = 0;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_DEFINE_ZERO_SETPOINT;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
     case CMD_CHANGE_OLED_SCREEN:
         if (payload_len >= 1) {
             uint16_t requested_page = payload[0];
@@ -1439,6 +1527,77 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_CHANGE_OLED_SCREEN;
             uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_PID_PITCH_KP:
+    case CMD_PID_PITCH_KI:
+    case CMD_PID_PITCH_KD:
+    case CMD_PID_ALPHA:
+    case CMD_PID_PITCH_LIM_INCLI:
+    case CMD_PID_PITCH_CORECCION_RCSP:
+    case CMD_PID_YAW_KP:
+    case CMD_PID_YAW_KD:
+    case CMD_PID_YAW_SP:
+    case CMD_PID_YAW_MULTIPLICADOR:
+        if (payload_len >= 4) {
+            float value = UNER_ReadFloatLE(payload);
+
+            switch (cmd) {
+            case CMD_PID_PITCH_KP: Kp = value; break;
+            case CMD_PID_PITCH_KI: Ki = value; break;
+            case CMD_PID_PITCH_KD: Kd = value; break;
+            case CMD_PID_ALPHA: ALPHA_PID = value; break;
+            case CMD_PID_PITCH_LIM_INCLI: limite_inclinacion = value; break;
+            case CMD_PID_PITCH_CORECCION_RCSP: correccionRCSP = value; break;
+            case CMD_PID_YAW_KP: Kp_yaw = value; break;
+            case CMD_PID_YAW_KD: Kd_yaw = value; break;
+            case CMD_PID_YAW_SP: FL_setpoint = value; break;
+            case CMD_PID_YAW_MULTIPLICADOR: multiplicadorYaw = value; break;
+            default: break;
+            }
+
+            uner_ack_status = 0;
+        } else if (payload_len >= 2) {
+            float value = (float)UNER_ReadInt16LE(payload);
+            uint8_t status = 0;
+
+            switch (cmd) {
+            case CMD_PID_PITCH_LIM_INCLI: limite_inclinacion = value; break;
+            case CMD_PID_PITCH_CORECCION_RCSP: correccionRCSP = value; break;
+            case CMD_PID_YAW_SP: FL_setpoint = value; break;
+            default: status = 1; break;
+            }
+
+            uner_ack_status = status;
+        } else {
+            uner_ack_status = 2;
+        }
+
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = cmd;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_IR_INICIAR_CALIBRACION:
+        Iniciar_Calibracion_Linea();
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_IR_INICIAR_CALIBRACION;
+            uner_ack_seq = seq;
+            uner_ack_status = 0;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_IR_DETENER_CALIBRACION:
+        Finalizar_Calibracion_Linea();
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_IR_DETENER_CALIBRACION;
+            uner_ack_seq = seq;
+            uner_ack_status = 0;
             uner_ack_pending = 1;
         }
         break;
@@ -2191,6 +2350,10 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	    ESP01_App_Task();
+	    if (mpu_calibration_requested && !uner_ack_pending) {
+	        mpu_calibration_requested = 0;
+	        MPU6050_Calibrate();
+	    }
 	    continue;
 	    /*
 	     * Telemetría desactivada en esta etapa.
