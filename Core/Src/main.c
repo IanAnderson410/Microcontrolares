@@ -1344,9 +1344,6 @@ void UNER_ProcessByte(uint8_t b)
 
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len)
 {
-    (void)payload;
-    (void)payload_len;
-
     switch (cmd) {
 
     case CMD_ALIVE:
@@ -1372,6 +1369,27 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_seq = seq;
         uner_ack_status = 0;
         uner_ack_pending = 1;
+        break;
+
+    case CMD_CHANGE_MODE:
+        if (payload_len >= 2) {
+            int16_t requested_mode = (int16_t)((uint16_t)payload[0] | ((uint16_t)payload[1] << 8));
+
+            if (requested_mode >= MODO_IDDLE && requested_mode <= MODO_FL_INGRESO_A_90) {
+                currentMode = (uint8_t)requested_mode;
+                uner_ack_status = 0;
+            } else {
+                uner_ack_status = 1;
+            }
+        } else {
+            uner_ack_status = 2;
+        }
+
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CHANGE_MODE;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
         break;
 
     default:
