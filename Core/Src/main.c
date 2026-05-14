@@ -1389,6 +1389,30 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_pending = 1;
         break;
 
+    case CMD_START:
+        flagMotorsAreOn = 1;
+        uner_ack_status = 0;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_START;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_STOP:
+        flagMotorsAreOn = 0;
+        RC_setpoint = 0.0f;
+        RC_slow_setpoint = 0.0f;
+        RC_steering = 0;
+        Robot_Drive(0, 0);
+        uner_ack_status = 0;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_STOP;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
     case CMD_CALIBRATE:
         flagCalibrationIsReady = 0;
         mpu_calibration_requested = 1;
@@ -1441,6 +1465,29 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_CHANGE_MODE;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_ONOFFMOTORS:
+        if (payload_len >= 1) {
+            flagMotorsAreOn = (payload[0] != 0) ? 1 : 0;
+
+            if (!flagMotorsAreOn) {
+                RC_setpoint = 0.0f;
+                RC_slow_setpoint = 0.0f;
+                RC_steering = 0;
+                Robot_Drive(0, 0);
+            }
+
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 2;
+        }
+
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_ONOFFMOTORS;
             uner_ack_seq = seq;
             uner_ack_pending = 1;
         }
@@ -2298,11 +2345,13 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_I2C1_Init();
-  MX_TIM4_Init();
-  MX_USART1_UART_Init();
-  MX_ADC1_Init();
+      MX_DMA_Init();
+      MX_I2C1_Init();
+      MX_TIM2_Init();
+      MX_TIM3_Init();
+      MX_TIM4_Init();
+      MX_USART1_UART_Init();
+      MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
       /* ================= [ ESP01 AT OFICIAL ] ================= */
 
@@ -2316,6 +2365,9 @@ int main(void)
 
       MPU6050_Init(&hi2c1);
       HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_buffer, 8);
+      HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+      HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+      Robot_Drive(0, 0);
 
       ESP.uner_rx_read = 0;
       ESP.uner_rx_write = 0;
