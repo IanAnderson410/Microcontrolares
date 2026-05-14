@@ -246,6 +246,8 @@ ESP01_App_t ESP = {0};
 #define     UNER_RX_RING_SIZE          128
 #define     UNER_TX_QUEUE_DEPTH        4
 #define     UNER_TX_FRAME_MAX          80
+#define     UNER_TELEMETRY_PERIOD_MS   150
+#define     UNER_TX_RECOVERY_MS        1000
 #define     UNER_V1_VERSION            1
 #define     UNER_V1_MAX_PAYLOAD        64
 #define     UNER_V1_FLAG_ACK_REQUIRED  0x01
@@ -762,7 +764,7 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
         uner_tx_busy = 0;
         uner_tx_last_try_tick = 0;
         uner_recovering_udp = 0;
-        uner_next_telemetry_tick = HAL_GetTick() + 250;
+        uner_next_telemetry_tick = HAL_GetTick() + UNER_TELEMETRY_PERIOD_MS;
         break;
 
     case ESP01_UDPTCP_DISCONNECTED:
@@ -786,7 +788,7 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
         uner_tx_ok_count++;
         uner_tx_last_ok_tick = HAL_GetTick();
         uner_tx_last_try_tick = 0;
-        uner_next_telemetry_tick = uner_tx_last_ok_tick + 250;
+        uner_next_telemetry_tick = uner_tx_last_ok_tick + UNER_TELEMETRY_PERIOD_MS;
         break;
 
     default:
@@ -868,7 +870,7 @@ void ESP01_App_Task(void)
     if (uner_telemetry_enabled && !uner_ack_pending &&
         ESP.udp_connected && (int32_t)(now - uner_next_telemetry_tick) >= 0) {
         if (UNER_SendTelemetryV1()) {
-            uner_next_telemetry_tick = now + 250;
+            uner_next_telemetry_tick = now + UNER_TELEMETRY_PERIOD_MS;
         } else {
             uner_next_telemetry_tick = now + 50;
         }
@@ -970,7 +972,7 @@ void UNER_Tx_Task(void)
         return;
     }
 
-    if (uner_tx_last_try_tick != 0 && (now - uner_tx_last_try_tick) > 3000) {
+    if (uner_tx_last_try_tick != 0 && (now - uner_tx_last_try_tick) > UNER_TX_RECOVERY_MS) {
         ESP.uner_tx_head = 0;
         ESP.uner_tx_tail = 0;
         ESP.uner_tx_count = 0;
