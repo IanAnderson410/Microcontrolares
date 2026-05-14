@@ -51,7 +51,6 @@ static void ESP01ByteToBufTX(uint8_t value);
 static uint32_t esp01TimeoutTask = 0;
 static uint32_t esp01TimeoutDataRx = 0;
 static uint32_t esp01TimeoutTxSymbol = 0;
-static uint32_t esp01TimeoutSendOK = 0;
 static void (*ESP01ChangeState)(_eESP01STATUS esp01State);
 static void (*ESP01DbgStr)(const char *dbgStr);
 
@@ -270,7 +269,6 @@ _eESP01STATUS ESP01_Send(uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint
 
 		esp01Flags.bit.TXCIPSEND = 1;
 		esp01Flags.bit.SENDINGDATA = 1;
-		esp01TimeoutSendOK = 200;
 
 		if(ESP01DbgStr != NULL){
 			ESP01DbgStr("+&DBGSENDING DATA ");
@@ -300,7 +298,6 @@ void ESP01_Init(_sESP01Handle *hESP01){
 	esp01irRXAT = 0;
 	esp01iwRXAT = 0;
 	esp01Flags.byte = 0;
-	esp01TimeoutSendOK = 0;
 	ESP01ChangeState = NULL;
 	ESP01DbgStr = NULL;
 }
@@ -319,20 +316,6 @@ void ESP01_Timeout10ms(){
 	if(esp01TimeoutTxSymbol)
 		esp01TimeoutTxSymbol--;
 
-	if(esp01TimeoutSendOK){
-		esp01TimeoutSendOK--;
-		if(!esp01TimeoutSendOK && esp01Flags.bit.SENDINGDATA){
-			esp01Flags.bit.SENDINGDATA = 0;
-			esp01Flags.bit.TXCIPSEND = 0;
-			esp01Flags.bit.WAITINGSYMBOL = 0;
-			esp01Flags.bit.UDPTCPCONNECTED = 0;
-			esp01irTX = esp01iwTX;
-			esp01ATSate = ESP01ATHARDRST0;
-			esp01TimeoutTask = 1;
-			if(ESP01ChangeState != NULL)
-				ESP01ChangeState(ESP01_UDPTCP_DISCONNECTED);
-		}
-	}
 }
 
 void ESP01_Task(){
@@ -458,7 +441,6 @@ static void ESP01ATDecode(){
 				case 3://ERROR
 					if(esp01Flags.bit.SENDINGDATA){
 						esp01Flags.bit.SENDINGDATA = 0;
-						esp01TimeoutSendOK = 0;
 						esp01Flags.bit.UDPTCPCONNECTED = 0;
 						esp01irTX = esp01iwTX;
 					}
@@ -488,7 +470,6 @@ static void ESP01ATDecode(){
 					break;
 				case 9://SEND OK
 					esp01Flags.bit.SENDINGDATA = 0;
-					esp01TimeoutSendOK = 0;
 					if(ESP01ChangeState != NULL)
 						ESP01ChangeState(ESP01_SEND_OK);
 					break;
@@ -683,7 +664,7 @@ static void ESP01DOConnection(){
 			ESP01DbgStr("+&DBGESP01ATCWJAP\n");
 		esp01Flags.bit.ATRESPONSEOK = 0;
 		esp01ATSate = ESP01CWJAPRESPONSE;
-		esp01TimeoutTask = 1500;
+		esp01TimeoutTask = 5000;
 		break;
 	case ESP01CWJAPRESPONSE:
 		if(esp01Flags.bit.ATRESPONSEOK){
@@ -743,7 +724,7 @@ static void ESP01DOConnection(){
 		esp01Flags.bit.ATRESPONSEOK = 0;
 		esp01Flags.bit.UDPTCPCONNECTED = 0;
 		esp01ATSate = ESP01CIPSTARTRESPONSE;
-		esp01TimeoutTask = 200;
+		esp01TimeoutTask = 5000;
 		break;
 	case ESP01CIPSTARTRESPONSE:
 		if(esp01Flags.bit.ATRESPONSEOK)
@@ -772,14 +753,8 @@ static void ESP01SENDData(){
 		if(!esp01TimeoutTxSymbol){
 			esp01irTX = esp01iwTX;
 			esp01Flags.bit.WAITINGSYMBOL = 0;
-			esp01Flags.bit.TXCIPSEND = 0;
-			esp01Flags.bit.SENDINGDATA = 0;
-			esp01Flags.bit.UDPTCPCONNECTED = 0;
-			esp01TimeoutSendOK = 0;
-			esp01ATSate = ESP01ATHARDRST0;
-			esp01TimeoutTask = 1;
-			if(ESP01ChangeState != NULL)
-				ESP01ChangeState(ESP01_UDPTCP_DISCONNECTED);
+			esp01ATSate = ESP01ATAT;
+			esp01TimeoutTask = 10;
 		}
 		return;
 	}
@@ -794,7 +769,7 @@ static void ESP01SENDData(){
 				if(esp01TXATBuf[esp01irTX] == '>'){
 					esp01Flags.bit.TXCIPSEND = 0;
 					esp01Flags.bit.WAITINGSYMBOL = 1;
-					esp01TimeoutTxSymbol = 200;
+					esp01TimeoutTxSymbol = 5;
 				}
 			}
 			esp01irTX++;

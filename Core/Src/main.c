@@ -100,6 +100,11 @@ typedef union {
 
 typedef struct __attribute__((packed)) {
     int16_t     acc_x, acc_y, acc_z;
+    int16_t     pitch_cdeg;
+} PayloadDataMinV1_t;
+
+typedef struct __attribute__((packed)) {
+    int16_t     acc_x, acc_y, acc_z;
     int16_t     gyro_pitch, gyro_yaw;
     int16_t     pitch_cdeg;
     int16_t     roll_cdeg;
@@ -198,10 +203,16 @@ typedef struct {
 // ================= [ ESP01 / UDP ALIVE TEST ] ================= //
 typedef struct {
     _sESP01Handle Config;
+    uint8_t AT_Rx_data;
 
     uint8_t uner_rx_ring[255];
     volatile uint16_t uner_rx_write;
     volatile uint16_t uner_rx_read;
+    uint8_t uner_tx_frame[4][80];
+    uint8_t uner_tx_len[4];
+    volatile uint8_t uner_tx_head;
+    volatile uint8_t uner_tx_tail;
+    volatile uint8_t uner_tx_count;
 
     volatile uint8_t udp_started;
     volatile uint8_t udp_connected;
@@ -233,6 +244,8 @@ ESP01_App_t ESP = {0};
 #define     ESP01_QT_REMOTE_PORT       8888
 #define     ESP01_RX_DMA_SIZE          256
 #define     UNER_RX_RING_SIZE          128
+#define     UNER_TX_QUEUE_DEPTH        4
+#define     UNER_TX_FRAME_MAX          80
 #define     UNER_V1_VERSION            1
 #define     UNER_V1_MAX_PAYLOAD        64
 #define     UNER_V1_FLAG_ACK_REQUIRED  0x01
@@ -241,7 +254,7 @@ ESP01_App_t ESP = {0};
 #define     ESP01_WIFI_PROFILE_UNIVERSITY  0
 #define     ESP01_WIFI_PROFILE_HOME        1
 #define     ESP01_WIFI_PROFILE_LAB         2
-#define     ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_HOME
+#define     ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_UNIVERSITY
 
 #if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
 #define     WIFI_SSID                  "InternetPlus_872f10"
@@ -467,6 +480,8 @@ void onESP01Debug(const char *dbgStr);
 void ESP01_App_Task(void);
 
 void UNER_Rx_Task(void);
+void UNER_Tx_Task(void);
+uint8_t UNER_QueueTx(const uint8_t *data, uint16_t len);
 void UNER_ProcessByte(uint8_t b);
 void UNER_ProcessByteV1(uint8_t b);
 uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len);
@@ -564,7 +579,7 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c);
  * 										Implementa la verificación de Checksum mediante operación XOR[cite: 81].
  * @param Size Cantidad de bytes recibidos.
  */
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size);
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 /**
  * @brief HAL_UART_ErrorCallback
  * @details
@@ -737,10 +752,6 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
             ip_received_flag = 1;
         }
 
-        if (!ESP.udp_started) {
-            ESP.udp_started = 1;
-            ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
-        }
         break;
     }
 
@@ -749,15 +760,16 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
         ESP.udp_connected = 1;
         ESP.udp_started = 1;
         uner_tx_busy = 0;
+        uner_tx_last_try_tick = 0;
         uner_recovering_udp = 0;
-        uner_next_telemetry_tick = HAL_GetTick() + 120;
+        uner_next_telemetry_tick = HAL_GetTick() + 250;
         break;
 
     case ESP01_UDPTCP_DISCONNECTED:
         ESP.udp_connected = 0;
-        ESP.udp_started = 0;
         uner_tx_busy = 0;
         uner_recovering_udp = 0;
+        uner_tx_recover_count++;
         break;
 
     case ESP01_WIFI_DISCONNECTED:
@@ -766,13 +778,15 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
         ESP.udp_started = 0;
         uner_tx_busy = 0;
         uner_recovering_udp = 0;
+        uner_tx_recover_count++;
         break;
 
     case ESP01_SEND_OK:
         uner_tx_busy = 0;
         uner_tx_ok_count++;
         uner_tx_last_ok_tick = HAL_GetTick();
-        uner_next_telemetry_tick = uner_tx_last_ok_tick + 120;
+        uner_tx_last_try_tick = 0;
+        uner_next_telemetry_tick = uner_tx_last_ok_tick + 250;
         break;
 
     default:
@@ -789,6 +803,28 @@ void onESP01Debug(const char *dbgStr)
     if (strncmp(dbgStr, "+&DBG", 5) == 0) {
         dbgStr += 5;
     }
+
+    const char *failStr = NULL;
+
+    if (strncmp(dbgStr, "FAIL_SENDOK", 11) == 0) {
+        failStr = "SOK";
+    } else if (strncmp(dbgStr, "FAIL_PROMPT", 11) == 0) {
+        failStr = "PRM";
+    } else if (strncmp(dbgStr, "FAIL_ERROR", 10) == 0) {
+        failStr = "ERR";
+    } else if (strncmp(dbgStr, "FAIL_DISCONN", 12) == 0) {
+        failStr = "DSC";
+    } else if (strncmp(dbgStr, "FAIL_CLOSED", 11) == 0) {
+        failStr = "CLS";
+    } else if (strncmp(dbgStr, "FAIL_BUSY", 9) == 0) {
+        failStr = "BSY";
+    }
+
+    if (failStr == NULL) {
+        return;
+    }
+
+    dbgStr = failStr;
 
     strncpy(esp01_last_debug, dbgStr, sizeof(esp01_last_debug) - 1);
     esp01_last_debug[sizeof(esp01_last_debug) - 1] = '\0';
@@ -809,6 +845,7 @@ void ESP01_App_Task(void)
 
     ESP01_Task();
     UNER_Rx_Task();
+    UNER_Tx_Task();
 
     if ((now - last_mpu_update) >= 10) {
         last_mpu_update = now;
@@ -828,9 +865,13 @@ void ESP01_App_Task(void)
         }
     }
 
-    if (uner_telemetry_enabled && !uner_ack_pending && !uner_tx_busy &&
+    if (uner_telemetry_enabled && !uner_ack_pending &&
         ESP.udp_connected && (int32_t)(now - uner_next_telemetry_tick) >= 0) {
-        UNER_SendTelemetryV1();
+        if (UNER_SendTelemetryV1()) {
+            uner_next_telemetry_tick = now + 250;
+        } else {
+            uner_next_telemetry_tick = now + 50;
+        }
     }
 }
 
@@ -860,18 +901,8 @@ uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t 
     static uint8_t seq = 0;
     uint8_t frame[4 + 1 + 1 + 1 + 1 + 1 + UNER_V1_MAX_PAYLOAD + 2];
     uint16_t idx = 0;
-    uint32_t now = HAL_GetTick();
 
     if (payload_len > UNER_V1_MAX_PAYLOAD) {
-        return 0;
-    }
-
-    if (uner_tx_busy) {
-        uner_tx_busy_count++;
-        return 0;
-    }
-
-    if ((now - uner_tx_last_try_tick) < 40) {
         return 0;
     }
 
@@ -894,18 +925,78 @@ uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t 
     frame[idx++] = (uint8_t)(crc & 0xFF);
     frame[idx++] = (uint8_t)((crc >> 8) & 0xFF);
 
-    uner_tx_last_try_tick = now;
-
-    if (ESP01_Send(frame, 0, idx, idx) == ESP01_SEND_READY) {
+    if (UNER_QueueTx(frame, idx)) {
         seq++;
-        uner_tx_busy = 1;
         uner_tx_ready_count++;
         return 1;
     }
 
     uner_tx_busy_count++;
-    uner_next_telemetry_tick = now + 120;
     return 0;
+}
+
+uint8_t UNER_QueueTx(const uint8_t *data, uint16_t len)
+{
+    if (data == NULL || len == 0 || len > UNER_TX_FRAME_MAX) {
+        return 0;
+    }
+
+    if (ESP.uner_tx_count >= UNER_TX_QUEUE_DEPTH) {
+        return 0;
+    }
+
+    memcpy(ESP.uner_tx_frame[ESP.uner_tx_tail], data, len);
+    ESP.uner_tx_len[ESP.uner_tx_tail] = (uint8_t)len;
+    ESP.uner_tx_tail++;
+    if (ESP.uner_tx_tail >= UNER_TX_QUEUE_DEPTH) {
+        ESP.uner_tx_tail = 0;
+    }
+    ESP.uner_tx_count++;
+
+    return 1;
+}
+
+void UNER_Tx_Task(void)
+{
+    uint8_t len;
+    _eESP01STATUS status;
+    uint32_t now = HAL_GetTick();
+
+    if (ESP.uner_tx_count == 0 || !ESP.udp_connected) {
+        return;
+    }
+
+    if (uner_tx_last_try_tick != 0 && (now - uner_tx_last_try_tick) < 20) {
+        return;
+    }
+
+    if (uner_tx_last_try_tick != 0 && (now - uner_tx_last_try_tick) > 3000) {
+        ESP.uner_tx_head = 0;
+        ESP.uner_tx_tail = 0;
+        ESP.uner_tx_count = 0;
+        ESP.udp_connected = 0;
+        ESP.udp_started = 0;
+        uner_tx_recover_count++;
+        uner_tx_last_try_tick = now;
+        ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
+        ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
+        ESP.udp_started = 1;
+        return;
+    }
+
+    len = ESP.uner_tx_len[ESP.uner_tx_head];
+    status = ESP01_Send(ESP.uner_tx_frame[ESP.uner_tx_head], 0, len, len);
+
+    if (status == ESP01_SEND_READY) {
+        uner_tx_last_try_tick = now;
+        ESP.uner_tx_head++;
+        if (ESP.uner_tx_head >= UNER_TX_QUEUE_DEPTH) {
+            ESP.uner_tx_head = 0;
+        }
+        ESP.uner_tx_count--;
+    } else if (status == ESP01_SEND_BUSY) {
+        uner_tx_busy_count++;
+    }
 }
 
 uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status)
@@ -921,26 +1012,12 @@ uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status)
 
 uint8_t UNER_SendTelemetryV1(void)
 {
-    PayloadDataV1_t payload;
+    PayloadDataMinV1_t payload;
 
     payload.acc_x = (int16_t)accelx;
     payload.acc_y = (int16_t)accely;
     payload.acc_z = (int16_t)accelz;
-    payload.gyro_pitch = (int16_t)giro;
-    payload.gyro_yaw = (int16_t)giro_z;
     payload.pitch_cdeg = (int16_t)(angle_y * 100.0f);
-    payload.roll_cdeg = (int16_t)(angle_roll * 100.0f);
-    payload.yaw_cdeg = (int16_t)(angle_yaw * 100.0f);
-    payload.pos_x_mm = 0;
-    payload.pos_y_mm = 0;
-    payload.velocidad_mm_s = (int16_t)(velocidad_objetivo * 1000.0f);
-    payload.modo = currentMode;
-
-    for (uint8_t i = 0; i < 8; i++) {
-        payload.IR[i] = adc_filtrado[i];
-    }
-
-    payload.infoAdicional = flagCalibrationIsReady;
 
     return UNER_SendV1(CMD_DATA, 0, (const uint8_t *)&payload, sizeof(payload));
 }
@@ -1365,9 +1442,10 @@ void screenScheduler(void){
             (unsigned long)uner_tx_ok_count);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 52);
-    sprintf(msg, "B:%lu R:%lu",
-            (unsigned long)uner_tx_busy_count,
-            (unsigned long)uner_tx_recover_count);
+    snprintf(msg, sizeof(msg), "B:%lu R:%lu %.3s",
+             (unsigned long)uner_tx_busy_count,
+             (unsigned long)uner_tx_recover_count,
+             esp01_last_debug);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_UpdateScreen();
     return;
@@ -1847,40 +1925,36 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
 }
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1) {
+        uint8_t value = ESP.AT_Rx_data;
 
-        for (uint16_t i = 0; i < Size; i++) {
-            uint8_t value = rx_buffer_uart[i];
+        esp01_rx_count++;
 
-            esp01_rx_count++;
+        if (value == '\r' || value == '\n') {
+            size_t len = strlen(esp01_last_rx);
 
-            if (value == '\r' || value == '\n') {
-                size_t len = strlen(esp01_last_rx);
-
-                if (len < (sizeof(esp01_last_rx) - 1)) {
-                    esp01_last_rx[len] = '|';
-                    esp01_last_rx[len + 1] = '\0';
-                }
-            } else if (value >= 32 && value <= 126) {
-                size_t len = strlen(esp01_last_rx);
-
-                if (len >= (sizeof(esp01_last_rx) - 1)) {
-                    memmove(esp01_last_rx, &esp01_last_rx[1], sizeof(esp01_last_rx) - 2);
-                    esp01_last_rx[sizeof(esp01_last_rx) - 2] = '\0';
-                    len = strlen(esp01_last_rx);
-                }
-
-                esp01_last_rx[len] = (char)value;
+            if (len < (sizeof(esp01_last_rx) - 1)) {
+                esp01_last_rx[len] = '|';
                 esp01_last_rx[len + 1] = '\0';
             }
+        } else if (value >= 32 && value <= 126) {
+            size_t len = strlen(esp01_last_rx);
 
-            ESP01_WriteRX(value);
+            if (len >= (sizeof(esp01_last_rx) - 1)) {
+                memmove(esp01_last_rx, &esp01_last_rx[1], sizeof(esp01_last_rx) - 2);
+                esp01_last_rx[sizeof(esp01_last_rx) - 2] = '\0';
+                len = strlen(esp01_last_rx);
+            }
+
+            esp01_last_rx[len] = (char)value;
+            esp01_last_rx[len + 1] = '\0';
         }
 
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, sizeof(rx_buffer_uart));
-        __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
+        ESP01_WriteRX(value);
+
+        HAL_UART_Receive_IT(&huart1, &ESP.AT_Rx_data, 1);
     }
 }
 
@@ -1889,8 +1963,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     if (huart->Instance == USART1) {
         __HAL_UART_CLEAR_OREFLAG(huart);
 
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, sizeof(rx_buffer_uart));
-        __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
+        HAL_UART_Receive_IT(&huart1, &ESP.AT_Rx_data, 1);
     }
 }
 /* USER CODE END 0 */
@@ -1945,6 +2018,9 @@ int main(void)
 
       ESP.uner_rx_read = 0;
       ESP.uner_rx_write = 0;
+      ESP.uner_tx_head = 0;
+      ESP.uner_tx_tail = 0;
+      ESP.uner_tx_count = 0;
       ESP.udp_started = 0;
       ESP.udp_connected = 0;
 
@@ -1956,10 +2032,11 @@ int main(void)
       ESP01_AttachChangeState(&onESP01ChangeState);
       ESP01_AttachDebugStr(&onESP01Debug);
 
-      HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer_uart, sizeof(rx_buffer_uart));
-      __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
+      HAL_UART_Receive_IT(&huart1, &ESP.AT_Rx_data, 1);
 
       ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
+      ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
+      ESP.udp_started = 1;
 
       HAL_TIM_Base_Start_IT(&htim4);
   /* USER CODE END 2 */
