@@ -7,6 +7,7 @@
 C_SRCS += \
 ../Core/Src/ESP01.c \
 ../Core/Src/fonts.c \
+../Core/Src/line_sensors.c \
 ../Core/Src/main.c \
 ../Core/Src/ssd1306.c \
 ../Core/Src/stm32f4xx_hal_msp.c \
@@ -18,6 +19,7 @@ C_SRCS += \
 OBJS += \
 ./Core/Src/ESP01.o \
 ./Core/Src/fonts.o \
+./Core/Src/line_sensors.o \
 ./Core/Src/main.o \
 ./Core/Src/ssd1306.o \
 ./Core/Src/stm32f4xx_hal_msp.o \
@@ -29,6 +31,7 @@ OBJS += \
 C_DEPS += \
 ./Core/Src/ESP01.d \
 ./Core/Src/fonts.d \
+./Core/Src/line_sensors.d \
 ./Core/Src/main.d \
 ./Core/Src/ssd1306.d \
 ./Core/Src/stm32f4xx_hal_msp.d \

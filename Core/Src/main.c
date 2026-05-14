@@ -71,6 +71,8 @@
 /* USER CODE BEGIN Includes */
 #include "ssd1306.h"
 #include "fonts.h"
+#include "line_sensors.h"
+#include "control_systems.h"
 #include "math.h"
 
 #include "ESP01.h"
@@ -202,7 +204,8 @@ enum {
        CMD_NETWORK_CHANGE_PASSWORD	= 51,
        CMD_TELEMETRY_START          = 60,
        CMD_TELEMETRY_STOP           = 61,
-       CMD_HTTP_SOFTAP              = 62
+       CMD_HTTP_SOFTAP              = 62,
+       CMD_SET_YAW_PD               = 63
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -251,11 +254,10 @@ ESP01_App_t ESP = {0};
 // ================= [ Periféricos ] ================= //
 #define 	MPU6050_ADDR 	(0x68 << 1) // Dirección I2C desplazada
 
-	#define IRCSAAB (estado_sensores[0] && estado_sensores[1] && estado_sensores[2] && estado_sensores[3])	// ESTA MACRO SIGNIFICA IR CURRENT STATE ARE ALL BLACK
-	#define IRLSAAB (ultimo_estado_sensores[0] && ultimo_estado_sensores[1] && ultimo_estado_sensores[2] && ultimo_estado_sensores[3])	// ESTA MACRO SIGNIFICA IR LAST STATE ARE ALL BLACK
-	#define IRCSAAW (!estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2] && !estado_sensores[3])	// ESTA MACRO SIGNIFICA IR CURRENT STATE ARE ALL WHITE
-	#define IRLSAAW (!ultimo_estado_sensores[0] && !ultimo_estado_sensores[1] && !ultimo_estado_sensores[2] && !ultimo_estado_sensores[3])	// ESTA MACRO SIGNIFICA IR LAST STATE ARE ALL WHITE
-	#define	AIRAB	(estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3])	// ESTA MACRO SIGNIFICA ANY IR ARE BLACK
+    #define KEY_GPIO_PORT        GPIOA
+    #define KEY_GPIO_PIN         GPIO_PIN_0
+    #define KEY_ACTIVE_STATE     GPIO_PIN_SET
+    #define KEY_DEBOUNCE_MS      50U
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		        64
 #define 	UNER_HEADER_STR 	        "UNER"
@@ -529,7 +531,6 @@ uint8_t UNER_SendTelemetryV1(void);
 uint8_t UNER_SendInt16(uint8_t cmd, int16_t value);
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len);
 void Telemetry_UpdateMPU(void);
-void Filtrar_Sensores_IR(void);
 /**
  * @brief buzzerSecuence:  				Máquina de estados para señales auditivas (Buzzer) no-bloqueante.
  * @param seq:			   				Estructura con tiempos de duración, intervalo y repeticiones.
@@ -548,10 +549,7 @@ void BS_Error();
  */
 void BS_ACK_NOT_FOUND();
 void screenScheduler(void);
-void Iniciar_Calibracion_Linea(void);
-void Finalizar_Calibracion_Linea(void);
-void Procesar_Calibracion_Linea(void);
-void Leer_Linea_Digital(void);
+void KEY_CalibrationTask(void);
 /**
  * @brief PID_PITCH:					Calcula la salida del controlador PID para el equilibrio.
  * @details 							Crea una respuesta en forma de impulso con los motores la cual es proporcional
@@ -559,10 +557,6 @@ void Leer_Linea_Digital(void);
  * 										acelerómetro y giroscopio.
  * @note 								Frecuencia de ejecución dependiente de la llegada de datos del MPU (100Hz nominal).
  */
-void PID_PITCH(void);
-float calcularErrorYawDiscreto(void);
-float calcularErrorYawContinuo(void);
-int16_t Calcular_PID_YAW(float error_linea);
 /**
  * @brief sendCMD:						Envía un comando bajo el Protocolo UNER vía UART DMA.
  * @param cmd: 							Código del comando (CMD)
@@ -582,7 +576,6 @@ void DataToQt();
  * @param speed_R: 						Velocidad motor derecho (-3599 a 3599).
  * @note 								Aplica deadband para vencer la inercia mecánica de los motores.
  */
-void Robot_Drive(int16_t speed_L, int16_t speed_R);
 /**
  * @brief MPU6050_Init:					Inicializa el MPU6050 con configuración específica para equilibrio.
  * @details								Configura Full Scale: Accel +/- 2g, Gyro +/- 500 dps y DLPF a 42Hz.
@@ -916,6 +909,10 @@ void ESP01_App_Task(void)
 
         Telemetry_UpdateMPU();
         Filtrar_Sensores_IR();
+        Leer_Linea_Digital();
+        if (flag_calibrando_linea) {
+            Procesar_Calibracion_Linea();
+        }
         PID_PITCH();
     }
 
@@ -957,6 +954,46 @@ void ESP01_App_Task(void)
 }
 
 /* ===================== [ UNER mínimo: ALIVE -> ACK ] ===================== */
+
+void KEY_CalibrationTask(void)
+{
+    static GPIO_PinState last_raw_state = GPIO_PIN_RESET;
+    static GPIO_PinState stable_state = GPIO_PIN_RESET;
+    static uint32_t last_change_tick = 0;
+
+    GPIO_PinState raw_state = HAL_GPIO_ReadPin(KEY_GPIO_PORT, KEY_GPIO_PIN);
+    uint32_t now = HAL_GetTick();
+
+    if (raw_state != last_raw_state) {
+        last_raw_state = raw_state;
+        last_change_tick = now;
+        return;
+    }
+
+    if ((now - last_change_tick) < KEY_DEBOUNCE_MS) {
+        return;
+    }
+
+    if (raw_state == stable_state) {
+        return;
+    }
+
+    stable_state = raw_state;
+
+    if (stable_state != KEY_ACTIVE_STATE) {
+        return;
+    }
+
+    if (flag_calibrando_linea) {
+        Finalizar_Calibracion_Linea();
+        currentMode = MODO_FL_BUSQUEDA_INICIAL;
+    } else {
+        Iniciar_Calibracion_Linea();
+        currentMode = MODO_FL_INICIO;
+    }
+
+    screenScheduler();
+}
 
 uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len)
 {
@@ -1208,11 +1245,16 @@ uint8_t UNER_SendTelemetryV1(void)
     payload.pitch_cdeg = (int16_t)(angle_y * 100.0f);
     payload.roll_cdeg = (int16_t)(angle_roll * 100.0f);
     payload.yaw_cdeg = (int16_t)(angle_yaw * 100.0f);
-    payload.pos_x_mm = 0;
-    payload.pos_y_mm = 0;
+    payload.pos_x_mm = (int32_t)(error_linea * 1000.0f);
+    payload.pos_y_mm = (int32_t)RC_steering;
     payload.velocidad_mm_s = (int16_t)(velocidad_objetivo * 1000.0f);
     payload.modo = currentMode;
-    payload.infoAdicional = flagCalibrationIsReady;
+    payload.infoAdicional = (uint8_t)((flagCalibrationIsReady ? 0x01 : 0x00) |
+                                      (flag_calibrando_linea ? 0x02 : 0x00) |
+                                      ((estado_sensores[0] & 0x01) << 2) |
+                                      ((estado_sensores[1] & 0x01) << 3) |
+                                      ((estado_sensores[2] & 0x01) << 4) |
+                                      ((estado_sensores[3] & 0x01) << 5));
 
     for (uint8_t i = 0; i < 8; i++) {
         payload.IR[i] = adc_filtrado[i];
@@ -1561,6 +1603,22 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_pending = 1;
         break;
 
+    case CMD_SET_YAW_PD:
+        if (payload_len >= 8) {
+            Kp_yaw = UNER_ReadFloatLE(payload);
+            Kd_yaw = UNER_ReadFloatLE(payload + 4);
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 2;
+        }
+
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_SET_YAW_PD;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
     case CMD_START:
         flagMotorsAreOn = 1;
         uner_ack_status = 0;
@@ -1823,6 +1881,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 
     case CMD_IR_INICIAR_CALIBRACION:
         Iniciar_Calibracion_Linea();
+        currentMode = MODO_FL_INICIO;
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_IR_INICIAR_CALIBRACION;
             uner_ack_seq = seq;
@@ -1833,6 +1892,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 
     case CMD_IR_DETENER_CALIBRACION:
         Finalizar_Calibracion_Linea();
+        currentMode = MODO_FL_BUSQUEDA_INICIAL;
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_IR_DETENER_CALIBRACION;
             uner_ack_seq = seq;
@@ -1912,7 +1972,12 @@ void Telemetry_UpdateMPU(void)
     telemetria.data.pos_y = 0.0f;
     telemetria.data.velocidad = velocidad_objetivo;
     telemetria.data.modo = currentMode;
-    telemetria.data.infoAdicional = flagCalibrationIsReady;
+    telemetria.data.infoAdicional = (uint8_t)((flagCalibrationIsReady ? 0x01 : 0x00) |
+                                             (flag_calibrando_linea ? 0x02 : 0x00) |
+                                             ((estado_sensores[0] & 0x01) << 2) |
+                                             ((estado_sensores[1] & 0x01) << 3) |
+                                             ((estado_sensores[2] & 0x01) << 4) |
+                                             ((estado_sensores[3] & 0x01) << 5));
 
     for (uint8_t i = 0; i < 8; i++) {
         telemetria.data.IR[i] = adc_filtrado[i];
@@ -1925,6 +1990,10 @@ void screenScheduler(void){
     }
 
     SSD1306_Fill(SSD1306_COLOR_BLACK);
+    uint8_t line_s0 = estado_sensores[0] ? 1U : 0U;
+    uint8_t line_s1 = estado_sensores[1] ? 1U : 0U;
+    uint8_t line_s2 = estado_sensores[2] ? 1U : 0U;
+    uint8_t line_s3 = estado_sensores[3] ? 1U : 0U;
 
     if (flagOLED == 0) {
         SSD1306_UpdateScreen();
@@ -1941,7 +2010,7 @@ void screenScheduler(void){
         sprintf(msg, "D:%3.1f Y:%3.1f", Kd, Kp_yaw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 36);
-        sprintf(msg, "SP:%3.1f", setpoint);
+        sprintf(msg, "SP:%3.1f L:%u%u%u%u", setpoint, line_s3, line_s2, line_s1, line_s0);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_UpdateScreen();
         return;
@@ -1958,6 +2027,9 @@ void screenScheduler(void){
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 36);
         sprintf(msg, "IR:%4u %4u", adc_filtrado[2], adc_filtrado[3]);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 48);
+        sprintf(msg, "LINEA:%u%u%u%u", line_s3, line_s2, line_s1, line_s0);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_UpdateScreen();
         return;
@@ -1982,7 +2054,7 @@ void screenScheduler(void){
     SSD1306_GotoXY(24, 10);
     SSD1306_Puts(ip_address, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 20);
-    sprintf(msg, "W:%d U:%d", flagWIFI, ESP.udp_connected);
+    sprintf(msg, "W:%d U:%d L:%u%u%u%u", flagWIFI, ESP.udp_connected, line_s3, line_s2, line_s1, line_s0);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 30);
     sprintf(msg, "TX:%lu RX:%lu", (unsigned long)esp01_tx_count, (unsigned long)esp01_rx_count);
@@ -2145,175 +2217,6 @@ void screenScheduler(void){
 				break;
 			}
 	    }
-}
-void Filtrar_Sensores_IR(void) {
-    for(int i = 0; i < 8; i++) {
-        // Ahora es 90% historia y 10% dato nuevo
-        adc_filtrado[i] = (adc_filtrado[i] * 9 + adc_buffer[i]) / 10;
-    }
-}
-void Iniciar_Calibracion_Linea(void) {
-    flag_calibrando_linea = 1;
-    	for(int i = 0; i < 3; i++) {
-    		sensor_min[i] = 4095; // Valor máximo del ADC
-    		sensor_max[i] = 0;    // Valor mínimo del ADC
-    		}
-
-}
-void Procesar_Calibracion_Linea(void) {
-    if (flag_calibrando_linea) {
-        for(int i = 0; i < 3; i++) {
-            // Buscamos si hay un nuevo récord de valor bajo (Blanco)
-            if(adc_filtrado[i] < sensor_min[i]) {
-                sensor_min[i] = adc_filtrado[i];
-            }
-            // Buscamos si hay un nuevo récord de valor alto (Negro)
-            if(adc_filtrado[i] > sensor_max[i]) {
-                sensor_max[i] = adc_filtrado[i];
-            }
-        }
-    }
-}
-void Leer_Linea_Digital(void) {
-    for(int i = 0; i < 3; i++) {
-        // Si el valor analógico superó la mitad, está viendo la línea
-        if(adc_filtrado[i] > sensor_threshold[i]) {
-            estado_sensores[i] = 1; // NEGRO
-        } else {
-            estado_sensores[i] = 0; // BLANCO
-        }
-    }
-}
-void Finalizar_Calibracion_Linea(void) {
-    flag_calibrando_linea = 0;
-//    for(int i = 0; i < 3; i++) {
-//          // El punto medio perfecto entre lo más blanco y lo más negro que vio
-//          sensor_threshold[i] = (sensor_max[i] + sensor_min[i]) / 2;
-//      }
-    sensor_threshold[0] = (806 + 3419) / 2;
-    sensor_threshold[1] = (283 + 3213) / 2;
-    sensor_threshold[2] = (339 + 3456) / 2;
-    sensor_threshold[3] = (1280 + 3634) / 2;
-}
-
-
-void PID_PITCH(void){
-		float gyro_rate = giro;
-			telemetria.data.pitch_filtrado 	= 	angle_y;
-			accelx 	= axRaw;
-			accely 	= ayRaw;
-			accelz 	= azRaw;
-			// 1. Calculamos la inclinación real absoluta (sin importar si va para adelante o atrás)
-			float abs_angle = (angle_y < 0) ? -angle_y : angle_y;
-			if (abs_angle > limite_inclinacion) {
-//			        RC_slow_setpoint = RC_slow_setpoint * correccionRCSP;
-				RC_setpoint = RC_setpoint * correccionRCSP;
-			}
-			    else {
-			        if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
-			        if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
-			    }
-	   error = angle_y - (setpoint + RC_slow_setpoint);
-
-	   switch(currentMode){
-	   case MODO_RC:
-		   error = angle_y - (setpoint + RC_slow_setpoint);
-		   break;
-	   case MODO_IDDLE:
-	   default:
-		   error = angle_y - setpoint;
-		   break;
-	   }
-
-	   integral += error * DT_PID;
-	   if(integral > 2000) integral = 2000;
-	   else if(integral < -2000) integral = -2000;
-	   float P_base = Kp * error;
-	   float abs_error = (error < 0) ? -error : error;
-	   float P_agresivo = Kp_Agresivo * (error * abs_error);
-	   P = P_base + P_agresivo;
-//	   P =  Kp * error;
-	   I =  Ki * integral;
-	   //D = Kd * (error - last_error) / DT_PID; //Kd * gyro_filtrado_ema; //Kd * (error - last_error) / DT_PID;//float D =  Kd * gyro_rate; //
-	   D =  Kd * gyro_rate; //
-	   output = P + I + D ; // Funcion de transferencia
-	   showoutput = output;
-	   last_error = error;
-	   if(flagMotorsAreOn){
-		   int16_t outputLeft = 0;
-		   int16_t outputRigth = 0;
-		   switch(currentMode){
-			   case MODO_IDDLE:
-				   outputLeft = (int16_t)output;
-				   outputRigth = (int16_t)output;
-				   break;
-			   case MODO_RC:
-			   default:
-				   outputLeft = (int16_t)output  + RC_steering;
-				   outputRigth = (int16_t)output - RC_steering;
-				   break;
-		   }
-		   Robot_Drive(outputLeft, outputRigth);
-	   }
-	   if(flagMotorsAreOn==0||angle_y > 35 ||angle_y < -35)	   Robot_Drive(0, 0);
-}
-float calcularErrorYawDiscreto(void) {
-    float numerador = 0.0f;
-    float denominador = 0.0f;
-    numerador = (estado_sensores[3] * -2.5f) +
-                (estado_sensores[2] * -1.2f) +
-                (estado_sensores[1] * 1.2f) +
-                (estado_sensores[0] * 2.5f);
-    denominador = estado_sensores[3] + estado_sensores[2] + estado_sensores[1] + estado_sensores[0];
-    if (denominador == 0) {
-        return 0.0f; // Asumimos error 0 para que siga caminando derecho
-    	}
-    float last_state_linea = (numerador / denominador);;
-
-    return last_state_linea;
-}
-float calcularErrorYawContinuo(void) {
-    float val_norm[3] = {0}; // Solo necesitamos los índices 0, 1 y 2
-    for(int i = 0; i < 3; i++) {
-        // Evitar división por cero si la calibración falló
-        if (sensor_max[i] == sensor_min[i]) {
-            val_norm[i] = 0.0f;
-            continue;
-        }
-        float rango = (float)(sensor_max[i] - sensor_min[i]);
-        val_norm[i] = (float)(adc_filtrado[i] - sensor_min[i]) / rango;
-
-        // Saturamos
-        if(val_norm[i] > 1.0f) val_norm[i] = 1.0f;
-        if(val_norm[i] < 0.0f) val_norm[i] = 0.0f;
-    }
-    float y_izq    = val_norm[2]; // Sensor Interior Izquierdo
-    float y_centro = val_norm[1]; // Sensor Interior Derecho
-    float y_der    = val_norm[0]; // Sensor Exterior Derecho
-
-    float denominador = (y_izq + y_der - 2.0f * y_centro);
-    float offset = 0.0f;
-    if (denominador != 0.0f)    offset = (y_izq - y_der) / denominador;
-    float error_continuo =  offset;
-    last_state_linea = error_continuo;
-    return error_continuo;
-}
-
-int16_t Calcular_PID_YAW(float error_linea) {
-    // 1. Proporcional: Reacción instantánea al error
-    float P_yaw = Kp_yaw * error_linea;
-    // 2. Derivativa: Frena el giro si se está acercando rápido al centro
-    // DT_PID es tu delta de tiempo (ej: 0.01 si corre a 10ms)
-    float D_yaw = Kd_yaw * (error_linea - last_error_yaw) / DT_PID;
-    // 3. Guardamos el error para la próxima iteración
-    last_error_yaw = error_linea;
-    // 4. Salida total
-    float salida_yaw = P_yaw + D_yaw;
-    // Limitamos la salida máxima para que un volantazo no tire el robot al piso
-    if(salida_yaw > 400.0f) salida_yaw = 400.0f;
-    if(salida_yaw < -400.0f) salida_yaw = -400.0f;
-
-    return (int16_t)salida_yaw;
 }
 void Procesar_Evasion_Obstaculo(void) {
 	/*
@@ -2602,6 +2505,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	    ESP01_App_Task();
+	    KEY_CalibrationTask();
 	    if (mpu_calibration_requested && !uner_ack_pending) {
 	        mpu_calibration_requested = 0;
 	        MPU6050_Calibrate();
@@ -2620,17 +2524,19 @@ int main(void)
 	        flagPID = 0;
 	        Filtrar_Sensores_IR();
 	        Leer_Linea_Digital();
+	        if (flag_calibrando_linea) {
+	            Procesar_Calibracion_Linea();
+	        }
 	        switch (currentMode) {
 	        case MODO_IDDLE:
 	            break;
 	        case MODO_RC:
 	            break;
 	        case MODO_FL_INICIO:
-	            Procesar_Calibracion_Linea();
 	            break;
 	        case MODO_FL_BUSQUEDA_INICIAL:
 	            RC_steering = 0.0f;
-	            if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
+	            if (AIRAB) {
 	                currentMode = MODO_FL_SIGUIENDO;
 	            }
 	            break;
@@ -2666,7 +2572,7 @@ int main(void)
 	                RC_steering = 0;
 	            }
 
-	            if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
+	            if (AIRAB) {
 	                currentMode = MODO_FL_SIGUIENDO;
 	                break;
 	            }
@@ -2678,10 +2584,11 @@ int main(void)
 
 	        PID_PITCH();
 
-	        if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2]) {
+	        if (AIRAB) {
 	            ultimo_estado_sensores[0] = estado_sensores[0];
 	            ultimo_estado_sensores[1] = estado_sensores[1];
 	            ultimo_estado_sensores[2] = estado_sensores[2];
+	            ultimo_estado_sensores[3] = estado_sensores[3];
 	        }
 	    }
   }
@@ -3130,6 +3037,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : KEY PA0 */
+  GPIO_InitStruct.Pin = KEY_GPIO_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(KEY_GPIO_PORT, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB2 PB10 MOT2_IN1_Pin */
   GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_10|MOT2_IN1_Pin;
