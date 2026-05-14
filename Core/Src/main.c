@@ -109,6 +109,26 @@ typedef struct __attribute__((packed)) {
     int16_t     pitch_cdeg;
     int16_t     roll_cdeg;
     int16_t     yaw_cdeg;
+} PayloadDataMpuV1_t;
+
+typedef struct __attribute__((packed)) {
+    int16_t     acc_x, acc_y, acc_z;
+    int16_t     gyro_pitch, gyro_yaw;
+    int16_t     pitch_cdeg;
+    int16_t     roll_cdeg;
+    int16_t     yaw_cdeg;
+    int32_t     pos_x_mm;
+    int32_t     pos_y_mm;
+    int16_t     velocidad_mm_s;
+    uint8_t     modo;
+} PayloadDataStateV1_t;
+
+typedef struct __attribute__((packed)) {
+    int16_t     acc_x, acc_y, acc_z;
+    int16_t     gyro_pitch, gyro_yaw;
+    int16_t     pitch_cdeg;
+    int16_t     roll_cdeg;
+    int16_t     yaw_cdeg;
     int32_t     pos_x_mm;
     int32_t     pos_y_mm;
     int16_t     velocidad_mm_s;
@@ -246,7 +266,7 @@ ESP01_App_t ESP = {0};
 #define     UNER_RX_RING_SIZE          128
 #define     UNER_TX_QUEUE_DEPTH        4
 #define     UNER_TX_FRAME_MAX          80
-#define     UNER_TELEMETRY_PERIOD_MS   150
+#define     UNER_TELEMETRY_PERIOD_MS   100
 #define     UNER_TX_RECOVERY_MS        1000
 #define     UNER_V1_VERSION            1
 #define     UNER_V1_MAX_PAYLOAD        64
@@ -1014,12 +1034,25 @@ uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status)
 
 uint8_t UNER_SendTelemetryV1(void)
 {
-    PayloadDataMinV1_t payload;
+    PayloadDataV1_t payload;
 
     payload.acc_x = (int16_t)accelx;
     payload.acc_y = (int16_t)accely;
     payload.acc_z = (int16_t)accelz;
+    payload.gyro_pitch = (int16_t)giro;
+    payload.gyro_yaw = (int16_t)giro_z;
     payload.pitch_cdeg = (int16_t)(angle_y * 100.0f);
+    payload.roll_cdeg = (int16_t)(angle_roll * 100.0f);
+    payload.yaw_cdeg = (int16_t)(angle_yaw * 100.0f);
+    payload.pos_x_mm = 0;
+    payload.pos_y_mm = 0;
+    payload.velocidad_mm_s = (int16_t)(velocidad_objetivo * 1000.0f);
+    payload.modo = currentMode;
+    payload.infoAdicional = flagCalibrationIsReady;
+
+    for (uint8_t i = 0; i < 8; i++) {
+        payload.IR[i] = adc_filtrado[i];
+    }
 
     return UNER_SendV1(CMD_DATA, 0, (const uint8_t *)&payload, sizeof(payload));
 }
