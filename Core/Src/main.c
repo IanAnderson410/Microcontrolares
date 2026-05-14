@@ -413,6 +413,7 @@ volatile uint32_t uner_tx_last_try_tick = 0;
 volatile uint32_t uner_tx_last_ok_tick = 0;
 volatile uint32_t uner_tx_recover_count = 0;
 volatile uint8_t uner_recovering_udp = 0;
+volatile uint32_t uner_next_telemetry_tick = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
@@ -749,10 +750,10 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
         ESP.udp_started = 1;
         uner_tx_busy = 0;
         uner_recovering_udp = 0;
+        uner_next_telemetry_tick = HAL_GetTick() + 120;
         break;
 
     case ESP01_UDPTCP_DISCONNECTED:
-        flagWIFI = 0;
         ESP.udp_connected = 0;
         ESP.udp_started = 0;
         uner_tx_busy = 0;
@@ -771,6 +772,7 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
         uner_tx_busy = 0;
         uner_tx_ok_count++;
         uner_tx_last_ok_tick = HAL_GetTick();
+        uner_next_telemetry_tick = uner_tx_last_ok_tick + 120;
         break;
 
     default:
@@ -803,21 +805,10 @@ void ESP01_App_Task(void)
 {
     static uint32_t last_oled_update = 0;
     static uint32_t last_mpu_update = 0;
-    static uint32_t last_telemetry = 0;
     uint32_t now = HAL_GetTick();
 
     ESP01_Task();
     UNER_Rx_Task();
-
-    if (uner_tx_busy && (now - uner_tx_last_try_tick) > 1500) {
-        uner_tx_busy = 0;
-        uner_ack_pending = 0;
-        ESP.udp_connected = 0;
-        ESP.udp_started = 0;
-        uner_recovering_udp = 1;
-        uner_tx_recover_count++;
-        ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
-    }
 
     if ((now - last_mpu_update) >= 10) {
         last_mpu_update = now;
@@ -837,10 +828,9 @@ void ESP01_App_Task(void)
         }
     }
 
-    if (uner_telemetry_enabled && !uner_ack_pending && !uner_recovering_udp && ESP.udp_connected && (now - last_telemetry) >= 120) {
-        if (UNER_SendTelemetryV1()) {
-            last_telemetry = now;
-        }
+    if (uner_telemetry_enabled && !uner_ack_pending && !uner_tx_busy &&
+        ESP.udp_connected && (int32_t)(now - uner_next_telemetry_tick) >= 0) {
+        UNER_SendTelemetryV1();
     }
 }
 
@@ -914,6 +904,7 @@ uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t 
     }
 
     uner_tx_busy_count++;
+    uner_next_telemetry_tick = now + 120;
     return 0;
 }
 
@@ -1256,6 +1247,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 
     case CMD_TELEMETRY_START:
         uner_telemetry_enabled = 1;
+        uner_next_telemetry_tick = HAL_GetTick();
         uner_ack_cmd = CMD_TELEMETRY_START;
         uner_ack_seq = seq;
         uner_ack_status = 0;
