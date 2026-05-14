@@ -272,6 +272,7 @@ ESP01_App_t ESP = {0};
 #define     UNER_V1_MAX_PAYLOAD        64
 #define     UNER_V1_FLAG_ACK_REQUIRED  0x01
 #define     UNER_V1_FLAG_ACK           0x02
+#define     RC_TIMEOUT_MS              350
 
 #define     ESP01_WIFI_PROFILE_UNIVERSITY  0
 #define     ESP01_WIFI_PROFILE_HOME        1
@@ -450,6 +451,7 @@ volatile uint32_t uner_tx_recover_count = 0;
 volatile uint8_t uner_recovering_udp = 0;
 volatile uint32_t uner_next_telemetry_tick = 0;
 volatile uint8_t mpu_calibration_requested = 0;
+volatile uint32_t rc_last_packet_tick = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
 uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
@@ -872,6 +874,14 @@ void ESP01_App_Task(void)
 
     if ((now - last_mpu_update) >= 10) {
         last_mpu_update = now;
+
+        if (flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
+            flag_RC_active = 0;
+            RC_setpoint = 0.0f;
+            RC_slow_setpoint = 0.0f;
+            RC_steering = 0;
+        }
+
         Telemetry_UpdateMPU();
         Filtrar_Sensores_IR();
         PID_PITCH();
@@ -1579,6 +1589,26 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         }
         break;
 
+    case CMD_RC:
+        if (payload_len >= 4) {
+            uint8_t active = payload[0];
+            int8_t setpoint_cmd = (int8_t)payload[1];
+            int16_t steering_cmd = UNER_ReadInt16LE(&payload[2]);
+
+            rc_last_packet_tick = HAL_GetTick();
+            flag_RC_active = (active != 0) ? 1 : 0;
+
+            if (flag_RC_active) {
+                RC_setpoint = ((float)setpoint_cmd) / 10.0f;
+                RC_steering = steering_cmd;
+            } else {
+                RC_setpoint = 0.0f;
+                RC_slow_setpoint = 0.0f;
+                RC_steering = 0;
+            }
+        }
+        break;
+
     case CMD_PID_PITCH_KP:
     case CMD_PID_PITCH_KI:
     case CMD_PID_PITCH_KD:
@@ -2014,11 +2044,11 @@ void PID_PITCH(void){
 
 	   switch(currentMode){
 	   case MODO_RC:
-	   default:
-		   error = angle_y - setpoint;
+		   error = angle_y - (setpoint + RC_slow_setpoint);
 		   break;
 	   case MODO_IDDLE:
-		   error = angle_y - setpoint - RC_setpoint;
+	   default:
+		   error = angle_y - setpoint;
 		   break;
 	   }
 
