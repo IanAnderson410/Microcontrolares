@@ -105,6 +105,10 @@ _eESP01STATUS ESP01_StartUDP(const char *RemoteIP, uint16_t RemotePORT, uint16_t
  */
 _eESP01STATUS ESP01_StartTCP(const char *RemoteIP, uint16_t RemotePORT, uint16_t LocalPORT);
 
+_eESP01STATUS ESP01_StartHTTPServer(uint16_t LocalPORT);
+_eESP01STATUS ESP01_SendToClient(uint8_t link_id, uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint16_t sizeRingBuf);
+uint8_t ESP01_GetLastIPDLinkId(void);
+
 /**
  * @brief ESP01_CLOSEUDP Cierra una conexión UDP
  *

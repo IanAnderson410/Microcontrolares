@@ -201,7 +201,8 @@ enum {
        CMD_NETWORK_CHANGE_SSID		= 50,
        CMD_NETWORK_CHANGE_PASSWORD	= 51,
        CMD_TELEMETRY_START          = 60,
-       CMD_TELEMETRY_STOP           = 61
+       CMD_TELEMETRY_STOP           = 61,
+       CMD_HTTP_SOFTAP              = 62
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -265,6 +266,10 @@ ESP01_App_t ESP = {0};
 #define     ESP01_TRANSPORT_UDP        0
 #define     ESP01_TRANSPORT_TCP        1
 #define     ESP01_TRANSPORT            ESP01_TRANSPORT_TCP
+#define     ESP01_APP_MODE_QT          0
+#define     ESP01_APP_MODE_HTTP_SOFTAP 1
+#define     ESP01_APP_MODE             ESP01_APP_MODE_QT
+#define     ESP01_HTTP_PORT            80
 #define     ESP01_RX_DMA_SIZE          256
 #define     UNER_RX_RING_SIZE          128
 #define     UNER_TX_QUEUE_DEPTH        4
@@ -453,6 +458,8 @@ volatile uint32_t uner_tx_last_ok_tick = 0;
 volatile uint32_t uner_tx_recover_count = 0;
 volatile uint8_t uner_recovering_udp = 0;
 volatile uint32_t uner_next_telemetry_tick = 0;
+volatile uint8_t esp01_http_softap_requested = 0;
+volatile uint8_t esp01_http_softap_active = 0;
 volatile uint8_t mpu_calibration_requested = 0;
 volatile uint32_t rc_last_packet_tick = 0;
 char esp01_last_debug[18] = "-";
@@ -507,6 +514,8 @@ void onESP01ChangeState(_eESP01STATUS esp01State);
 void onESP01Debug(const char *dbgStr);
 void ESP01_App_Task(void);
 _eESP01STATUS ESP01_StartTransport(void);
+void ESP01_Http_ProcessByte(uint8_t value);
+void ESP01_Http_Task(void);
 
 void UNER_Rx_Task(void);
 void UNER_Tx_Task(void);
@@ -712,6 +721,17 @@ int ESP01_UART_Transmit(uint8_t val)
 
 void ESP01_Data_Received(uint8_t value)
 {
+#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
+    esp01_payload_count++;
+    ESP01_Http_ProcessByte(value);
+    return;
+#else
+    if (esp01_http_softap_active) {
+        esp01_payload_count++;
+        ESP01_Http_ProcessByte(value);
+        return;
+    }
+
     static char line[8];
     static uint8_t index = 0;
 
@@ -745,6 +765,7 @@ void ESP01_Data_Received(uint8_t value)
     }
 
     return;
+#endif
 
 #if 0
     /*
@@ -873,6 +894,13 @@ void ESP01_App_Task(void)
     uint32_t now = HAL_GetTick();
 
     ESP01_Task();
+#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
+    ESP01_Http_Task();
+#else
+    if (esp01_http_softap_active) {
+        ESP01_Http_Task();
+    }
+#endif
     UNER_Rx_Task();
     UNER_Tx_Task();
 
@@ -894,6 +922,20 @@ void ESP01_App_Task(void)
     if ((now - last_oled_update) >= 500) {
         last_oled_update = now;
         screenScheduler();
+    }
+
+    if (esp01_http_softap_requested && !uner_ack_pending && !uner_tx_busy) {
+        esp01_http_softap_requested = 0;
+        esp01_http_softap_active = 1;
+        uner_telemetry_enabled = 0;
+        ESP.uner_tx_head = 0;
+        ESP.uner_tx_tail = 0;
+        ESP.uner_tx_count = 0;
+        ESP.udp_connected = 0;
+        ESP.udp_started = 0;
+        ESP01_StartTransport();
+        ESP.udp_started = 1;
+        return;
     }
 
     if (uner_ack_pending && ESP.udp_connected && !uner_tx_busy) {
@@ -997,11 +1039,106 @@ uint8_t UNER_QueueTx(const uint8_t *data, uint16_t len)
 
 _eESP01STATUS ESP01_StartTransport(void)
 {
+#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
+    return ESP01_StartHTTPServer(ESP01_HTTP_PORT);
+#else
+    if (esp01_http_softap_active) {
+        return ESP01_StartHTTPServer(ESP01_HTTP_PORT);
+    }
+
 #if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
     return ESP01_StartTCP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, 0);
 #else
     return ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
 #endif
+#endif
+}
+
+void ESP01_Http_ProcessByte(uint8_t value)
+{
+    static char request_line[96];
+    static uint8_t index = 0;
+    static uint8_t line_done = 0;
+    static uint8_t pending_link = 0;
+    extern volatile uint8_t http_response_pending;
+    extern volatile uint8_t http_response_link;
+    extern volatile uint16_t http_requested_hb;
+
+    if (!line_done) {
+        if (index < (sizeof(request_line) - 1)) {
+            request_line[index++] = (char)value;
+        }
+
+        if (value == '\n') {
+            request_line[index] = '\0';
+            pending_link = ESP01_GetLastIPDLinkId();
+            line_done = 1;
+
+            if (strncmp(request_line, "GET /hb?ms=", 11) == 0) {
+                uint16_t hb = (uint16_t)atoi(&request_line[11]);
+                if (hb >= 1 && hb <= 200) {
+                    delayHB = hb;
+                    http_requested_hb = hb;
+                }
+            }
+
+            if (strncmp(request_line, "GET ", 4) == 0) {
+                http_response_link = pending_link;
+                http_response_pending = 1;
+            }
+        }
+    }
+
+    if (line_done && value == '\n' && index == 0) {
+        line_done = 0;
+    }
+
+    if (line_done && value == '\n') {
+        index = 0;
+        line_done = 0;
+    }
+}
+
+volatile uint8_t http_response_pending = 0;
+volatile uint8_t http_response_link = 0;
+volatile uint16_t http_requested_hb = 0;
+
+void ESP01_Http_Task(void)
+{
+    char body[150];
+    char response[256];
+    int body_len;
+    int response_len;
+
+    if (!http_response_pending || uner_tx_busy) {
+        return;
+    }
+
+    body_len = snprintf(body, sizeof(body),
+                        "<html><body><h3>N20 HB</h3><p>HB=%u</p>"
+                        "<a href=\"/hb?ms=10\">10</a> "
+                        "<a href=\"/hb?ms=50\">50</a> "
+                        "<a href=\"/hb?ms=100\">100</a>"
+                        "</body></html>",
+                        delayHB);
+    if (body_len < 0 || body_len >= (int)sizeof(body)) {
+        return;
+    }
+
+    response_len = snprintf(response, sizeof(response),
+                            "HTTP/1.1 200 OK\r\n"
+                            "Content-Type: text/html\r\n"
+                            "Connection: close\r\n"
+                            "Content-Length: %d\r\n\r\n%s",
+                            body_len, body);
+    if (response_len <= 0 || response_len >= (int)sizeof(response)) {
+        return;
+    }
+
+    if (ESP01_SendToClient(http_response_link, (uint8_t *)response, 0, (uint16_t)response_len, (uint16_t)response_len) == ESP01_SEND_READY) {
+        http_response_pending = 0;
+        uner_tx_busy = 1;
+    }
 }
 
 void UNER_Tx_Task(void)
@@ -1415,6 +1552,15 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_pending = 1;
         break;
 
+    case CMD_HTTP_SOFTAP:
+        uner_telemetry_enabled = 0;
+        esp01_http_softap_requested = 1;
+        uner_ack_cmd = CMD_HTTP_SOFTAP;
+        uner_ack_seq = seq;
+        uner_ack_status = 0;
+        uner_ack_pending = 1;
+        break;
+
     case CMD_START:
         flagMotorsAreOn = 1;
         uner_ack_status = 0;
@@ -1818,10 +1964,18 @@ void screenScheduler(void){
     }
 
     SSD1306_GotoXY(0, 0);
-#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
-    SSD1306_Puts("ESP01 TCP", &Font_7x10, SSD1306_COLOR_WHITE);
+#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
+    SSD1306_Puts("ESP01 HTTP", &Font_7x10, SSD1306_COLOR_WHITE);
 #else
-    SSD1306_Puts("ESP01 UDP", &Font_7x10, SSD1306_COLOR_WHITE);
+    if (esp01_http_softap_active) {
+        SSD1306_Puts("ESP01 HTTP", &Font_7x10, SSD1306_COLOR_WHITE);
+    } else {
+#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
+        SSD1306_Puts("ESP01 TCP", &Font_7x10, SSD1306_COLOR_WHITE);
+#else
+        SSD1306_Puts("ESP01 UDP", &Font_7x10, SSD1306_COLOR_WHITE);
+#endif
+    }
 #endif
     SSD1306_GotoXY(0, 10);
     SSD1306_Puts("", &Font_7x10, SSD1306_COLOR_WHITE);

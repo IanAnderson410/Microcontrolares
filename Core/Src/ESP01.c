@@ -16,6 +16,7 @@ static enum {
 	ESP01ATCWMODE,
 	ESP01ATCWSAP,
 	ESP01ATCIPMUX,
+	ESP01ATCIPSERVER,
 	ESP01ATCWJAP,
 	ESP01CWJAPRESPONSE,
 	ESP01ATCIFSR,
@@ -62,6 +63,9 @@ static char esp01PROTO[4] = "UDP";
 static char esp01RemotePORT[6] = {0};
 static char esp01LocalIP[16] = {0};
 static char esp01LocalPORT[6] = {0};
+static uint8_t esp01ServerMode = 0;
+static uint8_t esp01CurrentIPDLinkId = 0;
+static uint8_t esp01LastIPDLinkId = 0;
 
 static uint8_t esp01HState = 0;
 static uint16_t	esp01nBytes = 0;
@@ -80,6 +84,8 @@ static _sESP01Handle esp01Handle = {.DoCHPD = NULL, .WriteUSARTByte = NULL, .Wri
 
 const char ATAT[] = "AT\r\n";
 const char ATCIPMUX[] = "AT+CIPMUX=0\r\n";
+const char ATCIPMUXSERVER[] = "AT+CIPMUX=1\r\n";
+const char ATCIPSERVER[] = "AT+CIPSERVER=1,";
 const char ATCWQAP[] = "AT+CWQAP\r\n";
 const char ATCWMODE[] = "AT+CWMODE=3\r\n";
 const char ATCWSAP[] = "AT+CWSAP=\"N20_ROBOT\",\"n20robot1\",5,3\r\n";
@@ -130,6 +136,7 @@ static uint8_t indexResponseChar = 0;
 void ESP01_SetWIFI(const char *ssid, const char *password){
 	esp01ATSate = ESP01ATIDLE;
 	esp01Flags.byte = 0;
+	esp01ServerMode = 0;
 
 	strncpy(esp01SSID, ssid, 64);
 	esp01SSID[63] = '\0';
@@ -168,6 +175,26 @@ _eESP01STATUS ESP01_StartUDP(const char *RemoteIP, uint16_t RemotePORT, uint16_t
 	esp01ATSate = ESP01ATCIPCLOSE;
 
 	return ESP01_UDPTCP_CONNECTING;
+}
+
+_eESP01STATUS ESP01_StartHTTPServer(uint16_t LocalPORT){
+	if(esp01Handle.WriteUSARTByte == NULL)
+		return ESP01_NOT_INIT;
+
+	if(LocalPORT == 0)
+		LocalPORT = 80;
+
+	esp01ServerMode = 1;
+	esp01RemoteIP[0] = '\0';
+	strcpy(esp01PROTO, "TCP");
+	itoa(LocalPORT, esp01LocalPORT, 10);
+	esp01ATSate = ESP01ATHARDRST0;
+
+	return ESP01_UDPTCP_CONNECTING;
+}
+
+uint8_t ESP01_GetLastIPDLinkId(void){
+	return esp01LastIPDLinkId;
 }
 
 _eESP01STATUS ESP01_StartTCP(const char *RemoteIP, uint16_t RemotePORT, uint16_t LocalPORT){
@@ -284,6 +311,44 @@ _eESP01STATUS ESP01_Send(uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint
 
 	if(ESP01DbgStr != NULL)
 		ESP01DbgStr("+&DBGSENDING DATA BUSY\n");
+
+	return ESP01_SEND_BUSY;
+}
+
+_eESP01STATUS ESP01_SendToClient(uint8_t link_id, uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint16_t sizeRingBuf){
+	if(esp01Handle.WriteUSARTByte == NULL)
+		return ESP01_NOT_INIT;
+
+	if(esp01Flags.bit.UDPTCPCONNECTED == 0)
+		return ESP01_UDPTCP_DISCONNECTED;
+
+	if(esp01Flags.bit.SENDINGDATA == 0){
+		char strInt[10];
+		uint8_t l = 0;
+
+		itoa(length, strInt, 10);
+		l = strlen(strInt);
+		if(l>4 || l==0)
+			return ESP01_SEND_ERROR;
+
+		ESP01StrToBufTX(ATCIPSEND);
+		ESP01ByteToBufTX((char)('0' + (link_id % 10)));
+		ESP01ByteToBufTX(',');
+		ESP01StrToBufTX(strInt);
+		ESP01StrToBufTX("\r>");
+
+		for(uint16_t i=0; i<length; i++){
+			esp01TXATBuf[esp01iwTX++] = buf[irRingBuf++];
+			if(esp01iwTX == ESP01TXBUFAT)
+				esp01iwTX = 0;
+			if(irRingBuf == sizeRingBuf)
+				irRingBuf = 0;
+		}
+
+		esp01Flags.bit.TXCIPSEND = 1;
+		esp01Flags.bit.SENDINGDATA = 1;
+		return ESP01_SEND_READY;
+	}
 
 	return ESP01_SEND_BUSY;
 }
@@ -551,8 +616,14 @@ static void ESP01ATDecode(){
 			}
 			break;
 		case 11:
-			if(value == ':')
+			if(esp01ServerMode && value >= '0' && value <= '9'){
+				esp01CurrentIPDLinkId = (uint8_t)(value - '0');
+				esp01HState = 13;
+			}
+			else if(value == ':'){
+				esp01LastIPDLinkId = 0;
 				esp01HState = 12;
+			}
 			else{
 				if(value<'0' || value>'9'){
 					esp01HState = 0;
@@ -572,6 +643,32 @@ static void ESP01ATDecode(){
 				esp01HState = 0;
 				if(ESP01DbgStr != NULL)
 					ESP01DbgStr("+&DBGRESPONSE IPD\n");
+			}
+			break;
+		case 13:
+			if(value == ','){
+				esp01HState = 14;
+				esp01nBytes = 0;
+			}
+			else{
+				esp01HState = 0;
+				esp01irRXAT--;
+			}
+			break;
+		case 14:
+			if(value == ':'){
+				esp01LastIPDLinkId = esp01CurrentIPDLinkId;
+				esp01HState = 12;
+			}
+			else{
+				if(value<'0' || value>'9'){
+					esp01HState = 0;
+					esp01irRXAT--;
+				}
+				else{
+					esp01nBytes *= 10;
+					esp01nBytes += (value - '0');
+				}
 			}
 			break;
 		default:
@@ -646,10 +743,28 @@ static void ESP01DOConnection(){
 		esp01ATSate = ESP01ATCIPMUX;
 		break;
 	case ESP01ATCIPMUX:
-		ESP01StrToBufTX(ATCIPMUX);
+		if(esp01ServerMode)
+			ESP01StrToBufTX(ATCIPMUXSERVER);
+		else
+			ESP01StrToBufTX(ATCIPMUX);
 		if(ESP01DbgStr != NULL)
 			ESP01DbgStr("+&DBGESP01ATCIPMUX\n");
-		esp01ATSate = ESP01ATCWJAP;
+		esp01ATSate = esp01ServerMode ? ESP01ATCIPSERVER : ESP01ATCWJAP;
+		break;
+	case ESP01ATCIPSERVER:
+		ESP01StrToBufTX(ATCIPSERVER);
+		ESP01StrToBufTX(esp01LocalPORT);
+		ESP01ByteToBufTX('\r');
+		ESP01ByteToBufTX('\n');
+		esp01Flags.bit.WIFICONNECTED = 1;
+		esp01Flags.bit.UDPTCPCONNECTED = 1;
+		strcpy(esp01LocalIP, "192.168.4.1");
+		if(ESP01ChangeState != NULL){
+			ESP01ChangeState(ESP01_WIFI_CONNECTED);
+			ESP01ChangeState(ESP01_WIFI_NEW_IP);
+			ESP01ChangeState(ESP01_UDPTCP_CONNECTED);
+		}
+		esp01ATSate = ESP01ATCONNECTED;
 		break;
 	case ESP01ATCWJAP:
 		if(esp01Flags.bit.WIFICONNECTED){
