@@ -14,6 +14,7 @@ static enum {
 	ESP01ATAT,
 	ESP01ATRESPONSE,
 	ESP01ATCWMODE,
+	ESP01ATCWSAP,
 	ESP01ATCIPMUX,
 	ESP01ATCWJAP,
 	ESP01CWJAPRESPONSE,
@@ -81,6 +82,7 @@ const char ATAT[] = "AT\r\n";
 const char ATCIPMUX[] = "AT+CIPMUX=0\r\n";
 const char ATCWQAP[] = "AT+CWQAP\r\n";
 const char ATCWMODE[] = "AT+CWMODE=3\r\n";
+const char ATCWSAP[] = "AT+CWSAP=\"N20_ROBOT\",\"n20robot1\",5,3\r\n";
 const char ATCWJAP[] = "AT+CWJAP=";
 const char ATCIFSR[] = "AT+CIFSR\r\n";
 const char ATCIPSTART[] = "AT+CIPSTART=";
@@ -635,6 +637,12 @@ static void ESP01DOConnection(){
 		ESP01StrToBufTX(ATCWMODE);
 		if(ESP01DbgStr != NULL)
 			ESP01DbgStr("+&DBGESP01ATCWMODE\n");
+		esp01ATSate = ESP01ATCWSAP;
+		break;
+	case ESP01ATCWSAP:
+		ESP01StrToBufTX(ATCWSAP);
+		if(ESP01DbgStr != NULL)
+			ESP01DbgStr("+&DBGESP01ATCWSAP\n");
 		esp01ATSate = ESP01ATCIPMUX;
 		break;
 	case ESP01ATCIPMUX:
@@ -713,10 +721,12 @@ static void ESP01DOConnection(){
 		ESP01ByteToBufTX('\"');
 		ESP01ByteToBufTX(',');
 		ESP01StrToBufTX(esp01RemotePORT);
-		ESP01ByteToBufTX(',');
-		ESP01StrToBufTX(esp01LocalPORT);
-		ESP01ByteToBufTX(',');
-		ESP01ByteToBufTX('0');
+		if(esp01PROTO[0] == 'U'){
+			ESP01ByteToBufTX(',');
+			ESP01StrToBufTX(esp01LocalPORT);
+			ESP01ByteToBufTX(',');
+			ESP01ByteToBufTX('0');
+		}
 		ESP01ByteToBufTX('\r');
 		ESP01ByteToBufTX('\n');
 		if(ESP01DbgStr != NULL)

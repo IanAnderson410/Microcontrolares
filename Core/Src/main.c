@@ -262,6 +262,9 @@ ESP01_App_t ESP = {0};
 
 #define     ESP01_UDP_LOCAL_PORT       8888
 #define     ESP01_QT_REMOTE_PORT       8888
+#define     ESP01_TRANSPORT_UDP        0
+#define     ESP01_TRANSPORT_TCP        1
+#define     ESP01_TRANSPORT            ESP01_TRANSPORT_TCP
 #define     ESP01_RX_DMA_SIZE          256
 #define     UNER_RX_RING_SIZE          128
 #define     UNER_TX_QUEUE_DEPTH        4
@@ -503,6 +506,7 @@ void ESP01_Data_Received(uint8_t value);
 void onESP01ChangeState(_eESP01STATUS esp01State);
 void onESP01Debug(const char *dbgStr);
 void ESP01_App_Task(void);
+_eESP01STATUS ESP01_StartTransport(void);
 
 void UNER_Rx_Task(void);
 void UNER_Tx_Task(void);
@@ -892,7 +896,7 @@ void ESP01_App_Task(void)
         screenScheduler();
     }
 
-    if (uner_ack_pending && ESP.udp_connected) {
+    if (uner_ack_pending && ESP.udp_connected && !uner_tx_busy) {
         if (UNER_SendAckV1(uner_ack_cmd, uner_ack_seq, uner_ack_status)) {
             uner_ack_pending = 0;
             esp01_ack_count++;
@@ -900,7 +904,8 @@ void ESP01_App_Task(void)
     }
 
     if (uner_telemetry_enabled && !uner_ack_pending &&
-        ESP.udp_connected && (int32_t)(now - uner_next_telemetry_tick) >= 0) {
+        ESP.udp_connected && !uner_tx_busy && ESP.uner_tx_count == 0 &&
+        (int32_t)(now - uner_next_telemetry_tick) >= 0) {
         if (UNER_SendTelemetryV1()) {
             uner_next_telemetry_tick = now + UNER_TELEMETRY_PERIOD_MS;
         } else {
@@ -990,6 +995,15 @@ uint8_t UNER_QueueTx(const uint8_t *data, uint16_t len)
     return 1;
 }
 
+_eESP01STATUS ESP01_StartTransport(void)
+{
+#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
+    return ESP01_StartTCP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, 0);
+#else
+    return ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
+#endif
+}
+
 void UNER_Tx_Task(void)
 {
     uint8_t len;
@@ -1013,7 +1027,7 @@ void UNER_Tx_Task(void)
         uner_tx_recover_count++;
         uner_tx_last_try_tick = now;
         ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
-        ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
+        ESP01_StartTransport();
         ESP.udp_started = 1;
         return;
     }
@@ -1023,6 +1037,7 @@ void UNER_Tx_Task(void)
 
     if (status == ESP01_SEND_READY) {
         uner_tx_last_try_tick = now;
+        uner_tx_busy = 1;
         ESP.uner_tx_head++;
         if (ESP.uner_tx_head >= UNER_TX_QUEUE_DEPTH) {
             ESP.uner_tx_head = 0;
@@ -1803,7 +1818,11 @@ void screenScheduler(void){
     }
 
     SSD1306_GotoXY(0, 0);
+#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
+    SSD1306_Puts("ESP01 TCP", &Font_7x10, SSD1306_COLOR_WHITE);
+#else
     SSD1306_Puts("ESP01 UDP", &Font_7x10, SSD1306_COLOR_WHITE);
+#endif
     SSD1306_GotoXY(0, 10);
     SSD1306_Puts("", &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(24, 10);
@@ -2415,7 +2434,7 @@ int main(void)
       HAL_UART_Receive_IT(&huart1, &ESP.AT_Rx_data, 1);
 
       ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
-      ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
+      ESP01_StartTransport();
       ESP.udp_started = 1;
 
       HAL_TIM_Base_Start_IT(&htim4);
