@@ -874,6 +874,7 @@ void ESP01_App_Task(void)
         last_mpu_update = now;
         Telemetry_UpdateMPU();
         Filtrar_Sensores_IR();
+        PID_PITCH();
     }
 
     if ((now - last_oled_update) >= 500) {
@@ -1994,11 +1995,7 @@ void Finalizar_Calibracion_Linea(void) {
 
 
 void PID_PITCH(void){
-		float gyro_rate = -(((float)gyPitchRaw / 131.0f)); // 65.5f));
-		float accel_angle = (atan2f((float)axRaw , (float)azRaw ) * 57.2957f) ;
-		giro 	= gyro_rate;
-		accelGiro = accel_angle;
-		angle_y = ALPHA_PID * (angle_y + gyro_rate * DT_PID) + (1.0f - ALPHA_PID) * accel_angle;
+		float gyro_rate = giro;
 			telemetria.data.pitch_filtrado 	= 	angle_y;
 			accelx 	= axRaw;
 			accely 	= ayRaw;
