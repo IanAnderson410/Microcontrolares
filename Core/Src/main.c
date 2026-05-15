@@ -85,72 +85,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-//Al usar __attribute__((packed)), garantizamos que no haya "padding" (huecos de memoria)
-typedef struct __attribute__((packed)) {
-    int16_t     acc_x, acc_y, acc_z;    // 6 bytes - Datos crudos
-    int16_t     gyro_pitch, gyro_yaw;
-    float       pitch_filtrado;         // 4 bytes - Pitch filtrado
-    float       yaw_filtrado;           // 4 bytes - Yaw filtrado
-    float       pos_x;                  // 4 bytes - Trayectoria X
-    float       pos_y;                  // 4 bytes - Trayectoria Y
-    float       velocidad;              // 4 bytes - Velocidad lineal
-    uint8_t     modo;                   // 1 byte  - IDLE, FOLLOW_LINE, RC
-    uint16_t    IR[8];                  // 16 bytes- Sensores IR
-    uint8_t     infoAdicional;          // 1 byte  - Info Adicional
-} PayloadData_t;
 
-typedef union {
-    PayloadData_t 	data;
-    uint8_t 		buffer[sizeof(PayloadData_t)]; // 27 bytes totales
-} PayloadUNER_t;
-
-typedef struct __attribute__((packed)) {
-    int16_t     acc_x, acc_y, acc_z;
-    int16_t     pitch_cdeg;
-} PayloadDataMinV1_t;
-
-typedef struct __attribute__((packed)) {
-    int16_t     acc_x, acc_y, acc_z;
-    int16_t     gyro_pitch, gyro_yaw;
-    int16_t     pitch_cdeg;
-    int16_t     roll_cdeg;
-    int16_t     yaw_cdeg;
-} PayloadDataMpuV1_t;
-
-typedef struct __attribute__((packed)) {
-    int16_t     acc_x, acc_y, acc_z;
-    int16_t     gyro_pitch, gyro_yaw;
-    int16_t     pitch_cdeg;
-    int16_t     roll_cdeg;
-    int16_t     yaw_cdeg;
-    int32_t     pos_x_mm;
-    int32_t     pos_y_mm;
-    int16_t     velocidad_mm_s;
-    uint8_t     modo;
-} PayloadDataStateV1_t;
-
-typedef struct __attribute__((packed)) {
-    int16_t     acc_x, acc_y, acc_z;
-    int16_t     gyro_pitch, gyro_yaw;
-    int16_t     pitch_cdeg;
-    int16_t     roll_cdeg;
-    int16_t     yaw_cdeg;
-    int32_t     pos_x_mm;
-    int32_t     pos_y_mm;
-    int16_t     velocidad_mm_s;
-    uint8_t     modo;
-    uint16_t    IR[8];
-    uint8_t     infoAdicional;
-} PayloadDataV1_t;
-
-typedef struct {
-    uint8_t header[4];      // "UNER"
-    uint8_t length;         // CMD + N_Payload + Checksum
-    uint8_t token;          // ':'
-    uint8_t cmd;            // ID del comando
-    uint8_t payload[64];    // Buffer genérico (sobra espacio)
-    // El checksum no lo ponemos en el struct fijo porque su posición varía
-} UnerPacket_t;
 enum {
 	MODO_IDDLE 					= 0,
 	MODO_RC						= 1,
@@ -213,11 +148,6 @@ enum {
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
-typedef enum {
-    FILTRO_COMPLEMENTARIO = 0,	/*!< Predeterminado */
-    FILTRO_KALMAN = 1,			/*!< Presenta matemática más compleja que el filtro complementario */
-    FILTRO_SOLO_ACCEL = 2 		/*!< Desactivar filtro */
-} FiltroTipo_t;
 
 ESP01_App_t ESP = {0};
 /* USER CODE END PTD */
@@ -236,32 +166,18 @@ ESP01_App_t ESP = {0};
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 // ================= [ Typedef ] ================= //
-			PayloadUNER_t 	telemetria;
 			Buzzer_Seq_t 	hBuzzer = {0}; // Inicializamos en cero
-			FiltroTipo_t 	currentlySelectedFilter = 	FILTRO_COMPLEMENTARIO; //FILTRO_COMPLEMENTARIO;
 // ================= [ Variables generales ] ================= //
 			uint16_t 		delayHB	= 50; //ENTRE 1 Y 200
-			uint32_t 		lastTime0 = 0; // tiempo en el while 1
 volatile	uint8_t			currentMode = MODO_IDDLE;
 // ================= [ Flags ] ================= //
-volatile 	uint8_t 		flagPID 				= 	0;
-volatile 	uint8_t 		flagDisplay				=	0;
-volatile	uint8_t			flagSendUNER 			= 	0;
-volatile	uint8_t			flagDataToQt 			= 	0;
 volatile	uint8_t			flagWIFI				=   0;
 volatile	uint8_t 		flagOLED 				= 	2;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
 // ================= [ Counters ] ================= //
-			uint16_t 		contador = 0;
 volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Timer 4 para manejar el HeartBit*/
-volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción del Timer 4 para manejar los datos mandados a Qt*/
-			uint8_t  		counter1=0;				/*!< Utilizado para refrezcar la pantalla OLED*/
-//RECEPCION DE DATOS
-			char 			rx_buffer[20];
-			uint8_t 		rx_index = 0;
-			uint8_t 		rx_data;
 // Nuevas variables para compensar la diferencia entre motores
 			int16_t 		deadband_L = 130;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 75; 			/*!< Zona Muerta del PWM para el motor 2*/
@@ -283,8 +199,6 @@ volatile 	uint32_t 		counterDataToQt=0;				/*!< Utilizado en la interrupción de
 volatile    float 		FL_setpoint = 0.0f;
 			float 		last_state_linea = 0.0f;
 			float 		error_linea;
-			uint32_t	timer_rescate=0;
-volatile 	uint16_t 	adc_raw[4]= {0, 0, 0, 0};
 volatile 	uint16_t 	adc_filtrado[8] = {2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000};
 volatile 	uint8_t 	estado_sensores[4]	= {0, 0, 0, 0};
 volatile 	uint8_t 	ultimo_estado_sensores[4] = {0, 0, 0, 0};
@@ -292,12 +206,6 @@ volatile 	uint16_t 	sensor_min[4]= {0, 0, 0, 0};
 volatile 	uint16_t 	sensor_max[4]= {0, 0, 0, 0};
 volatile 	uint16_t 	sensor_threshold[4]= {0, 0, 0, 0};
 volatile 	uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estamos
-		// Umbrales de los IR de obstáculos (A calibrar luego)
-		// Asumo que a mayor valor, más cerca está el obstáculo
-		uint16_t UMBRAL_FRENTE_CHOQUE = 3700;  // Valor donde detecta la caja de frente
-		uint16_t SETPOINT_PARED_DER = 	1000;    // Valor ideal para mantener la caja a 5cm
-		uint16_t UMBRAL_PERDIDA_PARED = 3000;   // Si cae de este valor, la pared se terminó
-uint8_t sentidoDeGiro=0; // 0 horario, 1 anti-horario
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y 	= 0;
 			float           angle_roll  = 0;
@@ -314,7 +222,6 @@ uint8_t sentidoDeGiro=0; // 0 horario, 1 anti-horario
 			uint16_t 		adc_buffer[8]; // El buffer que llena el DMA
 // =================[ Modo Radio Control ] =================//
 volatile 	float 			RC_setpoint 			= 0;
-volatile	float 			RC_setpoint_base	 = 0.8f;
 volatile 	float 			RC_slow_setpoint = 0;
 volatile 	int16_t   		RC_steering = 0;
 float 		paso = 0.08f; // Velocidad de inclinación
@@ -324,8 +231,6 @@ volatile 	uint16_t 		accely=0;
 volatile 	uint16_t		accelz=0;
 volatile 	float 			giro=0;
 volatile 	float			giro_z=0;
-volatile 	float			accelGiro=0;
-volatile 	float			salida=0;
 // =================[ I2C Scheduler ] =================//
 volatile 	uint8_t 		oled_update_requested = 0;
 volatile 	uint8_t 		oled_current_page = 0;
@@ -336,33 +241,9 @@ volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
 	float output = 0;
 
 	float Kp_Agresivo = 0.0f;
-// =================[ Digitalizador del IR ] =================//
-// Máquina de estados de la evasión
-typedef enum {
-    EVA_DETECTADO,
-    EVA_GIRAR_IZQ,
-    EVA_SEGUIR_PARED,
-    EVA_AVANZAR_ESQUINA,
-    EVA_GIRAR_DER
-} EstadoEvasion_t;
-
-EstadoEvasion_t estado_evasion = EVA_DETECTADO;
-uint32_t timer_evasion = 0; // Para contar milisegundos en las maniobras
-// recibidos desde el qt
-uint8_t rx_buffer_uart[256];
 char msg[20];
-uint8_t BS=0;
 // Banderas y contadores
 volatile int16_t axRaw, ayRaw, azRaw, gyPitchRaw, gzYawRaw;
-// --- Variables para los Filtros IIR ---
-float ax_lpf = 0.0f;
-float az_lpf = 0.0f;
-float gy_hpf = 0.0f;
-float gy_prev_raw = 0.0f;
-// --- Constantes de Sintonía ---
-volatile uint32_t tiempo_anterior_pid = 0;
-volatile uint32_t delta_t_medido = 0;
-volatile uint32_t timeout_rc=0;
 
 char ip_address[16] = "0.0.0.0";
 volatile uint8_t ip_received_flag = 0;
@@ -393,11 +274,8 @@ volatile uint8_t mpu_calibration_requested = 0;
 volatile uint32_t rc_last_packet_tick = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
-uint8_t esperando_digitos_ip = 0; // Bandera para nuestra mini máquina de estados
 float velocidad_objetivo = 0.0f; // Reemplaza a tu viejo RC_setpoint y FL_setpoint
-float Kp_vel = 0.015f;           // Ganancia del lazo de velocidad (empezamos MUY bajo)
 float showoutput=0;
-int8_t prescaler=0;
 float multiplicadorYaw 	 = 0.01;
 float error=0;
 /* USER CODE END PM */
@@ -447,7 +325,6 @@ void Telemetry_UpdateMPU(void);
 void screenScheduler(void);
 void KEY_CalibrationTask(void);
 /**
- * @brief PID_PITCH:					Calcula la salida del controlador PID para el equilibrio.
  * @details 							Crea una respuesta en forma de impulso con los motores la cual es proporcional
  * 										al error (pitch) del robot.	Implementa un filtro complementario para fusionar
  * 										acelerómetro y giroscopio.
@@ -458,21 +335,6 @@ void KEY_CalibrationTask(void);
  * @param cmd: 							Código del comando (CMD)
  * @param param: 						Parámetro de 16 bits (enviado en Little Endian ).
  */
-void Procesar_Evasion_Obstaculo(void);
-/*
- * IMPORTANTE:
- * DataToQt queda desactivada para esta etapa.
- * No debe mandar directo por HAL_UART_Transmit_DMA(&huart1),
- * porque UART1 ahora se usa para comandos AT del ESP01.
- */
-void DataToQt(void)
-{
-    /*
-     * Próxima etapa:
-     * reemplazar este cuerpo por UNER_Send(CMD_DATA, telemetria.buffer, sizeof(PayloadData_t)).
-     */
-}
-
 void Telemetry_UpdateMPU(void)
 {
     uint8_t buffer[14];
@@ -494,7 +356,6 @@ void Telemetry_UpdateMPU(void)
 
     giro = gyro_pitch_rate;
     giro_z = gyro_yaw_rate;
-    accelGiro = pitch_accel;
     angle_y = ALPHA_PID * (angle_y + gyro_pitch_rate * DT_PID) + (1.0f - ALPHA_PID) * pitch_accel;
     angle_roll = ALPHA_PID * angle_roll + (1.0f - ALPHA_PID) * roll_accel;
     angle_yaw += gyro_yaw_rate * DT_PID;
@@ -503,27 +364,6 @@ void Telemetry_UpdateMPU(void)
     accely = ayRaw;
     accelz = azRaw;
 
-    telemetria.data.acc_x = axRaw;
-    telemetria.data.acc_y = ayRaw;
-    telemetria.data.acc_z = azRaw;
-    telemetria.data.gyro_pitch = (int16_t)gyro_pitch_rate;
-    telemetria.data.gyro_yaw = (int16_t)gyro_yaw_rate;
-    telemetria.data.pitch_filtrado = angle_y;
-    telemetria.data.yaw_filtrado = angle_yaw;
-    telemetria.data.pos_x = 0.0f;
-    telemetria.data.pos_y = 0.0f;
-    telemetria.data.velocidad = velocidad_objetivo;
-    telemetria.data.modo = currentMode;
-    telemetria.data.infoAdicional = (uint8_t)((flagCalibrationIsReady ? 0x01 : 0x00) |
-                                             (flag_calibrando_linea ? 0x02 : 0x00) |
-                                             ((estado_sensores[0] & 0x01) << 2) |
-                                             ((estado_sensores[1] & 0x01) << 3) |
-                                             ((estado_sensores[2] & 0x01) << 4) |
-                                             ((estado_sensores[3] & 0x01) << 5));
-
-    for (uint8_t i = 0; i < 8; i++) {
-        telemetria.data.IR[i] = adc_filtrado[i];
-    }
 }
 
 void screenScheduler(void){
@@ -623,10 +463,6 @@ void screenScheduler(void){
 				uint8_t sensores= (estado_sensores[2] * 100) + (estado_sensores[1] * 10) + estado_sensores[0];
 				uint8_t lastSensores = (ultimo_estado_sensores[2] * 100) + (ultimo_estado_sensores[1] * 10) + ultimo_estado_sensores[0];
 
-//				sprintf(msg, "IP:%s", ip_address);
-//				SSD1306_GotoXY(1, 0);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
 				sprintf(msg, "Depurar FL");
 				SSD1306_GotoXY(1, 0);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
@@ -634,9 +470,6 @@ void screenScheduler(void){
 				sprintf(msg, "O:%2.2f", showoutput);
 				SSD1306_GotoXY(1, 10);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-
-
 				sprintf(msg, "|%d|%d|%3.2f", sensores, lastSensores, multiplicadorYaw);
 				SSD1306_GotoXY(1, 30);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
@@ -685,56 +518,6 @@ void screenScheduler(void){
 				sprintf(msg, " Ki | %3.2f | %3.2f ", Ki, setpointDeEquilibrio);
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-//				float u = setpoint + RC_setpoint;
-//				sprintf(msg, "%3.2f ",u);
-//				SSD1306_GotoXY(1, 40);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//				sprintf(msg, "SP%3.2f|RCSP%f ", setpoint, RC_setpoint);
-//				SSD1306_GotoXY(1, 50);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-
-//					sprintf(msg, "SP:%.1f", setpoint);
-//					SSD1306_GotoXY(1, 30);
-//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//					sprintf(msg, "AP:%.3f", ALPHA_PID);
-//					SSD1306_GotoXY(1, 40);
-//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//					sprintf(msg, "dm: %ld", delta_t_medido);
-//					SSD1306_GotoXY(60, 0);
-//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//					sprintf(msg, "AG:%.2f", accelGiro);
-//					SSD1306_GotoXY(60, 10);
-//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//					sprintf(msg, "AX: %.0d", axRaw);
-//					SSD1306_GotoXY(60, 30);
-//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//					sprintf(msg, "AY:%.0d", ayRaw);
-//					SSD1306_GotoXY(60, 40);
-//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//					sprintf(msg, "AZ:%.0d", azRaw);
-//					SSD1306_GotoXY(60, 50);
-//					SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//				SSD1306_GotoXY(1, 20);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//				sprintf(msg, "DBL: %d",deadband_L);
-//				SSD1306_GotoXY(1, 30);
-//				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-//				sprintf(msg, "DBR: %d",deadband_R);
-//				if (flagWIFI) {
-//					// Dibujamos el icono de WiFi (podes usar lineas o circulos)
-//					SSD1306_Clear();
-//					SSD1306_DrawLine(110, 8, 114, 4, SSD1306_COLOR_WHITE); // Onda 1
-//					SSD1306_DrawLine(114, 4, 118, 8, SSD1306_COLOR_WHITE);
-//					SSD1306_DrawLine(112, 10, 116, 10, SSD1306_COLOR_WHITE); // Punto base
-//				} else {
-//					// Icono tachado o texto simple
-//					SSD1306_Clear();
-//					SSD1306_GotoXY(105, 2);
-//					SSD1306_Puts("X", &Font_7x10, SSD1306_COLOR_WHITE);
-//					SSD1306_DrawLine(105, 2, 120, 12, SSD1306_COLOR_WHITE); // Tachado
-//				}
 				oled_update_requested = 1;// NO llamamos a UpdateScreen(). Simplemente levantamos la bandera para el Scheduler.
 				break;
 			case 3:
@@ -835,7 +618,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     case CMD_CALIBRATE:
         flagCalibrationIsReady = 0;
         mpu_calibration_requested = 1;
@@ -846,7 +628,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     case CMD_SET_HB:
         if (payload_len >= 1) {
             uint16_t requested_delay = payload[0];
@@ -868,7 +649,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     case CMD_CHANGE_MODE:
         if (payload_len >= 2) {
             int16_t requested_mode = UNER_ReadInt16LE(payload);
@@ -887,7 +667,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     case CMD_ONOFFMOTORS:
         if (payload_len >= 1) {
             flagMotorsAreOn = (payload[0] != 0) ? 1 : 0;
@@ -907,7 +686,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     case CMD_CHANGE_DEADLINE_LEFT:
         uner_ack_status = 2;
         if (payload_len >= 2) {
@@ -920,7 +698,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     case CMD_CHANGE_DEADLINE_RIGHT:
         uner_ack_status = 2;
         if (payload_len >= 2) {
@@ -933,7 +710,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     case CMD_CHANGE_SETPOINT:
         if (payload_len >= 4) {
             setpoint = UNER_ReadFloatLE(payload);
@@ -973,7 +749,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             }
             if (requested_page <= 3) {
                 flagOLED = (uint8_t)requested_page;
-                flagDisplay = 1;
                 uner_ack_status = 0;
             } else {
                 uner_ack_status = 1;
@@ -1006,7 +781,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             }
         }
         break;
-
     case CMD_PID_PITCH_KP:
     case CMD_PID_PITCH_KI:
     case CMD_PID_PITCH_KD:
@@ -1052,7 +826,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     case CMD_IR_INICIAR_CALIBRACION:
         Iniciar_Calibracion_Linea();
         currentMode = MODO_FL_INICIO;
@@ -1063,7 +836,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     case CMD_IR_DETENER_CALIBRACION:
         Finalizar_Calibracion_Linea();
         currentMode = MODO_FL_BUSQUEDA_INICIAL;
@@ -1074,7 +846,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     default:
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = cmd;
@@ -1085,59 +856,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     }
 }
-
-void Procesar_Evasion_Obstaculo(void) {
-	/*
-    // 1. CONDICIÓN DE SALIDA (Prioridad Absoluta)
-    if (estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3]) {
-        currentMode = ;
-        estado_evasion = EVA_DETECTADO;
-        return;
-    }
-    // 2. MÁQUINA DE ESTADOS (Pared a la Derecha)
-    switch(estado_evasion) {
-        case EVA_DETECTADO:
-            RC_setpoint = 0.0f;
-            RC_steering = 0.0f;
-            estado_evasion = EVA_GIRAR_IZQ; // <--- Giramos a la izquierda para dejar la caja a la derecha
-            timer_evasion = HAL_GetTick();
-            break;
-        case EVA_GIRAR_IZQ:
-            RC_setpoint = 0.0f;
-            RC_steering = -150.0f; // Negativo (Izquierda)
-            if (HAL_GetTick() - timer_evasion > 500) estado_evasion = EVA_SEGUIR_PARED;
-            break;
-        case EVA_SEGUIR_PARED:
-            RC_setpoint = 1.0f;
-            // Mini PID de Pared Derecha (Usando adc_buffer[6])
-            // Lógica:
-            // Si lee 800 (muy cerca), Error = 800 - 1000 = -200. Steering Negativo -> Dobla Izq (se aleja).
-            // Si lee 1500 (muy lejos), Error = 1500 - 1000 = 500. Steering Positivo -> Dobla Der (se acerca).
-            float error_pared = (float)(adc_buffer[6] - SETPOINT_PARED_DER);
-            // Mantenemos el Kp MUY bajito porque el sensor es súper sensible
-            RC_steering = error_pared * 0.01f;
-            // ¿Llegó a la esquina? (El valor sube porque se va a infinito)
-            if (adc_buffer[6] > UMBRAL_PERDIDA_PARED) {
-                estado_evasion = EVA_AVANZAR_ESQUINA;
-                timer_evasion = HAL_GetTick();
-            }
-            break;
-        case EVA_AVANZAR_ESQUINA:
-            RC_setpoint = 1.0f;
-            RC_steering = 0.0f;
-            if (HAL_GetTick() - timer_evasion > 100) { // Avanza un toque para no enganchar la rueda
-                estado_evasion = EVA_GIRAR_DER; // <--- Ahora giramos a la derecha para rodear
-                timer_evasion = HAL_GetTick();
-            }
-            break;
-        case EVA_GIRAR_DER:
-            RC_setpoint = 0.0f;
-            RC_steering = 150.0f; // Positivo (Derecha)
-            if (HAL_GetTick() - timer_evasion > 500) estado_evasion = EVA_SEGUIR_PARED;
-            break;
-    }*/
-}
-
 void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    if (speed_L > 0) speed_L += deadband_L;			// Aplicar Deadband (Zona muerta)
 	    else if (speed_L < 0) speed_L -= deadband_L;
@@ -1154,14 +872,11 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	   } else {
 		if (speed_L >= 0) { // Motor 1 (PA8, PA9, PB4)
 			HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_RESET );
-							HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_SET);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)speed_L);
 			} else {
-
-
-
 				HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin,  GPIO_PIN_SET);
-							HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_RESET  );
+				HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin,  GPIO_PIN_RESET  );
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint16_t)(-speed_L));
 			}
 	   	   }
@@ -1183,12 +898,9 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 		}
 	    }
 }
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
     if (htim->Instance == TIM4) {
-
         ESP01_Timeout10ms();
-
         counterHB++;
         if (counterHB >= delayHB) {
             counterHB = 0;
@@ -1196,45 +908,33 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         }
     }
 }
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
     if (huart->Instance == USART1) {
         uint8_t value = ESP.AT_Rx_data;
-
         esp01_rx_count++;
-
         if (value == '\r' || value == '\n') {
             size_t len = strlen(esp01_last_rx);
-
             if (len < (sizeof(esp01_last_rx) - 1)) {
                 esp01_last_rx[len] = '|';
                 esp01_last_rx[len + 1] = '\0';
             }
         } else if (value >= 32 && value <= 126) {
             size_t len = strlen(esp01_last_rx);
-
             if (len >= (sizeof(esp01_last_rx) - 1)) {
                 memmove(esp01_last_rx, &esp01_last_rx[1], sizeof(esp01_last_rx) - 2);
                 esp01_last_rx[sizeof(esp01_last_rx) - 2] = '\0';
                 len = strlen(esp01_last_rx);
             }
-
             esp01_last_rx[len] = (char)value;
             esp01_last_rx[len + 1] = '\0';
         }
-
         ESP01_WriteRX(value);
-
         HAL_UART_Receive_IT(&huart1, &ESP.AT_Rx_data, 1);
     }
 }
-
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
     if (huart->Instance == USART1) {
         __HAL_UART_CLEAR_OREFLAG(huart);
-
         HAL_UART_Receive_IT(&huart1, &ESP.AT_Rx_data, 1);
     }
 }
@@ -1278,7 +978,6 @@ int main(void)
       MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
       /* ================= [ ESP01 AT OFICIAL ] ================= */
-
       memset(ip_address, 0, sizeof(ip_address));
       strncpy(ip_address, "0.0.0.0", sizeof(ip_address) - 1);
 
@@ -1304,17 +1003,13 @@ int main(void)
       ESP.Config.DoCHPD = setESP01_CHPD;
       ESP.Config.WriteUSARTByte = ESP01_UART_Transmit;
       ESP.Config.WriteByteToBufRX = ESP01_Data_Received;
-
       ESP01_Init(&ESP.Config);
       ESP01_AttachChangeState(&onESP01ChangeState);
       ESP01_AttachDebugStr(&onESP01Debug);
-
       HAL_UART_Receive_IT(&huart1, &ESP.AT_Rx_data, 1);
-
       ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
       ESP01_StartTransport();
       ESP.udp_started = 1;
-
       HAL_TIM_Base_Start_IT(&htim4);
   /* USER CODE END 2 */
 
@@ -1330,87 +1025,6 @@ int main(void)
 	    if (mpu_calibration_requested && !uner_ack_pending) {
 	        mpu_calibration_requested = 0;
 	        MPU6050_Calibrate();
-	    }
-	    continue;
-	    /*
-	     * Telemetría desactivada en esta etapa.
-	     * DataToQt() ya no debe escribir directo por UART1.
-	     */
-	    if (flagDataToQt) 	        flagDataToQt = 0; // DataToQt();
-	    if (flagDisplay) {
-	        flagDisplay = 0;
-	        screenScheduler();
-	    	}
-	    if (flagPID) {
-	        flagPID = 0;
-	        Filtrar_Sensores_IR();
-	        Leer_Linea_Digital();
-	        if (flag_calibrando_linea) {
-	            Procesar_Calibracion_Linea();
-	        }
-	        switch (currentMode) {
-	        case MODO_IDDLE:
-	            break;
-	        case MODO_RC:
-	            break;
-	        case MODO_FL_INICIO:
-	            break;
-	        case MODO_FL_BUSQUEDA_INICIAL:
-	            RC_steering = 0.0f;
-	            if (AIRAB) {
-	                currentMode = MODO_FL_SIGUIENDO;
-	            }
-	            break;
-	        case MODO_FL_SIGUIENDO:
-	        {
-	            if (adc_buffer[5] < UMBRAL_FRENTE_CHOQUE) {
-	                break;
-	            }
-
-	            error_linea = calcularErrorYawContinuo();
-	            RC_steering = Calcular_PID_YAW(error_linea);
-
-	            float abs_steering = (RC_steering < 0) ? -RC_steering : RC_steering;
-
-	            RC_setpoint = RC_setpoint_base - (abs_steering * multiplicadorYaw);
-
-	            if (RC_setpoint < 0.2f) {
-	                RC_setpoint = 0.2f;
-	            }
-
-	            float compensacion_anti_caida = abs_steering * multiplicadorYaw;
-	            RC_setpoint = RC_setpoint - compensacion_anti_caida;
-	            break;
-	        }
-
-	        case MODO_FL_RESCATE:
-	            RC_setpoint_base = 0.0f;
-	            error_linea = 0.0f;
-
-	            if (last_state_linea < 0.0f) {
-	                RC_steering = 0;
-	            } else {
-	                RC_steering = 0;
-	            }
-
-	            if (AIRAB) {
-	                currentMode = MODO_FL_SIGUIENDO;
-	                break;
-	            }
-	            break;
-
-	        default:
-	            break;
-	        }
-
-	        PID_PITCH();
-
-	        if (AIRAB) {
-	            ultimo_estado_sensores[0] = estado_sensores[0];
-	            ultimo_estado_sensores[1] = estado_sensores[1];
-	            ultimo_estado_sensores[2] = estado_sensores[2];
-	            ultimo_estado_sensores[3] = estado_sensores[3];
-	        }
 	    }
   }
   /* USER CODE END 3 */

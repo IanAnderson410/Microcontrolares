@@ -57,7 +57,7 @@ typedef enum{
 #define ESP01_TRANSPORT_UDP        0
 #define ESP01_TRANSPORT_TCP        1
 #ifndef ESP01_TRANSPORT
-#define ESP01_TRANSPORT            ESP01_TRANSPORT_TCP
+#define ESP01_TRANSPORT            ESP01_TRANSPORT_UDP
 #endif
 #define ESP01_APP_MODE_QT          0
 #define ESP01_APP_MODE_HTTP_SOFTAP 1

@@ -378,16 +378,13 @@ void ESP01_Init(_sESP01Handle *hESP01){
 void ESP01_Timeout10ms(){
 	if(esp01TimeoutTask)
 		esp01TimeoutTask--;
-
 	if(esp01TimeoutDataRx){
 		esp01TimeoutDataRx--;
 		if(!esp01TimeoutDataRx)
 			esp01HState = 0;
 	}
-
 	if(esp01TimeoutTxSymbol)
 		esp01TimeoutTxSymbol--;
-
 }
 
 void ESP01_Task(){
