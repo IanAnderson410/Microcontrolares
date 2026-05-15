@@ -587,44 +587,6 @@ _eESP01STATUS ESP01_StartTransport(void)
 
 void ESP01_App_Task(void)
 {
-	static uint32_t last_oled_update = 0;
-	static uint32_t last_mpu_update = 0;
-	uint32_t now = HAL_GetTick();
-
-	ESP01_Task();
-#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
-	ESP01_Http_Task();
-#else
-	if (esp01_http_softap_active) {
-		ESP01_Http_Task();
-	}
-#endif
-	UNER_Rx_Task();
-	UNER_Tx_Task();
-
-	if ((now - last_mpu_update) >= 10) {
-		last_mpu_update = now;
-
-		if (flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
-			flag_RC_active = 0;
-			RC_setpoint = 0.0f;
-			RC_slow_setpoint = 0.0f;
-			RC_steering = 0;
-		}
-
-		Telemetry_UpdateMPU();
-		Filtrar_Sensores_IR();
-		Leer_Linea_Digital();
-		if (flag_calibrando_linea) {
-			Procesar_Calibracion_Linea();
-		}
-		PID_PITCH();
-	}
-
-	if ((now - last_oled_update) >= 500) {
-		last_oled_update = now;
-		screenScheduler();
-	}
 
 	if (esp01_http_softap_requested && !uner_ack_pending && !uner_tx_busy) {
 		esp01_http_softap_requested = 0;
@@ -647,15 +609,7 @@ void ESP01_App_Task(void)
 		}
 	}
 
-	if (uner_telemetry_enabled && !uner_ack_pending &&
-		ESP.udp_connected && !uner_tx_busy && ESP.uner_tx_count == 0 &&
-		(int32_t)(now - uner_next_telemetry_tick) >= 0) {
-		if (UNER_SendTelemetryV1()) {
-			uner_next_telemetry_tick = now + UNER_TELEMETRY_PERIOD_MS;
-		} else {
-			uner_next_telemetry_tick = now + 50;
-		}
-	}
+
 }
 
 volatile uint8_t http_response_pending = 0;

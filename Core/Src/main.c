@@ -126,7 +126,6 @@ enum {
 
        CMD_PID_PITCH_LIM_INCLI		= 24, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Pitch*/
        CMD_PID_PITCH_CORECCION_RCSP= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
-
        CMD_RC_MOVE_5_CM             = 30, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
 
        //PID SISTEMA DE GIRO
@@ -562,7 +561,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_status = 0;
         uner_ack_pending = 1;
         break;
-
     case CMD_TELEMETRY_STOP:
         uner_telemetry_enabled = 0;
         uner_ack_cmd = CMD_TELEMETRY_STOP;
@@ -570,7 +568,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_status = 0;
         uner_ack_pending = 1;
         break;
-
     case CMD_HTTP_SOFTAP:
         uner_telemetry_enabled = 0;
         esp01_http_softap_requested = 1;
@@ -579,7 +576,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_status = 0;
         uner_ack_pending = 1;
         break;
-
     case CMD_SET_YAW_PD:
         if (payload_len >= 8) {
             Kp_yaw = UNER_ReadFloatLE(payload);
@@ -887,13 +883,11 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    } else {
 		if (speed_R >= 0) {// Motor 2 (PB3, PA15, PB5)
 			HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_SET  );
-						HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin,  GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin,  GPIO_PIN_RESET);
 			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)speed_R);
 		} else {
-
-
 			HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_RESET);
-						HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_SET  );
+			HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_SET  );
 			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)(-speed_R));
 		}
 	    }
@@ -962,7 +956,6 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
@@ -980,18 +973,15 @@ int main(void)
       /* ================= [ ESP01 AT OFICIAL ] ================= */
       memset(ip_address, 0, sizeof(ip_address));
       strncpy(ip_address, "0.0.0.0", sizeof(ip_address) - 1);
-
       if (SSD1306_Init() == 1) {
           esp01_oled_ready = 1;
           screenScheduler();
       }
-
       MPU6050_Init(&hi2c1);
       HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_buffer, 8);
       HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
       HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
       Robot_Drive(0, 0);
-
       ESP.uner_rx_read = 0;
       ESP.uner_rx_write = 0;
       ESP.uner_tx_head = 0;
@@ -999,7 +989,6 @@ int main(void)
       ESP.uner_tx_count = 0;
       ESP.udp_started = 0;
       ESP.udp_connected = 0;
-
       ESP.Config.DoCHPD = setESP01_CHPD;
       ESP.Config.WriteUSARTByte = ESP01_UART_Transmit;
       ESP.Config.WriteByteToBufRX = ESP01_Data_Received;
@@ -1026,6 +1015,47 @@ int main(void)
 	        mpu_calibration_requested = 0;
 	        MPU6050_Calibrate();
 	    }
+	    static uint32_t last_oled_update = 0;
+		static uint32_t last_mpu_update = 0;
+		uint32_t now = HAL_GetTick();
+	    #if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
+	    	ESP01_Http_Task();
+	    #else
+	    	if (esp01_http_softap_active) {
+	    		ESP01_Http_Task();
+	    	}
+	    #endif
+	    	UNER_Rx_Task();
+	    	UNER_Tx_Task();
+	    	if ((now - last_mpu_update) >= 10) {
+	    		last_mpu_update = now;
+	    		if (flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
+	    			flag_RC_active = 0;
+	    			RC_setpoint = 0.0f;
+	    			RC_slow_setpoint = 0.0f;
+	    			RC_steering = 0;
+	    		}
+	    		Telemetry_UpdateMPU();
+	    		Filtrar_Sensores_IR();
+	    		Leer_Linea_Digital();
+	    		if (flag_calibrando_linea) {
+	    			Procesar_Calibracion_Linea();
+	    		}
+	    		PID_PITCH();
+	    		}
+	    	if ((now - last_oled_update) >= 500) {
+	    		last_oled_update = now;
+	    		screenScheduler();
+	    		}
+	    	if (uner_telemetry_enabled && !uner_ack_pending && ESP.udp_connected && !uner_tx_busy && ESP.uner_tx_count == 0 &&
+	    			(int32_t)(now - uner_next_telemetry_tick) >= 0) {
+	    			if (UNER_SendTelemetryV1()) {
+	    				uner_next_telemetry_tick = now + UNER_TELEMETRY_PERIOD_MS;
+	    			} else {
+	    				uner_next_telemetry_tick = now + 50;
+	    			}
+	    		}
+			ESP01_Task();
   }
   /* USER CODE END 3 */
 }
