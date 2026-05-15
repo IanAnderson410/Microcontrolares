@@ -2,7 +2,7 @@
 
 void Filtrar_Sensores_IR(void)
 {
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < FL_LINE_SENSOR_COUNT; i++) {
         adc_filtrado[i] = (adc_filtrado[i] * 9 + adc_buffer[i]) / 10;
     }
 }
@@ -35,43 +35,18 @@ void Procesar_Calibracion_Linea(void)
 
 void Leer_Linea_Digital(void)
 {
-    uint16_t min_value = adc_filtrado[0];
-    uint16_t max_value = adc_filtrado[0];
-
-    for (int i = 1; i < FL_LINE_SENSOR_COUNT; i++) {
-        if (adc_filtrado[i] < min_value) {
-            min_value = adc_filtrado[i];
-        }
-        if (adc_filtrado[i] > max_value) {
-            max_value = adc_filtrado[i];
-        }
-    }
-
-    if ((uint16_t)(max_value - min_value) < FL_LINE_MIN_SPREAD) {
-        for (int i = 0; i < FL_LINE_SENSOR_COUNT; i++) {
-            estado_sensores[i] = 0;
-        }
-        return;
-    }
-
-    uint16_t mid_value = (uint16_t)((max_value + min_value) / 2U);
-    uint8_t high_count = 0;
-
     for (int i = 0; i < FL_LINE_SENSOR_COUNT; i++) {
-        if (adc_filtrado[i] >= mid_value) {
-            high_count++;
-        }
+        estado_sensores[i] = (adc_filtrado[i] > sensor_threshold[i]) ? 1U : 0U;
     }
 
-    uint8_t low_count = FL_LINE_SENSOR_COUNT - high_count;
-    uint8_t line_is_high = (high_count <= low_count) ? 1U : 0U;
-
-    for (int i = 0; i < FL_LINE_SENSOR_COUNT; i++) {
-        if (line_is_high) {
-            estado_sensores[i] = (adc_filtrado[i] >= mid_value) ? 1U : 0U;
-        } else {
-            estado_sensores[i] = (adc_filtrado[i] < mid_value) ? 1U : 0U;
-        }
+    if (AIRAB) {
+        ultimo_estado_sensores[0] = estado_sensores[0];
+        ultimo_estado_sensores[1] = estado_sensores[1];
+        ultimo_estado_sensores[2] = estado_sensores[2];
+        error_linea = calcularErrorYawContinuo();
+        last_state_linea = error_linea;
+    } else {
+        error_linea = 0.0f;
     }
 }
 
@@ -80,8 +55,7 @@ void Finalizar_Calibracion_Linea(void)
     static const uint16_t fallback_threshold[FL_LINE_SENSOR_COUNT] = {
         (806 + 3419) / 2,
         (283 + 3213) / 2,
-        (339 + 3456) / 2,
-        (1280 + 3634) / 2
+        (339 + 3456) / 2
     };
 
     flag_calibrando_linea = 0;

@@ -10,6 +10,12 @@ extern "C" {
 #define CONTROL_DT_PID     0.01f
 #define CONTROL_MODE_IDLE  0U
 #define CONTROL_MODE_RC    1U
+#define CONTROL_MODE_FL_INICIO             2U
+#define CONTROL_MODE_FL_BUSQUEDA_INICIAL   3U
+#define CONTROL_MODE_FL_SIGUIENDO          4U
+#define CONTROL_MODE_FL_RESCATE            5U
+#define CONTROL_MODE_FL_PERDIDO_FAILSAFE   6U
+#define CONTROL_MODE_FL_INGRESO_A_90       8U
 
 extern volatile uint8_t currentMode;
 extern volatile uint8_t flagMotorsAreOn;
@@ -23,6 +29,7 @@ extern volatile float giro;
 extern volatile float RC_setpoint;
 extern volatile float RC_slow_setpoint;
 extern volatile int16_t RC_steering;
+extern volatile float FL_setpoint;
 
 extern float angle_y;
 extern float Kp;
@@ -44,6 +51,9 @@ extern float error;
 extern float Kp_yaw;
 extern float Kd_yaw;
 extern float last_error_yaw;
+extern float error_linea;
+extern float last_state_linea;
+extern float multiplicadorYaw;
 
 void PID_PITCH(void);
 int16_t Calcular_PID_YAW(float error_linea);
