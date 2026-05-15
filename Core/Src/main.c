@@ -75,6 +75,8 @@
 #include "control_systems.h"
 #include "buzzer_app.h"
 #include "mpu6050_app.h"
+#include "uner_protocol.h"
+#include "button_key.h"
 #include "math.h"
 
 #include "ESP01.h"
@@ -217,24 +219,6 @@ typedef enum {
     FILTRO_SOLO_ACCEL = 2 		/*!< Desactivar filtro */
 } FiltroTipo_t;
 
-// ================= [ ESP01 / UDP ALIVE TEST ] ================= //
-typedef struct {
-    _sESP01Handle Config;
-    uint8_t AT_Rx_data;
-
-    uint8_t uner_rx_ring[255];
-    volatile uint16_t uner_rx_write;
-    volatile uint16_t uner_rx_read;
-    uint8_t uner_tx_frame[4][80];
-    uint8_t uner_tx_len[4];
-    volatile uint8_t uner_tx_head;
-    volatile uint8_t uner_tx_tail;
-    volatile uint8_t uner_tx_count;
-
-    volatile uint8_t udp_started;
-    volatile uint8_t udp_connected;
-} ESP01_App_t;
-
 ESP01_App_t ESP = {0};
 /* USER CODE END PTD */
 
@@ -244,57 +228,9 @@ ESP01_App_t ESP = {0};
 // ================= [ PID ] ================= //
 //#define 	ALPHA_PID 			0.98f    // Suaviza las vibraciones del acelerómetro
 #define 	DT_PID 				0.01f
-// ================= [ Periféricos ] ================= //
-    #define KEY_GPIO_PORT        GPIOA
-    #define KEY_GPIO_PIN         GPIO_PIN_0
-    #define KEY_ACTIVE_STATE     GPIO_PIN_SET
-    #define KEY_DEBOUNCE_MS      50U
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		        64
-#define 	UNER_HEADER_STR 	        "UNER"
-#define 	UNER_TOKEN      	        ':'
-
-#define     ESP01_UDP_LOCAL_PORT       8888
-#define     ESP01_QT_REMOTE_PORT       8888
-#define     ESP01_TRANSPORT_UDP        0
-#define     ESP01_TRANSPORT_TCP        1
-#define     ESP01_TRANSPORT            ESP01_TRANSPORT_TCP
-#define     ESP01_APP_MODE_QT          0
-#define     ESP01_APP_MODE_HTTP_SOFTAP 1
-#define     ESP01_APP_MODE             ESP01_APP_MODE_QT
-#define     ESP01_HTTP_PORT            80
 #define     ESP01_RX_DMA_SIZE          256
-#define     UNER_RX_RING_SIZE          128
-#define     UNER_TX_QUEUE_DEPTH        4
-#define     UNER_TX_FRAME_MAX          80
-#define     UNER_TELEMETRY_PERIOD_MS   100
-#define     UNER_TX_RECOVERY_MS        1000
-#define     UNER_V1_VERSION            1
-#define     UNER_V1_MAX_PAYLOAD        64
-#define     UNER_V1_FLAG_ACK_REQUIRED  0x01
-#define     UNER_V1_FLAG_ACK           0x02
-#define     RC_TIMEOUT_MS              350
-
-#define     ESP01_WIFI_PROFILE_UNIVERSITY  0
-#define     ESP01_WIFI_PROFILE_HOME        1
-#define     ESP01_WIFI_PROFILE_LAB         2
-#define     ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_UNIVERSITY
-
-#if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
-#define     WIFI_SSID                  "InternetPlus_872f10"
-#define     WIFI_PASSWORD              "wlan78d0ef"
-#define     ESP01_QT_REMOTE_IP         "192.168.1.3"
-#elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_LAB
-#define     WIFI_SSID                  "LabPrototip"
-#define     WIFI_PASSWORD              "labproto"
-#define     ESP01_QT_REMOTE_IP         "172.24.150.89"
-#elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_UNIVERSITY
-#define     WIFI_SSID                  "FCAL"
-#define     WIFI_PASSWORD              "fcalconcordia.06-2019"
-#define     ESP01_QT_REMOTE_IP         "172.23.224.234"
-#else
-#error "Seleccionar un perfil WiFi valido para ESP01_WIFI_PROFILE"
-#endif
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -506,16 +442,6 @@ _eESP01STATUS ESP01_StartTransport(void);
 void ESP01_Http_ProcessByte(uint8_t value);
 void ESP01_Http_Task(void);
 
-void UNER_Rx_Task(void);
-void UNER_Tx_Task(void);
-uint8_t UNER_QueueTx(const uint8_t *data, uint16_t len);
-void UNER_ProcessByte(uint8_t b);
-void UNER_ProcessByteV1(uint8_t b);
-uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len);
-uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t payload_len);
-uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status);
-uint8_t UNER_SendTelemetryV1(void);
-uint8_t UNER_SendInt16(uint8_t cmd, int16_t value);
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len);
 void Telemetry_UpdateMPU(void);
 void screenScheduler(void);
@@ -533,1288 +459,6 @@ void KEY_CalibrationTask(void);
  * @param param: 						Parámetro de 16 bits (enviado en Little Endian ).
  */
 void Procesar_Evasion_Obstaculo(void);
-void sendCMD(uint8_t cmd, uint16_t param);
-/**
- * @brief DataToQt:						Empaqueta y envía la telemetría completa hacia la interfaz Qt.
- * @details 							Envía aceleración (X, Y, Z), giro, posición y estado de los 8 sensores IR
- * 										Utiliza HAL_UART_Transmit_DMA para no bloquear el bucle de control
- */
-void DataToQt();
-/**
- * @brief Robot_Drive:					Controla el puente H TB6612FNG para el movimiento de las ruedas.
- * @param speed_L: 						Velocidad motor izquierdo (-3599 a 3599).
- * @param speed_R: 						Velocidad motor derecho (-3599 a 3599).
- * @note 								Aplica deadband para vencer la inercia mecánica de los motores.
- */
-/**
- * @brief HAL_TIM_PeriodElapsedCallback:Interrupción provocada por un timer
- * @param htim: 						manejador al timer utilizado
- */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
-/**
- * @brief HAL_I2C_MemRxCpltCallback:	Callback
- * @details
- * @param hi2c			manejador del I2C
- */
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c);
-/**
- * @brief HAL_I2C_MasterTxCpltCallback:
- * @details
- * @param
- */
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c);
-/**
- * @brief HAL_UARTEx_RxEventCallback	Callback de recepción UART por evento IDLE o Buffer lleno.
- * @details 							Gestiona la recepción de la IP del ESP-01 y el parseo de comandos UNER.
- * 										Implementa la verificación de Checksum mediante operación XOR[cite: 81].
- * @param Size Cantidad de bytes recibidos.
- */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
-/**
- * @brief HAL_UART_ErrorCallback
- * @details
- * @param huart:
- */
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-
-/* ===================== [ ESP01 + UDP ALIVE ] ===================== */
-
-void setESP01_CHPD(uint8_t val)
-{
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, val ? GPIO_PIN_SET : GPIO_PIN_RESET);
-#if 0
-    /*
-     * Ajustar si EN/CH_PD del ESP-01 está en otro GPIO.
-     * Uso PB2 porque tu main ya lo levantaba durante inicialización.
-     */
-//    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, val ? GPIO_PIN_SET : GPIO_PIN_RESET);
-#endif
-}
-
-int ESP01_UART_Transmit(uint8_t val)
-{
-    /*
-     * TX no bloqueante byte a byte hacia ESP01.
-     * Más adelante se puede migrar a TX DMA.
-     */
-    if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE)) {
-        huart1.Instance->DR = val;
-        esp01_tx_count++;
-        return 1;
-    }
-
-    return 0;
-}
-
-void ESP01_Data_Received(uint8_t value)
-{
-#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
-    esp01_payload_count++;
-    ESP01_Http_ProcessByte(value);
-    return;
-#else
-    if (esp01_http_softap_active) {
-        esp01_payload_count++;
-        ESP01_Http_ProcessByte(value);
-        return;
-    }
-
-    static char line[8];
-    static uint8_t index = 0;
-
-    esp01_payload_count++;
-
-    uint16_t next = ESP.uner_rx_write + 1;
-
-    if (next >= UNER_RX_RING_SIZE) {
-        next = 0;
-    }
-
-    if (next != ESP.uner_rx_read) {
-        ESP.uner_rx_ring[ESP.uner_rx_write] = value;
-        ESP.uner_rx_write = next;
-    }
-
-    if (index < sizeof(line)) {
-        line[index++] = (char)value;
-    } else {
-        index = 0;
-        return;
-    }
-
-    if (value == '\n') {
-        if (index == 7 && memcmp(line, "ALIVE\r\n", 7) == 0) {
-            esp01_alive_received = 1;
-            esp01_alive_count++;
-        }
-
-        index = 0;
-    }
-
-    return;
-#endif
-
-#if 0
-    /*
-     * Bytes útiles TCP recibidos desde ESP01.c después de parsear +IPD.
-     */
-    uint16_t next = ESP.uner_rx_write + 1;
-
-    if (next >= UNER_RX_RING_SIZE) {
-        next = 0;
-    }
-
-    if (next != ESP.uner_rx_read) {
-        ESP.uner_rx_ring[ESP.uner_rx_write] = value;
-        ESP.uner_rx_write = next;
-    }
-#endif
-}
-
-void onESP01ChangeState(_eESP01STATUS esp01State)
-{
-    switch (esp01State) {
-
-    case ESP01_WIFI_CONNECTED:
-        flagWIFI = 1;
-        break;
-
-    case ESP01_WIFI_NEW_IP:
-    {
-        char *ip = ESP01_GetLocalIP();
-
-        if (ip != NULL) {
-            strncpy(ip_address, ip, sizeof(ip_address) - 1);
-            ip_address[sizeof(ip_address) - 1] = '\0';
-            ip_received_flag = 1;
-        }
-
-        break;
-    }
-
-    case ESP01_UDPTCP_CONNECTED:
-        flagWIFI = 1;
-        ESP.udp_connected = 1;
-        ESP.udp_started = 1;
-        uner_tx_busy = 0;
-        uner_tx_last_try_tick = 0;
-        uner_recovering_udp = 0;
-        uner_next_telemetry_tick = HAL_GetTick() + UNER_TELEMETRY_PERIOD_MS;
-        break;
-
-    case ESP01_UDPTCP_DISCONNECTED:
-        ESP.udp_connected = 0;
-        uner_tx_busy = 0;
-        uner_recovering_udp = 0;
-        uner_tx_recover_count++;
-        break;
-
-    case ESP01_WIFI_DISCONNECTED:
-        flagWIFI = 0;
-        ESP.udp_connected = 0;
-        ESP.udp_started = 0;
-        uner_tx_busy = 0;
-        uner_recovering_udp = 0;
-        uner_tx_recover_count++;
-        break;
-
-    case ESP01_SEND_OK:
-        uner_tx_busy = 0;
-        uner_tx_ok_count++;
-        uner_tx_last_ok_tick = HAL_GetTick();
-        uner_tx_last_try_tick = 0;
-        uner_next_telemetry_tick = uner_tx_last_ok_tick + UNER_TELEMETRY_PERIOD_MS;
-        break;
-
-    default:
-        break;
-    }
-}
-
-void onESP01Debug(const char *dbgStr)
-{
-    if (dbgStr == NULL) {
-        return;
-    }
-
-    if (strncmp(dbgStr, "+&DBG", 5) == 0) {
-        dbgStr += 5;
-    }
-
-    const char *failStr = NULL;
-
-    if (strncmp(dbgStr, "FAIL_SENDOK", 11) == 0) {
-        failStr = "SOK";
-    } else if (strncmp(dbgStr, "FAIL_PROMPT", 11) == 0) {
-        failStr = "PRM";
-    } else if (strncmp(dbgStr, "FAIL_ERROR", 10) == 0) {
-        failStr = "ERR";
-    } else if (strncmp(dbgStr, "FAIL_DISCONN", 12) == 0) {
-        failStr = "DSC";
-    } else if (strncmp(dbgStr, "FAIL_CLOSED", 11) == 0) {
-        failStr = "CLS";
-    } else if (strncmp(dbgStr, "FAIL_BUSY", 9) == 0) {
-        failStr = "BSY";
-    }
-
-    if (failStr == NULL) {
-        return;
-    }
-
-    dbgStr = failStr;
-
-    strncpy(esp01_last_debug, dbgStr, sizeof(esp01_last_debug) - 1);
-    esp01_last_debug[sizeof(esp01_last_debug) - 1] = '\0';
-
-    for (uint8_t i = 0; esp01_last_debug[i] != '\0'; i++) {
-        if (esp01_last_debug[i] == '\r' || esp01_last_debug[i] == '\n') {
-            esp01_last_debug[i] = '\0';
-            break;
-        }
-    }
-}
-
-void ESP01_App_Task(void)
-{
-    static uint32_t last_oled_update = 0;
-    static uint32_t last_mpu_update = 0;
-    uint32_t now = HAL_GetTick();
-
-    ESP01_Task();
-#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
-    ESP01_Http_Task();
-#else
-    if (esp01_http_softap_active) {
-        ESP01_Http_Task();
-    }
-#endif
-    UNER_Rx_Task();
-    UNER_Tx_Task();
-
-    if ((now - last_mpu_update) >= 10) {
-        last_mpu_update = now;
-
-        if (flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
-            flag_RC_active = 0;
-            RC_setpoint = 0.0f;
-            RC_slow_setpoint = 0.0f;
-            RC_steering = 0;
-        }
-
-        Telemetry_UpdateMPU();
-        Filtrar_Sensores_IR();
-        Leer_Linea_Digital();
-        if (flag_calibrando_linea) {
-            Procesar_Calibracion_Linea();
-        }
-        PID_PITCH();
-    }
-
-    if ((now - last_oled_update) >= 500) {
-        last_oled_update = now;
-        screenScheduler();
-    }
-
-    if (esp01_http_softap_requested && !uner_ack_pending && !uner_tx_busy) {
-        esp01_http_softap_requested = 0;
-        esp01_http_softap_active = 1;
-        uner_telemetry_enabled = 0;
-        ESP.uner_tx_head = 0;
-        ESP.uner_tx_tail = 0;
-        ESP.uner_tx_count = 0;
-        ESP.udp_connected = 0;
-        ESP.udp_started = 0;
-        ESP01_StartTransport();
-        ESP.udp_started = 1;
-        return;
-    }
-
-    if (uner_ack_pending && ESP.udp_connected && !uner_tx_busy) {
-        if (UNER_SendAckV1(uner_ack_cmd, uner_ack_seq, uner_ack_status)) {
-            uner_ack_pending = 0;
-            esp01_ack_count++;
-        }
-    }
-
-    if (uner_telemetry_enabled && !uner_ack_pending &&
-        ESP.udp_connected && !uner_tx_busy && ESP.uner_tx_count == 0 &&
-        (int32_t)(now - uner_next_telemetry_tick) >= 0) {
-        if (UNER_SendTelemetryV1()) {
-            uner_next_telemetry_tick = now + UNER_TELEMETRY_PERIOD_MS;
-        } else {
-            uner_next_telemetry_tick = now + 50;
-        }
-    }
-}
-
-/* ===================== [ UNER mínimo: ALIVE -> ACK ] ===================== */
-
-void KEY_CalibrationTask(void)
-{
-    static GPIO_PinState last_raw_state = GPIO_PIN_RESET;
-    static GPIO_PinState stable_state = GPIO_PIN_RESET;
-    static uint32_t last_change_tick = 0;
-
-    GPIO_PinState raw_state = HAL_GPIO_ReadPin(KEY_GPIO_PORT, KEY_GPIO_PIN);
-    uint32_t now = HAL_GetTick();
-
-    if (raw_state != last_raw_state) {
-        last_raw_state = raw_state;
-        last_change_tick = now;
-        return;
-    }
-
-    if ((now - last_change_tick) < KEY_DEBOUNCE_MS) {
-        return;
-    }
-
-    if (raw_state == stable_state) {
-        return;
-    }
-
-    stable_state = raw_state;
-
-    if (stable_state != KEY_ACTIVE_STATE) {
-        return;
-    }
-
-    if (flag_calibrando_linea) {
-        Finalizar_Calibracion_Linea();
-        currentMode = MODO_FL_BUSQUEDA_INICIAL;
-    } else {
-        Iniciar_Calibracion_Linea();
-        currentMode = MODO_FL_INICIO;
-    }
-
-    screenScheduler();
-}
-
-uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len)
-{
-    uint16_t crc = 0xFFFF;
-
-    for (uint16_t i = 0; i < len; i++) {
-        crc ^= ((uint16_t)data[i] << 8);
-
-        for (uint8_t bit = 0; bit < 8; bit++) {
-            if (crc & 0x8000) {
-                crc = (uint16_t)((crc << 1) ^ 0x1021);
-            } else {
-                crc <<= 1;
-            }
-        }
-    }
-
-    return crc;
-}
-
-uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t payload_len)
-{
-    static uint8_t seq = 0;
-    uint8_t frame[4 + 1 + 1 + 1 + 1 + 1 + UNER_V1_MAX_PAYLOAD + 2];
-    uint16_t idx = 0;
-
-    if (payload_len > UNER_V1_MAX_PAYLOAD) {
-        return 0;
-    }
-
-    frame[idx++] = 'U';
-    frame[idx++] = 'N';
-    frame[idx++] = 'E';
-    frame[idx++] = 'R';
-    frame[idx++] = UNER_V1_VERSION;
-    frame[idx++] = cmd;
-    frame[idx++] = flags;
-    frame[idx++] = seq;
-    frame[idx++] = payload_len;
-
-    if (payload != NULL && payload_len > 0) {
-        memcpy(&frame[idx], payload, payload_len);
-        idx += payload_len;
-    }
-
-    uint16_t crc = UNER_Crc16Ccitt(frame, idx);
-    frame[idx++] = (uint8_t)(crc & 0xFF);
-    frame[idx++] = (uint8_t)((crc >> 8) & 0xFF);
-
-    if (UNER_QueueTx(frame, idx)) {
-        seq++;
-        uner_tx_ready_count++;
-        return 1;
-    }
-
-    uner_tx_busy_count++;
-    return 0;
-}
-
-uint8_t UNER_QueueTx(const uint8_t *data, uint16_t len)
-{
-    if (data == NULL || len == 0 || len > UNER_TX_FRAME_MAX) {
-        return 0;
-    }
-
-    if (ESP.uner_tx_count >= UNER_TX_QUEUE_DEPTH) {
-        return 0;
-    }
-
-    memcpy(ESP.uner_tx_frame[ESP.uner_tx_tail], data, len);
-    ESP.uner_tx_len[ESP.uner_tx_tail] = (uint8_t)len;
-    ESP.uner_tx_tail++;
-    if (ESP.uner_tx_tail >= UNER_TX_QUEUE_DEPTH) {
-        ESP.uner_tx_tail = 0;
-    }
-    ESP.uner_tx_count++;
-
-    return 1;
-}
-
-_eESP01STATUS ESP01_StartTransport(void)
-{
-#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
-    return ESP01_StartHTTPServer(ESP01_HTTP_PORT);
-#else
-    if (esp01_http_softap_active) {
-        return ESP01_StartHTTPServer(ESP01_HTTP_PORT);
-    }
-
-#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
-    return ESP01_StartTCP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, 0);
-#else
-    return ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
-#endif
-#endif
-}
-
-void ESP01_Http_ProcessByte(uint8_t value)
-{
-    static char request_line[96];
-    static uint8_t index = 0;
-    static uint8_t line_done = 0;
-    static uint8_t pending_link = 0;
-    extern volatile uint8_t http_response_pending;
-    extern volatile uint8_t http_response_link;
-    extern volatile uint16_t http_requested_hb;
-
-    if (!line_done) {
-        if (index < (sizeof(request_line) - 1)) {
-            request_line[index++] = (char)value;
-        }
-
-        if (value == '\n') {
-            request_line[index] = '\0';
-            pending_link = ESP01_GetLastIPDLinkId();
-            line_done = 1;
-
-            if (strncmp(request_line, "GET /hb?ms=", 11) == 0) {
-                uint16_t hb = (uint16_t)atoi(&request_line[11]);
-                if (hb >= 1 && hb <= 200) {
-                    delayHB = hb;
-                    http_requested_hb = hb;
-                }
-            }
-
-            if (strncmp(request_line, "GET ", 4) == 0) {
-                http_response_link = pending_link;
-                http_response_pending = 1;
-            }
-        }
-    }
-
-    if (line_done && value == '\n' && index == 0) {
-        line_done = 0;
-    }
-
-    if (line_done && value == '\n') {
-        index = 0;
-        line_done = 0;
-    }
-}
-
-volatile uint8_t http_response_pending = 0;
-volatile uint8_t http_response_link = 0;
-volatile uint16_t http_requested_hb = 0;
-
-void ESP01_Http_Task(void)
-{
-    char body[150];
-    char response[256];
-    int body_len;
-    int response_len;
-
-    if (!http_response_pending || uner_tx_busy) {
-        return;
-    }
-
-    body_len = snprintf(body, sizeof(body),
-                        "<html><body><h3>N20 HB</h3><p>HB=%u</p>"
-                        "<a href=\"/hb?ms=10\">10</a> "
-                        "<a href=\"/hb?ms=50\">50</a> "
-                        "<a href=\"/hb?ms=100\">100</a>"
-                        "</body></html>",
-                        delayHB);
-    if (body_len < 0 || body_len >= (int)sizeof(body)) {
-        return;
-    }
-
-    response_len = snprintf(response, sizeof(response),
-                            "HTTP/1.1 200 OK\r\n"
-                            "Content-Type: text/html\r\n"
-                            "Connection: close\r\n"
-                            "Content-Length: %d\r\n\r\n%s",
-                            body_len, body);
-    if (response_len <= 0 || response_len >= (int)sizeof(response)) {
-        return;
-    }
-
-    if (ESP01_SendToClient(http_response_link, (uint8_t *)response, 0, (uint16_t)response_len, (uint16_t)response_len) == ESP01_SEND_READY) {
-        http_response_pending = 0;
-        uner_tx_busy = 1;
-    }
-}
-
-void UNER_Tx_Task(void)
-{
-    uint8_t len;
-    _eESP01STATUS status;
-    uint32_t now = HAL_GetTick();
-
-    if (ESP.uner_tx_count == 0 || !ESP.udp_connected) {
-        return;
-    }
-
-    if (uner_tx_last_try_tick != 0 && (now - uner_tx_last_try_tick) < 20) {
-        return;
-    }
-
-    if (uner_tx_last_try_tick != 0 && (now - uner_tx_last_try_tick) > UNER_TX_RECOVERY_MS) {
-        ESP.uner_tx_head = 0;
-        ESP.uner_tx_tail = 0;
-        ESP.uner_tx_count = 0;
-        ESP.udp_connected = 0;
-        ESP.udp_started = 0;
-        uner_tx_recover_count++;
-        uner_tx_last_try_tick = now;
-        ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
-        ESP01_StartTransport();
-        ESP.udp_started = 1;
-        return;
-    }
-
-    len = ESP.uner_tx_len[ESP.uner_tx_head];
-    status = ESP01_Send(ESP.uner_tx_frame[ESP.uner_tx_head], 0, len, len);
-
-    if (status == ESP01_SEND_READY) {
-        uner_tx_last_try_tick = now;
-        uner_tx_busy = 1;
-        ESP.uner_tx_head++;
-        if (ESP.uner_tx_head >= UNER_TX_QUEUE_DEPTH) {
-            ESP.uner_tx_head = 0;
-        }
-        ESP.uner_tx_count--;
-    } else if (status == ESP01_SEND_BUSY) {
-        uner_tx_busy_count++;
-    }
-}
-
-uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status)
-{
-    uint8_t payload[3];
-
-    payload[0] = acked_cmd;
-    payload[1] = acked_seq;
-    payload[2] = status;
-
-    return UNER_SendV1(CMD_ACK, UNER_V1_FLAG_ACK, payload, sizeof(payload));
-}
-
-uint8_t UNER_SendTelemetryV1(void)
-{
-    PayloadDataV1_t payload;
-
-    payload.acc_x = (int16_t)accelx;
-    payload.acc_y = (int16_t)accely;
-    payload.acc_z = (int16_t)accelz;
-    payload.gyro_pitch = (int16_t)giro;
-    payload.gyro_yaw = (int16_t)giro_z;
-    payload.pitch_cdeg = (int16_t)(angle_y * 100.0f);
-    payload.roll_cdeg = (int16_t)(angle_roll * 100.0f);
-    payload.yaw_cdeg = (int16_t)(angle_yaw * 100.0f);
-    payload.pos_x_mm = (int32_t)(error_linea * 1000.0f);
-    payload.pos_y_mm = (int32_t)RC_steering;
-    payload.velocidad_mm_s = (int16_t)(velocidad_objetivo * 1000.0f);
-    payload.modo = currentMode;
-    payload.infoAdicional = (uint8_t)((flagCalibrationIsReady ? 0x01 : 0x00) |
-                                      (flag_calibrando_linea ? 0x02 : 0x00) |
-                                      ((estado_sensores[0] & 0x01) << 2) |
-                                      ((estado_sensores[1] & 0x01) << 3) |
-                                      ((estado_sensores[2] & 0x01) << 4) |
-                                      ((estado_sensores[3] & 0x01) << 5));
-
-    for (uint8_t i = 0; i < 8; i++) {
-        payload.IR[i] = adc_filtrado[i];
-    }
-
-    return UNER_SendV1(CMD_DATA, 0, (const uint8_t *)&payload, sizeof(payload));
-}
-
-uint8_t UNER_Send(uint8_t cmd, const uint8_t *payload, uint8_t payload_len)
-{
-    uint8_t frame[4 + 1 + 1 + 1 + 64 + 1];
-    uint16_t idx = 0;
-
-    if (payload_len > 64) {
-        return 0;
-    }
-
-    frame[idx++] = 'U';
-    frame[idx++] = 'N';
-    frame[idx++] = 'E';
-    frame[idx++] = 'R';
-
-    /*
-     * Len = CMD + Payload + Checksum.
-     * Token ':' queda fuera del Len, igual que en tu código original.
-     */
-    frame[idx++] = (uint8_t)(1 + payload_len + 1);
-    frame[idx++] = UNER_TOKEN;
-    frame[idx++] = cmd;
-
-    if (payload != NULL && payload_len > 0) {
-        memcpy(&frame[idx], payload, payload_len);
-        idx += payload_len;
-    }
-
-    uint8_t checksum = 0;
-
-    for (uint16_t i = 0; i < idx; i++) {
-        checksum ^= frame[i];
-    }
-
-    frame[idx++] = checksum;
-
-    return (ESP01_Send(frame, 0, idx, idx) == ESP01_SEND_READY);
-}
-
-uint8_t UNER_SendInt16(uint8_t cmd, int16_t value)
-{
-    uint8_t payload[2];
-
-    payload[0] = (uint8_t)(value & 0xFF);
-    payload[1] = (uint8_t)((value >> 8) & 0xFF);
-
-    return UNER_SendV1(cmd, 0, payload, 2);
-}
-
-void UNER_Rx_Task(void)
-{
-    while (ESP.uner_rx_read != ESP.uner_rx_write) {
-        uint8_t b = ESP.uner_rx_ring[ESP.uner_rx_read];
-
-        ESP.uner_rx_read++;
-
-        if (ESP.uner_rx_read >= UNER_RX_RING_SIZE) {
-            ESP.uner_rx_read = 0;
-        }
-
-        UNER_ProcessByteV1(b);
-    }
-}
-
-void UNER_ProcessByteV1(uint8_t b)
-{
-    typedef enum {
-        UNER_V1_ST_U,
-        UNER_V1_ST_N,
-        UNER_V1_ST_E,
-        UNER_V1_ST_R,
-        UNER_V1_ST_VERSION,
-        UNER_V1_ST_CMD,
-        UNER_V1_ST_FLAGS,
-        UNER_V1_ST_SEQ,
-        UNER_V1_ST_LEN,
-        UNER_V1_ST_PAYLOAD,
-        UNER_V1_ST_CRC0,
-        UNER_V1_ST_CRC1
-    } UNER_V1_State_t;
-
-    static UNER_V1_State_t st = UNER_V1_ST_U;
-    static uint8_t frame[4 + 1 + 1 + 1 + 1 + 1 + UNER_V1_MAX_PAYLOAD];
-    static uint8_t idx = 0;
-    static uint8_t payload_len = 0;
-    static uint8_t payload_idx = 0;
-    static uint8_t crc0 = 0;
-
-    switch (st) {
-    case UNER_V1_ST_U:
-        if (b == 'U') {
-            idx = 0;
-            frame[idx++] = b;
-            st = UNER_V1_ST_N;
-        }
-        break;
-
-    case UNER_V1_ST_N:
-        if (b == 'N') {
-            frame[idx++] = b;
-            st = UNER_V1_ST_E;
-        } else {
-            st = UNER_V1_ST_U;
-        }
-        break;
-
-    case UNER_V1_ST_E:
-        if (b == 'E') {
-            frame[idx++] = b;
-            st = UNER_V1_ST_R;
-        } else {
-            st = UNER_V1_ST_U;
-        }
-        break;
-
-    case UNER_V1_ST_R:
-        if (b == 'R') {
-            frame[idx++] = b;
-            st = UNER_V1_ST_VERSION;
-        } else {
-            st = UNER_V1_ST_U;
-        }
-        break;
-
-    case UNER_V1_ST_VERSION:
-        if (b == UNER_V1_VERSION) {
-            frame[idx++] = b;
-            st = UNER_V1_ST_CMD;
-        } else {
-            st = UNER_V1_ST_U;
-        }
-        break;
-
-    case UNER_V1_ST_CMD:
-        frame[idx++] = b;
-        st = UNER_V1_ST_FLAGS;
-        break;
-
-    case UNER_V1_ST_FLAGS:
-        frame[idx++] = b;
-        st = UNER_V1_ST_SEQ;
-        break;
-
-    case UNER_V1_ST_SEQ:
-        frame[idx++] = b;
-        st = UNER_V1_ST_LEN;
-        break;
-
-    case UNER_V1_ST_LEN:
-        payload_len = b;
-        if (payload_len > UNER_V1_MAX_PAYLOAD) {
-            st = UNER_V1_ST_U;
-            break;
-        }
-
-        frame[idx++] = b;
-        payload_idx = 0;
-        st = (payload_len == 0) ? UNER_V1_ST_CRC0 : UNER_V1_ST_PAYLOAD;
-        break;
-
-    case UNER_V1_ST_PAYLOAD:
-        frame[idx++] = b;
-        payload_idx++;
-        if (payload_idx >= payload_len) {
-            st = UNER_V1_ST_CRC0;
-        }
-        break;
-
-    case UNER_V1_ST_CRC0:
-        crc0 = b;
-        st = UNER_V1_ST_CRC1;
-        break;
-
-    case UNER_V1_ST_CRC1:
-    {
-        uint16_t crc_rx = (uint16_t)crc0 | ((uint16_t)b << 8);
-        uint16_t crc_calc = UNER_Crc16Ccitt(frame, idx);
-
-        if (crc_rx == crc_calc) {
-            uint8_t cmd = frame[5];
-            uint8_t flags = frame[6];
-            uint8_t seq = frame[7];
-            uint8_t *payload = &frame[9];
-
-            UNER_HandlePacket(cmd, flags, seq, payload, payload_len);
-        }
-
-        st = UNER_V1_ST_U;
-        break;
-    }
-
-    default:
-        st = UNER_V1_ST_U;
-        break;
-    }
-}
-
-void UNER_ProcessByte(uint8_t b)
-{
-    typedef enum {
-        UNER_ST_U,
-        UNER_ST_N,
-        UNER_ST_E,
-        UNER_ST_R,
-        UNER_ST_LEN,
-        UNER_ST_TOKEN,
-        UNER_ST_BODY
-    } UNER_State_t;
-
-    static UNER_State_t st = UNER_ST_U;
-    static uint8_t len = 0;
-    static uint8_t idx = 0;
-    static uint8_t body[1 + 64 + 1];
-
-    switch (st) {
-
-    case UNER_ST_U:
-        if (b == 'U') st = UNER_ST_N;
-        break;
-
-    case UNER_ST_N:
-        st = (b == 'N') ? UNER_ST_E : UNER_ST_U;
-        break;
-
-    case UNER_ST_E:
-        st = (b == 'E') ? UNER_ST_R : UNER_ST_U;
-        break;
-
-    case UNER_ST_R:
-        st = (b == 'R') ? UNER_ST_LEN : UNER_ST_U;
-        break;
-
-    case UNER_ST_LEN:
-        len = b;
-
-        if (len < 2 || len > sizeof(body)) {
-            st = UNER_ST_U;
-        } else {
-            idx = 0;
-            st = UNER_ST_TOKEN;
-        }
-        break;
-
-    case UNER_ST_TOKEN:
-        if (b == UNER_TOKEN) {
-            st = UNER_ST_BODY;
-        } else {
-            st = UNER_ST_U;
-        }
-        break;
-
-    case UNER_ST_BODY:
-        body[idx++] = b;
-
-        if (idx >= len) {
-            uint8_t checksum = 0;
-
-            checksum ^= 'U';
-            checksum ^= 'N';
-            checksum ^= 'E';
-            checksum ^= 'R';
-            checksum ^= len;
-            checksum ^= UNER_TOKEN;
-
-            for (uint8_t i = 0; i < (len - 1); i++) {
-                checksum ^= body[i];
-            }
-
-            if (checksum == body[len - 1]) {
-                uint8_t cmd = body[0];
-                uint8_t *payload = &body[1];
-                uint8_t payload_len = len - 2;
-
-                UNER_HandlePacket(cmd, 0, 0, payload, payload_len);
-            }
-
-            st = UNER_ST_U;
-        }
-        break;
-
-    default:
-        st = UNER_ST_U;
-        break;
-    }
-}
-
-static int16_t UNER_ReadInt16LE(const uint8_t *payload)
-{
-    return (int16_t)((uint16_t)payload[0] | ((uint16_t)payload[1] << 8));
-}
-
-static float UNER_ReadFloatLE(const uint8_t *payload)
-{
-    uint32_t raw = (uint32_t)payload[0] |
-                   ((uint32_t)payload[1] << 8) |
-                   ((uint32_t)payload[2] << 16) |
-                   ((uint32_t)payload[3] << 24);
-    float value;
-
-    memcpy(&value, &raw, sizeof(value));
-    return value;
-}
-
-void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len)
-{
-    switch (cmd) {
-
-    case CMD_ALIVE:
-        esp01_alive_count++;
-        uner_ack_cmd = CMD_ALIVE;
-        uner_ack_seq = seq;
-        uner_ack_status = 0;
-        uner_ack_pending = 1;
-        break;
-
-    case CMD_TELEMETRY_START:
-        uner_telemetry_enabled = 1;
-        uner_next_telemetry_tick = HAL_GetTick();
-        uner_ack_cmd = CMD_TELEMETRY_START;
-        uner_ack_seq = seq;
-        uner_ack_status = 0;
-        uner_ack_pending = 1;
-        break;
-
-    case CMD_TELEMETRY_STOP:
-        uner_telemetry_enabled = 0;
-        uner_ack_cmd = CMD_TELEMETRY_STOP;
-        uner_ack_seq = seq;
-        uner_ack_status = 0;
-        uner_ack_pending = 1;
-        break;
-
-    case CMD_HTTP_SOFTAP:
-        uner_telemetry_enabled = 0;
-        esp01_http_softap_requested = 1;
-        uner_ack_cmd = CMD_HTTP_SOFTAP;
-        uner_ack_seq = seq;
-        uner_ack_status = 0;
-        uner_ack_pending = 1;
-        break;
-
-    case CMD_SET_YAW_PD:
-        if (payload_len >= 8) {
-            Kp_yaw = UNER_ReadFloatLE(payload);
-            Kd_yaw = UNER_ReadFloatLE(payload + 4);
-            uner_ack_status = 0;
-        } else {
-            uner_ack_status = 2;
-        }
-
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_SET_YAW_PD;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_START:
-        flagMotorsAreOn = 1;
-        uner_ack_status = 0;
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_START;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_STOP:
-        flagMotorsAreOn = 0;
-        RC_setpoint = 0.0f;
-        RC_slow_setpoint = 0.0f;
-        RC_steering = 0;
-        Robot_Drive(0, 0);
-        uner_ack_status = 0;
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_STOP;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_CALIBRATE:
-        flagCalibrationIsReady = 0;
-        mpu_calibration_requested = 1;
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_CALIBRATE;
-            uner_ack_seq = seq;
-            uner_ack_status = 0;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_SET_HB:
-        if (payload_len >= 1) {
-            uint16_t requested_delay = payload[0];
-
-            if (payload_len >= 2) {
-                requested_delay = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
-            }
-
-            if (requested_delay >= 1 && requested_delay <= 200) {
-                delayHB = requested_delay;
-                uner_ack_status = 0;
-            } else {
-                uner_ack_status = 1;
-            }
-        } else {
-            uner_ack_status = 2;
-        }
-
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_SET_HB;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_CHANGE_MODE:
-        if (payload_len >= 2) {
-            int16_t requested_mode = (int16_t)((uint16_t)payload[0] | ((uint16_t)payload[1] << 8));
-
-            if (requested_mode >= MODO_IDDLE && requested_mode <= MODO_FL_INGRESO_A_90) {
-                currentMode = (uint8_t)requested_mode;
-                uner_ack_status = 0;
-            } else {
-                uner_ack_status = 1;
-            }
-        } else {
-            uner_ack_status = 2;
-        }
-
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_CHANGE_MODE;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_ONOFFMOTORS:
-        if (payload_len >= 1) {
-            flagMotorsAreOn = (payload[0] != 0) ? 1 : 0;
-
-            if (!flagMotorsAreOn) {
-                RC_setpoint = 0.0f;
-                RC_slow_setpoint = 0.0f;
-                RC_steering = 0;
-                Robot_Drive(0, 0);
-            }
-
-            uner_ack_status = 0;
-        } else {
-            uner_ack_status = 2;
-        }
-
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_ONOFFMOTORS;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_CHANGE_DEADLINE_LEFT:
-        if (payload_len >= 2) {
-            deadband_L = UNER_ReadInt16LE(payload);
-            uner_ack_status = 0;
-        } else {
-            uner_ack_status = 2;
-        }
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_CHANGE_DEADLINE_LEFT;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_CHANGE_DEADLINE_RIGHT:
-        if (payload_len >= 2) {
-            deadband_R = UNER_ReadInt16LE(payload);
-            uner_ack_status = 0;
-        } else {
-            uner_ack_status = 2;
-        }
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_CHANGE_DEADLINE_RIGHT;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_CHANGE_SETPOINT:
-        if (payload_len >= 4) {
-            setpoint = UNER_ReadFloatLE(payload);
-            uner_ack_status = 0;
-        } else if (payload_len >= 2) {
-            setpoint = (float)UNER_ReadInt16LE(payload);
-            uner_ack_status = 0;
-        } else {
-            uner_ack_status = 2;
-        }
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_CHANGE_SETPOINT;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_DEFINE_ZERO_SETPOINT:
-        if (payload_len >= 4) {
-            setpointDeEquilibrio = UNER_ReadFloatLE(payload);
-        } else {
-            setpointDeEquilibrio = angle_y;
-        }
-        uner_ack_status = 0;
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_DEFINE_ZERO_SETPOINT;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_CHANGE_OLED_SCREEN:
-        if (payload_len >= 1) {
-            uint16_t requested_page = payload[0];
-
-            if (payload_len >= 2) {
-                requested_page = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
-            }
-
-            if (requested_page <= 3) {
-                flagOLED = (uint8_t)requested_page;
-                flagDisplay = 1;
-                uner_ack_status = 0;
-            } else {
-                uner_ack_status = 1;
-            }
-        } else {
-            uner_ack_status = 2;
-        }
-
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_CHANGE_OLED_SCREEN;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_RC:
-        if (payload_len >= 4) {
-            uint8_t active = payload[0];
-            int8_t setpoint_cmd = (int8_t)payload[1];
-            int16_t steering_cmd = UNER_ReadInt16LE(&payload[2]);
-
-            rc_last_packet_tick = HAL_GetTick();
-            flag_RC_active = (active != 0) ? 1 : 0;
-
-            if (flag_RC_active) {
-                RC_setpoint = ((float)setpoint_cmd) / 10.0f;
-                RC_steering = steering_cmd;
-            } else {
-                RC_setpoint = 0.0f;
-                RC_slow_setpoint = 0.0f;
-                RC_steering = 0;
-            }
-        }
-        break;
-
-    case CMD_PID_PITCH_KP:
-    case CMD_PID_PITCH_KI:
-    case CMD_PID_PITCH_KD:
-    case CMD_PID_ALPHA:
-    case CMD_PID_PITCH_LIM_INCLI:
-    case CMD_PID_PITCH_CORECCION_RCSP:
-    case CMD_PID_YAW_KP:
-    case CMD_PID_YAW_KD:
-    case CMD_PID_YAW_SP:
-    case CMD_PID_YAW_MULTIPLICADOR:
-        if (payload_len >= 4) {
-            float value = UNER_ReadFloatLE(payload);
-
-            switch (cmd) {
-            case CMD_PID_PITCH_KP: Kp = value; break;
-            case CMD_PID_PITCH_KI: Ki = value; break;
-            case CMD_PID_PITCH_KD: Kd = value; break;
-            case CMD_PID_ALPHA: ALPHA_PID = value; break;
-            case CMD_PID_PITCH_LIM_INCLI: limite_inclinacion = value; break;
-            case CMD_PID_PITCH_CORECCION_RCSP: correccionRCSP = value; break;
-            case CMD_PID_YAW_KP: Kp_yaw = value; break;
-            case CMD_PID_YAW_KD: Kd_yaw = value; break;
-            case CMD_PID_YAW_SP: FL_setpoint = value; break;
-            case CMD_PID_YAW_MULTIPLICADOR: multiplicadorYaw = value; break;
-            default: break;
-            }
-
-            uner_ack_status = 0;
-        } else if (payload_len >= 2) {
-            float value = (float)UNER_ReadInt16LE(payload);
-            uint8_t status = 0;
-
-            switch (cmd) {
-            case CMD_PID_PITCH_LIM_INCLI: limite_inclinacion = value; break;
-            case CMD_PID_PITCH_CORECCION_RCSP: correccionRCSP = value; break;
-            case CMD_PID_YAW_SP: FL_setpoint = value; break;
-            default: status = 1; break;
-            }
-
-            uner_ack_status = status;
-        } else {
-            uner_ack_status = 2;
-        }
-
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = cmd;
-            uner_ack_seq = seq;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_IR_INICIAR_CALIBRACION:
-        Iniciar_Calibracion_Linea();
-        currentMode = MODO_FL_INICIO;
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_IR_INICIAR_CALIBRACION;
-            uner_ack_seq = seq;
-            uner_ack_status = 0;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    case CMD_IR_DETENER_CALIBRACION:
-        Finalizar_Calibracion_Linea();
-        currentMode = MODO_FL_BUSQUEDA_INICIAL;
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = CMD_IR_DETENER_CALIBRACION;
-            uner_ack_seq = seq;
-            uner_ack_status = 0;
-            uner_ack_pending = 1;
-        }
-        break;
-
-    default:
-        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
-            uner_ack_cmd = cmd;
-            uner_ack_seq = seq;
-            uner_ack_status = 0;
-            uner_ack_pending = 1;
-        }
-        break;
-    }
-}
-
-void sendCMD(uint8_t cmd, uint16_t param)
-{
-    UNER_SendInt16(cmd, (int16_t)param);
-}
-
 /*
  * IMPORTANTE:
  * DataToQt queda desactivada para esta etapa.
@@ -1934,19 +578,19 @@ void screenScheduler(void){
     }
 
     SSD1306_GotoXY(0, 0);
-#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
-    SSD1306_Puts("ESP01 HTTP", &Font_7x10, SSD1306_COLOR_WHITE);
-#else
-    if (esp01_http_softap_active) {
-        SSD1306_Puts("ESP01 HTTP", &Font_7x10, SSD1306_COLOR_WHITE);
-    } else {
-#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
-        SSD1306_Puts("ESP01 TCP", &Font_7x10, SSD1306_COLOR_WHITE);
-#else
-        SSD1306_Puts("ESP01 UDP", &Font_7x10, SSD1306_COLOR_WHITE);
-#endif
-    }
-#endif
+			#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
+				SSD1306_Puts("ESP01 HTTP", &Font_7x10, SSD1306_COLOR_WHITE);
+			#else
+				if (esp01_http_softap_active) {
+					SSD1306_Puts("ESP01 HTTP", &Font_7x10, SSD1306_COLOR_WHITE);
+				} else {
+			#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
+					SSD1306_Puts("ESP01 TCP", &Font_7x10, SSD1306_COLOR_WHITE);
+			#else
+					SSD1306_Puts("ESP01 UDP", &Font_7x10, SSD1306_COLOR_WHITE);
+			#endif
+				}
+			#endif
     SSD1306_GotoXY(0, 10);
     SSD1306_Puts("", &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(24, 10);
@@ -2116,6 +760,332 @@ void screenScheduler(void){
 			}
 	    }
 }
+void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len)
+{
+    switch (cmd) {
+    case CMD_ALIVE:
+        esp01_alive_count++;
+        uner_ack_cmd = CMD_ALIVE;
+        uner_ack_seq = seq;
+        uner_ack_status = 0;
+        uner_ack_pending = 1;
+        break;
+
+    case CMD_TELEMETRY_START:
+        uner_telemetry_enabled = 1;
+        uner_next_telemetry_tick = HAL_GetTick();
+        uner_ack_cmd = CMD_TELEMETRY_START;
+        uner_ack_seq = seq;
+        uner_ack_status = 0;
+        uner_ack_pending = 1;
+        break;
+
+    case CMD_TELEMETRY_STOP:
+        uner_telemetry_enabled = 0;
+        uner_ack_cmd = CMD_TELEMETRY_STOP;
+        uner_ack_seq = seq;
+        uner_ack_status = 0;
+        uner_ack_pending = 1;
+        break;
+
+    case CMD_HTTP_SOFTAP:
+        uner_telemetry_enabled = 0;
+        esp01_http_softap_requested = 1;
+        uner_ack_cmd = CMD_HTTP_SOFTAP;
+        uner_ack_seq = seq;
+        uner_ack_status = 0;
+        uner_ack_pending = 1;
+        break;
+
+    case CMD_SET_YAW_PD:
+        if (payload_len >= 8) {
+            Kp_yaw = UNER_ReadFloatLE(payload);
+            Kd_yaw = UNER_ReadFloatLE(payload + 4);
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_SET_YAW_PD;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_START:
+        flagMotorsAreOn = 1;
+        uner_ack_status = 0;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_START;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_STOP:
+        flagMotorsAreOn = 0;
+        RC_setpoint = 0.0f;
+        RC_slow_setpoint = 0.0f;
+        RC_steering = 0;
+        Robot_Drive(0, 0);
+        uner_ack_status = 0;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_STOP;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_CALIBRATE:
+        flagCalibrationIsReady = 0;
+        mpu_calibration_requested = 1;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CALIBRATE;
+            uner_ack_seq = seq;
+            uner_ack_status = 0;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_SET_HB:
+        if (payload_len >= 1) {
+            uint16_t requested_delay = payload[0];
+            if (payload_len >= 2) {
+                requested_delay = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
+            }
+            if (requested_delay >= 1 && requested_delay <= 200) {
+                delayHB = requested_delay;
+                uner_ack_status = 0;
+            } else {
+                uner_ack_status = 1;
+            }
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_SET_HB;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_CHANGE_MODE:
+        if (payload_len >= 2) {
+            int16_t requested_mode = UNER_ReadInt16LE(payload);
+            if (requested_mode >= MODO_IDDLE && requested_mode <= MODO_FL_INGRESO_A_90) {
+                currentMode = (uint8_t)requested_mode;
+                uner_ack_status = 0;
+            } else {
+                uner_ack_status = 1;
+            }
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CHANGE_MODE;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_ONOFFMOTORS:
+        if (payload_len >= 1) {
+            flagMotorsAreOn = (payload[0] != 0) ? 1 : 0;
+            if (!flagMotorsAreOn) {
+                RC_setpoint = 0.0f;
+                RC_slow_setpoint = 0.0f;
+                RC_steering = 0;
+                Robot_Drive(0, 0);
+            }
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_ONOFFMOTORS;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_CHANGE_DEADLINE_LEFT:
+        uner_ack_status = 2;
+        if (payload_len >= 2) {
+            deadband_L = UNER_ReadInt16LE(payload);
+            uner_ack_status = 0;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CHANGE_DEADLINE_LEFT;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_CHANGE_DEADLINE_RIGHT:
+        uner_ack_status = 2;
+        if (payload_len >= 2) {
+            deadband_R = UNER_ReadInt16LE(payload);
+            uner_ack_status = 0;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CHANGE_DEADLINE_RIGHT;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_CHANGE_SETPOINT:
+        if (payload_len >= 4) {
+            setpoint = UNER_ReadFloatLE(payload);
+            uner_ack_status = 0;
+        } else if (payload_len >= 2) {
+            setpoint = (float)UNER_ReadInt16LE(payload);
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CHANGE_SETPOINT;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_DEFINE_ZERO_SETPOINT:
+        if (payload_len >= 4) {
+            setpointDeEquilibrio = UNER_ReadFloatLE(payload);
+        } else {
+            setpointDeEquilibrio = angle_y;
+        }
+        uner_ack_status = 0;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_DEFINE_ZERO_SETPOINT;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_CHANGE_OLED_SCREEN:
+        if (payload_len >= 1) {
+            uint16_t requested_page = payload[0];
+            if (payload_len >= 2) {
+                requested_page = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
+            }
+            if (requested_page <= 3) {
+                flagOLED = (uint8_t)requested_page;
+                flagDisplay = 1;
+                uner_ack_status = 0;
+            } else {
+                uner_ack_status = 1;
+            }
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_CHANGE_OLED_SCREEN;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_RC:
+        if (payload_len >= 4) {
+            uint8_t active = payload[0];
+            int8_t setpoint_cmd = (int8_t)payload[1];
+            int16_t steering_cmd = UNER_ReadInt16LE(&payload[2]);
+            rc_last_packet_tick = HAL_GetTick();
+            flag_RC_active = (active != 0) ? 1 : 0;
+
+            if (flag_RC_active) {
+                RC_setpoint = ((float)setpoint_cmd) / 10.0f;
+                RC_steering = steering_cmd;
+            } else {
+                RC_setpoint = 0.0f;
+                RC_slow_setpoint = 0.0f;
+                RC_steering = 0;
+            }
+        }
+        break;
+
+    case CMD_PID_PITCH_KP:
+    case CMD_PID_PITCH_KI:
+    case CMD_PID_PITCH_KD:
+    case CMD_PID_ALPHA:
+    case CMD_PID_PITCH_LIM_INCLI:
+    case CMD_PID_PITCH_CORECCION_RCSP:
+    case CMD_PID_YAW_KP:
+    case CMD_PID_YAW_KD:
+    case CMD_PID_YAW_SP:
+    case CMD_PID_YAW_MULTIPLICADOR:
+        if (payload_len >= 4) {
+            float value = UNER_ReadFloatLE(payload);
+            switch (cmd) {
+            case CMD_PID_PITCH_KP: Kp = value; break;
+            case CMD_PID_PITCH_KI: Ki = value; break;
+            case CMD_PID_PITCH_KD: Kd = value; break;
+            case CMD_PID_ALPHA: ALPHA_PID = value; break;
+            case CMD_PID_PITCH_LIM_INCLI: limite_inclinacion = value; break;
+            case CMD_PID_PITCH_CORECCION_RCSP: correccionRCSP = value; break;
+            case CMD_PID_YAW_KP: Kp_yaw = value; break;
+            case CMD_PID_YAW_KD: Kd_yaw = value; break;
+            case CMD_PID_YAW_SP: FL_setpoint = value; break;
+            case CMD_PID_YAW_MULTIPLICADOR: multiplicadorYaw = value; break;
+            default: break;
+            }
+            uner_ack_status = 0;
+        } else if (payload_len >= 2) {
+            float value = (float)UNER_ReadInt16LE(payload);
+            uint8_t status = 0;
+            switch (cmd) {
+            case CMD_PID_PITCH_LIM_INCLI: limite_inclinacion = value; break;
+            case CMD_PID_PITCH_CORECCION_RCSP: correccionRCSP = value; break;
+            case CMD_PID_YAW_SP: FL_setpoint = value; break;
+            default: status = 1; break;
+            }
+            uner_ack_status = status;
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = cmd;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_IR_INICIAR_CALIBRACION:
+        Iniciar_Calibracion_Linea();
+        currentMode = MODO_FL_INICIO;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_IR_INICIAR_CALIBRACION;
+            uner_ack_seq = seq;
+            uner_ack_status = 0;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_IR_DETENER_CALIBRACION:
+        Finalizar_Calibracion_Linea();
+        currentMode = MODO_FL_BUSQUEDA_INICIAL;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_IR_DETENER_CALIBRACION;
+            uner_ack_seq = seq;
+            uner_ack_status = 0;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    default:
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = cmd;
+            uner_ack_seq = seq;
+            uner_ack_status = 0;
+            uner_ack_pending = 1;
+        }
+        break;
+    }
+}
+
 void Procesar_Evasion_Obstaculo(void) {
 	/*
     // 1. CONDICIÓN DE SALIDA (Prioridad Absoluta)

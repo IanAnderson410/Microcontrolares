@@ -44,6 +44,55 @@ typedef enum{
 
 #define ESP01RXBUFAT		128
 #define ESP01TXBUFAT		256
+#define ESP01_UNER_RX_RING_SIZE 128
+#define ESP01_UNER_TX_QUEUE_DEPTH 4
+#define ESP01_UNER_TX_FRAME_MAX 80
+
+#ifndef ESP01_UDP_LOCAL_PORT
+#define ESP01_UDP_LOCAL_PORT       8888
+#endif
+#ifndef ESP01_QT_REMOTE_PORT
+#define ESP01_QT_REMOTE_PORT       8888
+#endif
+#define ESP01_TRANSPORT_UDP        0
+#define ESP01_TRANSPORT_TCP        1
+#ifndef ESP01_TRANSPORT
+#define ESP01_TRANSPORT            ESP01_TRANSPORT_TCP
+#endif
+#define ESP01_APP_MODE_QT          0
+#define ESP01_APP_MODE_HTTP_SOFTAP 1
+#ifndef ESP01_APP_MODE
+#define ESP01_APP_MODE             ESP01_APP_MODE_QT
+#endif
+#ifndef ESP01_HTTP_PORT
+#define ESP01_HTTP_PORT            80
+#endif
+#ifndef RC_TIMEOUT_MS
+#define RC_TIMEOUT_MS              350
+#endif
+
+#define ESP01_WIFI_PROFILE_UNIVERSITY  0
+#define ESP01_WIFI_PROFILE_HOME        1
+#define ESP01_WIFI_PROFILE_LAB         2
+#ifndef ESP01_WIFI_PROFILE
+#define ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_UNIVERSITY
+#endif
+
+#if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
+#define WIFI_SSID                  "InternetPlus_872f10"
+#define WIFI_PASSWORD              "wlan78d0ef"
+#define ESP01_QT_REMOTE_IP         "192.168.1.3"
+#elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_LAB
+#define WIFI_SSID                  "LabPrototip"
+#define WIFI_PASSWORD              "labproto"
+#define ESP01_QT_REMOTE_IP         "172.24.150.89"
+#elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_UNIVERSITY
+#define WIFI_SSID                  "FCAL"
+#define WIFI_PASSWORD              "fcalconcordia.06-2019"
+#define ESP01_QT_REMOTE_IP         "172.23.224.234"
+#else
+#error "Seleccionar un perfil WiFi valido para ESP01_WIFI_PROFILE"
+#endif
 
 
 /**< Inicializa el driver ESP01 UDP */
@@ -55,6 +104,21 @@ typedef struct{
 //	uint16_t			*iwRX;				    /**< Puntero al índice de escritura del buffer de recepción circular */
 //	uint16_t			sizeBufferRX;		  	/**< Tamaño en bytes del buffer de recepción*/
 } _sESP01Handle;
+
+typedef struct {
+    _sESP01Handle Config;
+    uint8_t AT_Rx_data;
+    uint8_t uner_rx_ring[255];
+    volatile uint16_t uner_rx_write;
+    volatile uint16_t uner_rx_read;
+    uint8_t uner_tx_frame[ESP01_UNER_TX_QUEUE_DEPTH][ESP01_UNER_TX_FRAME_MAX];
+    uint8_t uner_tx_len[ESP01_UNER_TX_QUEUE_DEPTH];
+    volatile uint8_t uner_tx_head;
+    volatile uint8_t uner_tx_tail;
+    volatile uint8_t uner_tx_count;
+    volatile uint8_t udp_started;
+    volatile uint8_t udp_connected;
+} ESP01_App_t;
 
 
 /**
@@ -241,5 +305,14 @@ void ESP01_AttachDebugStr(void (*aESP01DbgStr)(const char *dbgStr));
  */
 int ESP01_IsHDRRST();
 
+void setESP01_CHPD(uint8_t val);
+int ESP01_UART_Transmit(uint8_t val);
+void ESP01_Data_Received(uint8_t value);
+void onESP01ChangeState(_eESP01STATUS esp01State);
+void onESP01Debug(const char *dbgStr);
+void ESP01_App_Task(void);
+_eESP01STATUS ESP01_StartTransport(void);
+void ESP01_Http_ProcessByte(uint8_t value);
+void ESP01_Http_Task(void);
 
 #endif /* ESP01_H_ */

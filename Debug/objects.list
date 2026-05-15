@@ -1,4 +1,5 @@
 "./Core/Src/ESP01.o"
+"./Core/Src/button_key.o"
 "./Core/Src/buzzer_app.o"
 "./Core/Src/control_systems.o"
 "./Core/Src/fonts.o"
@@ -6,6 +7,7 @@
 "./Core/Src/main.o"
 "./Core/Src/mpu6050_app.o"
 "./Core/Src/ssd1306.o"
+"./Core/Src/uner_protocol.o"
 "./Core/Src/stm32f4xx_hal_msp.o"
 "./Core/Src/stm32f4xx_it.o"
 "./Core/Src/syscalls.o"

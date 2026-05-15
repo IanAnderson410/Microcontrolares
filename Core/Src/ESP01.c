@@ -4,9 +4,14 @@
  */
 
 #include "ESP01.h"
+#include "main.h"
+#include "line_sensors.h"
+#include "control_systems.h"
+#include "uner_protocol.h"
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 
 static enum {
@@ -410,6 +415,335 @@ int ESP01_IsHDRRST(){
 	return 0;
 }
 
+/* ===================== [ Aplicacion ESP01 / STM32 ] ===================== */
+
+extern UART_HandleTypeDef huart1;
+extern ESP01_App_t ESP;
+extern char ip_address[16];
+extern char esp01_last_debug[18];
+extern char esp01_last_rx[18];
+extern volatile uint8_t flagWIFI;
+extern volatile uint8_t ip_received_flag;
+extern volatile uint32_t esp01_tx_count;
+extern volatile uint32_t esp01_payload_count;
+extern volatile uint32_t esp01_ack_count;
+extern volatile uint8_t esp01_http_softap_requested;
+extern volatile uint8_t esp01_http_softap_active;
+extern volatile uint8_t uner_ack_pending;
+extern volatile uint8_t uner_ack_cmd;
+extern volatile uint8_t uner_ack_seq;
+extern volatile uint8_t uner_ack_status;
+extern volatile uint8_t uner_telemetry_enabled;
+extern volatile uint8_t flag_RC_active;
+extern volatile uint32_t rc_last_packet_tick;
+extern volatile float RC_setpoint;
+extern volatile float RC_slow_setpoint;
+extern volatile int16_t RC_steering;
+extern uint16_t delayHB;
+
+void Telemetry_UpdateMPU(void);
+void screenScheduler(void);
+uint8_t UNER_SendTelemetryV1(void);
+
+void setESP01_CHPD(uint8_t val)
+{
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, val ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+int ESP01_UART_Transmit(uint8_t val)
+{
+	if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE)) {
+		huart1.Instance->DR = val;
+		esp01_tx_count++;
+		return 1;
+	}
+
+	return 0;
+}
+
+void ESP01_Data_Received(uint8_t value)
+{
+#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
+	esp01_payload_count++;
+	ESP01_Http_ProcessByte(value);
+	return;
+#else
+	if (esp01_http_softap_active) {
+		esp01_payload_count++;
+		ESP01_Http_ProcessByte(value);
+		return;
+	}
+#endif
+
+	esp01_payload_count++;
+	uint16_t next = ESP.uner_rx_write + 1;
+
+	if (next >= UNER_RX_RING_SIZE) {
+		next = 0;
+	}
+
+	if (next != ESP.uner_rx_read) {
+		ESP.uner_rx_ring[ESP.uner_rx_write] = value;
+		ESP.uner_rx_write = next;
+	}
+}
+
+void onESP01ChangeState(_eESP01STATUS esp01State)
+{
+	switch (esp01State) {
+	case ESP01_WIFI_NEW_IP:
+	{
+		char *ip = ESP01_GetLocalIP();
+		if (ip != NULL) {
+			strncpy(ip_address, ip, 15);
+			ip_address[15] = '\0';
+			ip_received_flag = 1;
+			flagWIFI = 1;
+		}
+		break;
+	}
+
+	case ESP01_UDPTCP_CONNECTED:
+		ESP.udp_connected = 1;
+		ESP.udp_started = 1;
+		uner_tx_busy = 0;
+		uner_tx_last_try_tick = 0;
+		uner_recovering_udp = 0;
+		uner_next_telemetry_tick = HAL_GetTick() + UNER_TELEMETRY_PERIOD_MS;
+		break;
+
+	case ESP01_UDPTCP_DISCONNECTED:
+		ESP.udp_connected = 0;
+		uner_tx_busy = 0;
+		uner_recovering_udp = 0;
+		uner_tx_recover_count++;
+		break;
+
+	case ESP01_WIFI_DISCONNECTED:
+		flagWIFI = 0;
+		ESP.udp_connected = 0;
+		ESP.udp_started = 0;
+		uner_tx_busy = 0;
+		uner_recovering_udp = 0;
+		uner_tx_recover_count++;
+		break;
+
+	case ESP01_SEND_OK:
+		uner_tx_busy = 0;
+		uner_tx_ok_count++;
+		uner_tx_last_ok_tick = HAL_GetTick();
+		uner_tx_last_try_tick = 0;
+		uner_next_telemetry_tick = uner_tx_last_ok_tick + UNER_TELEMETRY_PERIOD_MS;
+		break;
+
+	default:
+		break;
+	}
+}
+
+void onESP01Debug(const char *dbgStr)
+{
+	if (dbgStr == NULL) {
+		return;
+	}
+
+	const char *failStr = NULL;
+
+	if (strncmp(dbgStr, "FAIL_SENDOK", 11) == 0) {
+		failStr = "SOK";
+	} else if (strncmp(dbgStr, "FAIL_PROMPT", 11) == 0) {
+		failStr = "PRM";
+	} else if (strncmp(dbgStr, "FAIL_ERROR", 10) == 0) {
+		failStr = "ERR";
+	} else if (strncmp(dbgStr, "FAIL_DISCONN", 12) == 0) {
+		failStr = "DSC";
+	} else if (strncmp(dbgStr, "FAIL_CLOSED", 11) == 0) {
+		failStr = "CLS";
+	} else if (strncmp(dbgStr, "FAIL_BUSY", 9) == 0) {
+		failStr = "BSY";
+	}
+
+	if (failStr == NULL) {
+		return;
+	}
+
+	strncpy(esp01_last_debug, failStr, sizeof(esp01_last_debug) - 1);
+	esp01_last_debug[sizeof(esp01_last_debug) - 1] = '\0';
+}
+
+_eESP01STATUS ESP01_StartTransport(void)
+{
+#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
+	return ESP01_StartHTTPServer(ESP01_HTTP_PORT);
+#else
+	if (esp01_http_softap_active) {
+		return ESP01_StartHTTPServer(ESP01_HTTP_PORT);
+	}
+
+#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
+	return ESP01_StartTCP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, 0);
+#else
+	return ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
+#endif
+#endif
+}
+
+void ESP01_App_Task(void)
+{
+	static uint32_t last_oled_update = 0;
+	static uint32_t last_mpu_update = 0;
+	uint32_t now = HAL_GetTick();
+
+	ESP01_Task();
+#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
+	ESP01_Http_Task();
+#else
+	if (esp01_http_softap_active) {
+		ESP01_Http_Task();
+	}
+#endif
+	UNER_Rx_Task();
+	UNER_Tx_Task();
+
+	if ((now - last_mpu_update) >= 10) {
+		last_mpu_update = now;
+
+		if (flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
+			flag_RC_active = 0;
+			RC_setpoint = 0.0f;
+			RC_slow_setpoint = 0.0f;
+			RC_steering = 0;
+		}
+
+		Telemetry_UpdateMPU();
+		Filtrar_Sensores_IR();
+		Leer_Linea_Digital();
+		if (flag_calibrando_linea) {
+			Procesar_Calibracion_Linea();
+		}
+		PID_PITCH();
+	}
+
+	if ((now - last_oled_update) >= 500) {
+		last_oled_update = now;
+		screenScheduler();
+	}
+
+	if (esp01_http_softap_requested && !uner_ack_pending && !uner_tx_busy) {
+		esp01_http_softap_requested = 0;
+		esp01_http_softap_active = 1;
+		uner_telemetry_enabled = 0;
+		ESP.uner_tx_head = 0;
+		ESP.uner_tx_tail = 0;
+		ESP.uner_tx_count = 0;
+		ESP.udp_connected = 0;
+		ESP.udp_started = 0;
+		ESP01_StartTransport();
+		ESP.udp_started = 1;
+		return;
+	}
+
+	if (uner_ack_pending && ESP.udp_connected && !uner_tx_busy) {
+		if (UNER_SendAckV1(uner_ack_cmd, uner_ack_seq, uner_ack_status)) {
+			uner_ack_pending = 0;
+			esp01_ack_count++;
+		}
+	}
+
+	if (uner_telemetry_enabled && !uner_ack_pending &&
+		ESP.udp_connected && !uner_tx_busy && ESP.uner_tx_count == 0 &&
+		(int32_t)(now - uner_next_telemetry_tick) >= 0) {
+		if (UNER_SendTelemetryV1()) {
+			uner_next_telemetry_tick = now + UNER_TELEMETRY_PERIOD_MS;
+		} else {
+			uner_next_telemetry_tick = now + 50;
+		}
+	}
+}
+
+volatile uint8_t http_response_pending = 0;
+volatile uint8_t http_response_link = 0;
+volatile uint16_t http_requested_hb = 0;
+
+void ESP01_Http_ProcessByte(uint8_t value)
+{
+	static char request_line[96];
+	static uint8_t index = 0;
+	static uint8_t line_done = 0;
+	static uint8_t pending_link = 0;
+
+	if (!line_done) {
+		if (index < (sizeof(request_line) - 1)) {
+			request_line[index++] = (char)value;
+		}
+
+		if (value == '\n') {
+			request_line[index] = '\0';
+			pending_link = ESP01_GetLastIPDLinkId();
+			line_done = 1;
+
+			if (strncmp(request_line, "GET /hb?ms=", 11) == 0) {
+				uint16_t hb = (uint16_t)atoi(&request_line[11]);
+				if (hb >= 1 && hb <= 200) {
+					delayHB = hb;
+					http_requested_hb = hb;
+				}
+			}
+
+			if (strncmp(request_line, "GET ", 4) == 0) {
+				http_response_link = pending_link;
+				http_response_pending = 1;
+			}
+		}
+	}
+
+	if (line_done && value == '\n' && index == 0) {
+		line_done = 0;
+	}
+
+	if (line_done && value == '\n') {
+		index = 0;
+		line_done = 0;
+	}
+}
+
+void ESP01_Http_Task(void)
+{
+	char body[150];
+	char response[256];
+	int body_len;
+	int response_len;
+
+	if (!http_response_pending || uner_tx_busy) {
+		return;
+	}
+
+	body_len = snprintf(body, sizeof(body),
+						"<html><body><h3>N20 HB</h3><p>HB=%u</p>"
+						"<a href=\"/hb?ms=10\">10</a> "
+						"<a href=\"/hb?ms=50\">50</a> "
+						"<a href=\"/hb?ms=100\">100</a>"
+						"</body></html>",
+						delayHB);
+	if (body_len < 0 || body_len >= (int)sizeof(body)) {
+		return;
+	}
+
+	response_len = snprintf(response, sizeof(response),
+							"HTTP/1.1 200 OK\r\n"
+							"Content-Type: text/html\r\n"
+							"Connection: close\r\n"
+							"Content-Length: %d\r\n\r\n%s",
+							body_len, body);
+	if (response_len <= 0 || response_len >= (int)sizeof(response)) {
+		return;
+	}
+
+	if (ESP01_SendToClient(http_response_link, (uint8_t *)response, 0, (uint16_t)response_len, (uint16_t)response_len) == ESP01_SEND_READY) {
+		http_response_pending = 0;
+		uner_tx_busy = 1;
+	}
+}
 
 
 

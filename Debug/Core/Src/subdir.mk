@@ -6,6 +6,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../Core/Src/ESP01.c \
+../Core/Src/button_key.c \
 ../Core/Src/buzzer_app.c \
 ../Core/Src/control_systems.c \
 ../Core/Src/fonts.c \
@@ -13,6 +14,7 @@ C_SRCS += \
 ../Core/Src/main.c \
 ../Core/Src/mpu6050_app.c \
 ../Core/Src/ssd1306.c \
+../Core/Src/uner_protocol.c \
 ../Core/Src/stm32f4xx_hal_msp.c \
 ../Core/Src/stm32f4xx_it.c \
 ../Core/Src/syscalls.c \
@@ -21,6 +23,7 @@ C_SRCS += \
 
 OBJS += \
 ./Core/Src/ESP01.o \
+./Core/Src/button_key.o \
 ./Core/Src/buzzer_app.o \
 ./Core/Src/control_systems.o \
 ./Core/Src/fonts.o \
@@ -28,6 +31,7 @@ OBJS += \
 ./Core/Src/main.o \
 ./Core/Src/mpu6050_app.o \
 ./Core/Src/ssd1306.o \
+./Core/Src/uner_protocol.o \
 ./Core/Src/stm32f4xx_hal_msp.o \
 ./Core/Src/stm32f4xx_it.o \
 ./Core/Src/syscalls.o \
@@ -36,6 +40,7 @@ OBJS += \
 
 C_DEPS += \
 ./Core/Src/ESP01.d \
+./Core/Src/button_key.d \
 ./Core/Src/buzzer_app.d \
 ./Core/Src/control_systems.d \
 ./Core/Src/fonts.d \
@@ -43,6 +48,7 @@ C_DEPS += \
 ./Core/Src/main.d \
 ./Core/Src/mpu6050_app.d \
 ./Core/Src/ssd1306.d \
+./Core/Src/uner_protocol.d \
 ./Core/Src/stm32f4xx_hal_msp.d \
 ./Core/Src/stm32f4xx_it.d \
 ./Core/Src/syscalls.d \
