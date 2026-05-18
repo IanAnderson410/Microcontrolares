@@ -194,8 +194,8 @@ volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Time
 			float			correccionRCSP = 0.98;
 			float 			limite_inclinacion = 3.0f;
 // =================[ Variables de Control PID YAW] ================= //
-			float 		Kp_yaw = 1200.0f;
-			float 		Kd_yaw = 80.0f;
+			float 		Kp_yaw = 2410.0f;
+			float 		Kd_yaw = 10.0f;
 			float 		last_error_yaw = 0;
 volatile    float 		FL_setpoint = 1.5f;
 			float 		yaw_error_filter_alpha = 0.70f;

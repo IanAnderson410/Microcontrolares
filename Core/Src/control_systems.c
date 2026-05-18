@@ -115,6 +115,8 @@ void PID_PITCH(void)
 void FollowLine_Task(void)
 {
     static float fl_steering_slow = 0.0f;
+    static int8_t last_line_dir = 1;
+    float target_steering = 0.0f;
 
     if (currentMode < CONTROL_MODE_FL_INICIO ||
         currentMode > CONTROL_MODE_FL_INGRESO_A_90 ||
@@ -126,14 +128,19 @@ void FollowLine_Task(void)
         return;
     }
 
-    if (!AIRAB) {
+    if (AIRAB) {
+        if (error_linea > 0.05f) {
+            last_line_dir = 1;
+        } else if (error_linea < -0.05f) {
+            last_line_dir = -1;
+        }
+        target_steering = (float)Calcular_PID_YAW(error_linea);
+        FL_forward_setpoint = FL_setpoint;
+    } else {
+        target_steering = (float)(last_line_dir * FL_RECOVERY_STEERING);
         FL_forward_setpoint = 0.0f;
-        FL_steering = 0;
-        fl_steering_slow = 0.0f;
-        return;
     }
 
-    float target_steering = (float)Calcular_PID_YAW(error_linea);
     float delta_steering = target_steering - fl_steering_slow;
 
     if (delta_steering > yaw_steering_step_max) {
@@ -144,7 +151,6 @@ void FollowLine_Task(void)
 
     fl_steering_slow += delta_steering;
     FL_steering = (int16_t)fl_steering_slow;
-    FL_forward_setpoint = FL_setpoint;
 }
 
 int16_t Calcular_PID_YAW(float error_linea)
