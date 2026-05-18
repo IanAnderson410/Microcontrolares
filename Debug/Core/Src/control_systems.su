@@ -1,2 +1,4 @@
-../Core/Src/control_systems.c:3:6:PID_PITCH	32	static
-../Core/Src/control_systems.c:77:9:Calcular_PID_YAW	32	static
+../Core/Src/control_systems.c:16:16:clamp_i16	16	static
+../Core/Src/control_systems.c:27:16:rate_limit_i16	24	static
+../Core/Src/control_systems.c:40:6:PID_PITCH	56	static
+../Core/Src/control_systems.c:219:9:Calcular_PID_YAW	32	static

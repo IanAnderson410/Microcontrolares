@@ -143,7 +143,8 @@ enum {
        CMD_TELEMETRY_START          = 60,
        CMD_TELEMETRY_STOP           = 61,
        CMD_HTTP_SOFTAP              = 62,
-       CMD_SET_YAW_PD               = 63
+       CMD_SET_YAW_PD               = 63,
+       CMD_SET_YAW_CONFIG           = 64
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -193,10 +194,12 @@ volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Time
 			float			correccionRCSP = 0.98;
 			float 			limite_inclinacion = 3.0f;
 // =================[ Variables de Control PID YAW] ================= //
-			float 		Kp_yaw = 3000.0f;
-			float 		Kd_yaw = 0.0f;
+			float 		Kp_yaw = 1200.0f;
+			float 		Kd_yaw = 80.0f;
 			float 		last_error_yaw = 0;
 volatile    float 		FL_setpoint = 1.5f;
+			float 		yaw_error_filter_alpha = 0.70f;
+			float 		yaw_steering_step_max = 40.0f;
 			float 		last_state_linea = 0.0f;
 			float 		error_linea;
 volatile 	uint16_t 	adc_filtrado[8] = {2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000};
@@ -395,15 +398,18 @@ void screenScheduler(void){
 
     if (flagOLED == 1) {
         SSD1306_GotoXY(0, 0);
-        SSD1306_Puts("PID/MODO", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_Puts("YAW CONFIG", &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 12);
-        sprintf(msg, "M:%d P:%3.1f", currentMode, Kp);
+        sprintf(msg, "Kp:%4.0f Kd:%3.0f", Kp_yaw, Kd_yaw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 24);
-        sprintf(msg, "D:%3.1f Y:%3.1f", Kd, Kp_yaw);
+        sprintf(msg, "SP:%1.2f M:%1.3f", FL_setpoint, multiplicadorYaw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 36);
-        sprintf(msg, "SP:%3.1f L:%u%u%u%u", setpoint, line_s3, line_s2, line_s1, line_s0);
+        sprintf(msg, "A:%1.2f St:%2.0f", yaw_error_filter_alpha, yaw_steering_step_max);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 48);
+        sprintf(msg, "E:%+1.2f L:%u%u%u", error_linea, line_s2, line_s1, line_s0);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_UpdateScreen();
         return;
@@ -598,6 +604,40 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         }
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_SET_YAW_PD;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+    case CMD_SET_YAW_CONFIG:
+        if (payload_len >= 24) {
+            float kp = UNER_ReadFloatLE(payload);
+            float kd = UNER_ReadFloatLE(payload + 4);
+            float fl_sp = UNER_ReadFloatLE(payload + 8);
+            float curve_mul = UNER_ReadFloatLE(payload + 12);
+            float filter_alpha = UNER_ReadFloatLE(payload + 16);
+            float steering_step = UNER_ReadFloatLE(payload + 20);
+
+            if (kp >= 0.0f && kp <= 20000.0f &&
+                kd >= 0.0f && kd <= 5000.0f &&
+                fl_sp >= -10.0f && fl_sp <= 10.0f &&
+                curve_mul >= 0.0f && curve_mul <= 1.0f &&
+                filter_alpha >= 0.0f && filter_alpha <= 0.995f &&
+                steering_step >= 1.0f && steering_step <= 2000.0f) {
+                Kp_yaw = kp;
+                Kd_yaw = kd;
+                FL_setpoint = fl_sp;
+                multiplicadorYaw = curve_mul;
+                yaw_error_filter_alpha = filter_alpha;
+                yaw_steering_step_max = steering_step;
+                uner_ack_status = 0;
+            } else {
+                uner_ack_status = 1;
+            }
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_SET_YAW_CONFIG;
             uner_ack_seq = seq;
             uner_ack_pending = 1;
         }

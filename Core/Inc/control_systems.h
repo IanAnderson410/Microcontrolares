@@ -26,6 +26,7 @@ extern volatile uint16_t accelx;
 extern volatile uint16_t accely;
 extern volatile uint16_t accelz;
 extern volatile float giro;
+extern volatile float giro_z;
 extern volatile float RC_setpoint;
 extern volatile float RC_slow_setpoint;
 extern volatile int16_t RC_steering;
@@ -54,6 +55,8 @@ extern float last_error_yaw;
 extern float error_linea;
 extern float last_state_linea;
 extern float multiplicadorYaw;
+extern float yaw_error_filter_alpha;
+extern float yaw_steering_step_max;
 
 void PID_PITCH(void);
 int16_t Calcular_PID_YAW(float error_linea);
