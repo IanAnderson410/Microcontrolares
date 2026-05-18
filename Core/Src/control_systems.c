@@ -12,6 +12,9 @@
 #define FL_ANGLE_90_STEERING         850
 #define FL_RECOVERY_SETPOINT         0.5f
 #define FL_RECOVERY_STEERING         700
+#define FL_SETPOINT_DECAY_INTERVAL_MS 50U
+#define FL_SETPOINT_DECAY_SCALAR      0.995f
+#define FL_SETPOINT_RESET_THRESHOLD   0.01f
 
 void PID_PITCH(void)
 {
@@ -115,8 +118,11 @@ void PID_PITCH(void)
 void FollowLine_Task(void)
 {
     static float fl_steering_slow = 0.0f;
+    static float fl_dynamic_setpoint = 0.0f;
+    static uint32_t fl_decay_tick = 0;
     static int8_t last_line_dir = 1;
     float target_steering = 0.0f;
+    uint32_t now = HAL_GetTick();
 
     if (currentMode < CONTROL_MODE_FL_INICIO ||
         currentMode > CONTROL_MODE_FL_INGRESO_A_90 ||
@@ -125,7 +131,14 @@ void FollowLine_Task(void)
         FL_forward_setpoint = 0.0f;
         FL_steering = 0;
         fl_steering_slow = 0.0f;
+        fl_dynamic_setpoint = FL_setpoint;
+        fl_decay_tick = now;
         return;
+    }
+
+    if (fl_dynamic_setpoint == 0.0f) {
+        fl_dynamic_setpoint = FL_setpoint;
+        fl_decay_tick = now;
     }
 
     if (AIRAB) {
@@ -135,7 +148,14 @@ void FollowLine_Task(void)
             last_line_dir = -1;
         }
         target_steering = (float)Calcular_PID_YAW(error_linea);
-        FL_forward_setpoint = FL_setpoint;
+        if ((uint32_t)(now - fl_decay_tick) >= FL_SETPOINT_DECAY_INTERVAL_MS) {
+            fl_decay_tick = now;
+            fl_dynamic_setpoint *= FL_SETPOINT_DECAY_SCALAR;
+            if (fl_dynamic_setpoint <= FL_SETPOINT_RESET_THRESHOLD) {
+                fl_dynamic_setpoint = FL_setpoint;
+            }
+        }
+        FL_forward_setpoint = fl_dynamic_setpoint;
     } else {
         target_steering = (float)(last_line_dir * FL_RECOVERY_STEERING);
         FL_forward_setpoint = 0.0f;
