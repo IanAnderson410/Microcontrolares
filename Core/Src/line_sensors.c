@@ -43,6 +43,7 @@ void Leer_Linea_Digital(void)
         ultimo_estado_sensores[0] = estado_sensores[0];
         ultimo_estado_sensores[1] = estado_sensores[1];
         ultimo_estado_sensores[2] = estado_sensores[2];
+        ultimo_estado_sensores[3] = estado_sensores[3];
         error_linea = calcularErrorYawContinuo();
         last_state_linea = error_linea;
     } else {
@@ -55,7 +56,8 @@ void Finalizar_Calibracion_Linea(void)
     static const uint16_t fallback_threshold[FL_LINE_SENSOR_COUNT] = {
         (806 + 3419) / 2,
         (283 + 3213) / 2,
-        (339 + 3456) / 2
+        (339 + 3456) / 2,
+        2048
     };
 
     flag_calibrando_linea = 0;
@@ -89,9 +91,17 @@ float calcularErrorYawDiscreto(void)
 
 float calcularErrorYawContinuo(void)
 {
-    float val_norm[3] = {0};
+    static const float sensor_pos[FL_LINE_SENSOR_COUNT] = {
+        2.5f,
+        1.2f,
+        -1.2f,
+        -2.5f
+    };
+    float val_norm[FL_LINE_SENSOR_COUNT] = {0};
+    float numerador = 0.0f;
+    float denominador = 0.0f;
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < FL_LINE_SENSOR_COUNT; i++) {
         if (sensor_max[i] == sensor_min[i]) {
             val_norm[i] = 0.0f;
             continue;
@@ -106,18 +116,15 @@ float calcularErrorYawContinuo(void)
         if (val_norm[i] < 0.0f) {
             val_norm[i] = 0.0f;
         }
+
+        numerador += val_norm[i] * sensor_pos[i];
+        denominador += val_norm[i];
     }
 
-    float y_izq = val_norm[2];
-    float y_centro = val_norm[1];
-    float y_der = val_norm[0];
-
-    float denominador = (y_izq + y_der - 2.0f * y_centro);
     float offset = 0.0f;
-    if (denominador != 0.0f) {
-        offset = (y_izq - y_der) / denominador;
+    if (denominador > 0.0f) {
+        offset = -((numerador / denominador) / 2.5f);
     }
-
     last_state_linea = offset;
     return offset;
 }

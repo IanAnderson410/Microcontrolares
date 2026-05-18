@@ -31,6 +31,8 @@ extern volatile float RC_setpoint;
 extern volatile float RC_slow_setpoint;
 extern volatile int16_t RC_steering;
 extern volatile float FL_setpoint;
+extern volatile float FL_forward_setpoint;
+extern volatile int16_t FL_steering;
 
 extern float angle_y;
 extern float Kp;
@@ -57,8 +59,10 @@ extern float last_state_linea;
 extern float multiplicadorYaw;
 extern float yaw_error_filter_alpha;
 extern float yaw_steering_step_max;
+extern float yaw_output_limit;
 
 void PID_PITCH(void);
+void FollowLine_Task(void);
 int16_t Calcular_PID_YAW(float error_linea);
 void Robot_Drive(int16_t speed_L, int16_t speed_R);
 

@@ -5,64 +5,35 @@
 #define FL_ALIGN_SETPOINT            0.2f
 #define FL_ALIGN_ENTER_ERROR         0.35f
 #define FL_ALIGN_HARD_ERROR          0.75f
-#define FL_ALIGN_STEERING_LIMIT      320
+#define FL_ALIGN_STEERING_LIMIT      600
 #define FL_ANGLE_90_ERROR            0.85f
 #define FL_ANGLE_90_TICKS            12U
 #define FL_ANGLE_90_SETPOINT         0.0f
-#define FL_ANGLE_90_STEERING         420
+#define FL_ANGLE_90_STEERING         850
 #define FL_RECOVERY_SETPOINT         0.5f
-#define FL_RECOVERY_STEERING         260
-
-static int16_t clamp_i16(int16_t value, int16_t min_value, int16_t max_value)
-{
-    if (value > max_value) {
-        return max_value;
-    }
-    if (value < min_value) {
-        return min_value;
-    }
-    return value;
-}
-
-static int16_t rate_limit_i16(int16_t current, int16_t target, int16_t max_step)
-{
-    int16_t delta = target - current;
-
-    if (delta > max_step) {
-        delta = max_step;
-    } else if (delta < -max_step) {
-        delta = -max_step;
-    }
-
-    return current + delta;
-}
+#define FL_RECOVERY_STEERING         700
 
 void PID_PITCH(void)
 {
-    static float FL_slow_setpoint = 0.0f;
-    static uint16_t FL_lost_ticks = 0;
-    static uint8_t fl_90_ticks = 0;
-    static int16_t fl_steering_limited = 0;
     float gyro_rate = giro;
     float target_setpoint = setpoint;
     int16_t steering = 0;
-    float abs_line_error = (error_linea < 0.0f) ? -error_linea : error_linea;
-    uint8_t lateral_only = (uint8_t)((estado_sensores[0] || estado_sensores[2]) &&
-                                     !estado_sensores[1]);
 
     accelx = axRaw;
     accely = ayRaw;
     accelz = azRaw;
 
-    float abs_angle = (angle_y < 0.0f) ? -angle_y : angle_y;
-    if (abs_angle > limite_inclinacion) {
-        RC_setpoint = RC_setpoint * correccionRCSP;
-    } else {
-        if (RC_slow_setpoint < RC_setpoint) {
-            RC_slow_setpoint += paso;
-        }
-        if (RC_slow_setpoint > RC_setpoint) {
-            RC_slow_setpoint -= paso;
+    if (currentMode == CONTROL_MODE_RC) {
+        float abs_angle = (angle_y < 0.0f) ? -angle_y : angle_y;
+        if (abs_angle > limite_inclinacion) {
+            RC_setpoint = RC_setpoint * correccionRCSP;
+        } else {
+            if (RC_slow_setpoint < RC_setpoint) {
+                RC_slow_setpoint += paso;
+            }
+            if (RC_slow_setpoint > RC_setpoint) {
+                RC_slow_setpoint -= paso;
+            }
         }
     }
 
@@ -70,97 +41,22 @@ void PID_PITCH(void)
     case CONTROL_MODE_RC:
         target_setpoint = setpoint + RC_slow_setpoint;
         steering = RC_steering;
-        FL_slow_setpoint = 0.0f;
-        FL_lost_ticks = 0;
         break;
     case CONTROL_MODE_FL_INICIO:
     case CONTROL_MODE_FL_BUSQUEDA_INICIAL:
     case CONTROL_MODE_FL_SIGUIENDO:
     case CONTROL_MODE_FL_RESCATE:
     case CONTROL_MODE_FL_INGRESO_A_90:
-        if (AIRAB) {
-            FL_lost_ticks = 0;
-            if (currentMode == CONTROL_MODE_FL_INGRESO_A_90) {
-                FL_slow_setpoint = FL_ANGLE_90_SETPOINT;
-                steering = (last_state_linea >= 0.0f) ? FL_ANGLE_90_STEERING : -FL_ANGLE_90_STEERING;
-
-                RC_setpoint = FL_ANGLE_90_SETPOINT;
-                fl_steering_limited = steering;
-                RC_steering = fl_steering_limited;
-
-                if (abs_line_error < FL_ALIGN_ENTER_ERROR || estado_sensores[1]) {
-                    fl_90_ticks = 0;
-                    currentMode = CONTROL_MODE_FL_SIGUIENDO;
-                }
-            } else if (currentMode == CONTROL_MODE_FL_BUSQUEDA_INICIAL ||
-                currentMode == CONTROL_MODE_FL_INICIO) {
-                FL_slow_setpoint = FL_ALIGN_SETPOINT;
-
-                if (lateral_only && abs_line_error > FL_ANGLE_90_ERROR) {
-                    fl_90_ticks++;
-                    FL_slow_setpoint = FL_ANGLE_90_SETPOINT;
-                    steering = (error_linea > 0.0f) ? FL_ANGLE_90_STEERING : -FL_ANGLE_90_STEERING;
-
-                    if (fl_90_ticks >= FL_ANGLE_90_TICKS) {
-                        currentMode = CONTROL_MODE_FL_INGRESO_A_90;
-                    }
-                } else if (abs_line_error > FL_ALIGN_HARD_ERROR) {
-                    fl_90_ticks = 0;
-                    steering = (error_linea > 0.0f) ? FL_ALIGN_STEERING_LIMIT : -FL_ALIGN_STEERING_LIMIT;
-                } else {
-                    fl_90_ticks = 0;
-                    steering = clamp_i16((int16_t)(Calcular_PID_YAW(error_linea) * 0.6f),
-                                         -FL_ALIGN_STEERING_LIMIT,
-                                         FL_ALIGN_STEERING_LIMIT);
-                }
-
-                if (abs_line_error < FL_ALIGN_ENTER_ERROR) {
-                    currentMode = CONTROL_MODE_FL_SIGUIENDO;
-                }
-                RC_setpoint = FL_slow_setpoint;
-                fl_steering_limited = rate_limit_i16(fl_steering_limited, steering, (int16_t)yaw_steering_step_max);
-                RC_steering = fl_steering_limited;
-                steering = RC_steering;
-            } else {
-                int16_t target_steering = Calcular_PID_YAW(error_linea);
-                RC_steering = rate_limit_i16(fl_steering_limited, target_steering, (int16_t)yaw_steering_step_max);
-                fl_steering_limited = RC_steering;
-                int16_t abs_steering = (RC_steering < 0) ? -RC_steering : RC_steering;
-                RC_setpoint = FL_setpoint - ((float)abs_steering * multiplicadorYaw);
-                if (RC_setpoint < 0.2f) {
-                    RC_setpoint = 0.2f;
-                }
-                RC_setpoint -= ((float)abs_steering * multiplicadorYaw);
-                if (RC_setpoint < 0.2f) {
-                    RC_setpoint = 0.2f;
-                }
-                steering = RC_steering;
-                FL_slow_setpoint = RC_setpoint;
-            }
-        } else {
-            FL_lost_ticks++;
-            fl_90_ticks = 0;
-            currentMode = CONTROL_MODE_FL_RESCATE;
-            RC_setpoint = FL_RECOVERY_SETPOINT;
-            RC_steering = (last_state_linea >= 0.0f) ? FL_RECOVERY_STEERING : -FL_RECOVERY_STEERING;
-            fl_steering_limited = RC_steering;
-            FL_slow_setpoint = RC_setpoint;
-            steering = RC_steering;
-        }
-        target_setpoint = setpoint + RC_setpoint;
+        target_setpoint = setpoint + FL_forward_setpoint;
+        steering = FL_steering;
         break;
     case CONTROL_MODE_FL_PERDIDO_FAILSAFE:
-        FL_slow_setpoint = 0.0f;
         target_setpoint = setpoint;
         steering = 0;
         break;
     case CONTROL_MODE_IDLE:
     default:
         RC_slow_setpoint = 0.0f;
-        FL_slow_setpoint = 0.0f;
-        FL_lost_ticks = 0;
-        fl_90_ticks = 0;
-        fl_steering_limited = 0;
         target_setpoint = setpoint;
         steering = 0;
         break;
@@ -216,6 +112,41 @@ void PID_PITCH(void)
     }
 }
 
+void FollowLine_Task(void)
+{
+    static float fl_steering_slow = 0.0f;
+
+    if (currentMode < CONTROL_MODE_FL_INICIO ||
+        currentMode > CONTROL_MODE_FL_INGRESO_A_90 ||
+        currentMode == CONTROL_MODE_FL_INICIO ||
+        flag_calibrando_linea) {
+        FL_forward_setpoint = 0.0f;
+        FL_steering = 0;
+        fl_steering_slow = 0.0f;
+        return;
+    }
+
+    if (!AIRAB) {
+        FL_forward_setpoint = 0.0f;
+        FL_steering = 0;
+        fl_steering_slow = 0.0f;
+        return;
+    }
+
+    float target_steering = (float)Calcular_PID_YAW(error_linea);
+    float delta_steering = target_steering - fl_steering_slow;
+
+    if (delta_steering > yaw_steering_step_max) {
+        delta_steering = yaw_steering_step_max;
+    } else if (delta_steering < -yaw_steering_step_max) {
+        delta_steering = -yaw_steering_step_max;
+    }
+
+    fl_steering_slow += delta_steering;
+    FL_steering = (int16_t)fl_steering_slow;
+    FL_forward_setpoint = FL_setpoint;
+}
+
 int16_t Calcular_PID_YAW(float error_linea)
 {
     static float error_linea_filtrado = 0.0f;
@@ -228,13 +159,6 @@ int16_t Calcular_PID_YAW(float error_linea)
     last_error_yaw = error_linea_filtrado;
 
     float salida_yaw = P_yaw + D_yaw;
-
-    if (salida_yaw > 400.0f) {
-        salida_yaw = 400.0f;
-    }
-    if (salida_yaw < -400.0f) {
-        salida_yaw = -400.0f;
-    }
 
     return (int16_t)salida_yaw;
 }

@@ -173,8 +173,8 @@ uint8_t UNER_SendTelemetryV1(void)
     payload.roll_cdeg = (int16_t)(angle_roll * 100.0f);
     payload.yaw_cdeg = (int16_t)(angle_yaw * 100.0f);
     payload.pos_x_mm = (int32_t)(error_linea * 1000.0f);
-    payload.pos_y_mm = (int32_t)RC_steering;
-    payload.velocidad_mm_s = (int16_t)(velocidad_objetivo * 1000.0f);
+    payload.pos_y_mm = (int32_t)((currentMode >= CONTROL_MODE_FL_INICIO) ? FL_steering : RC_steering);
+    payload.velocidad_mm_s = (int16_t)(((currentMode >= CONTROL_MODE_FL_INICIO) ? FL_forward_setpoint : RC_slow_setpoint) * 1000.0f);
     payload.modo = currentMode;
     payload.infoAdicional = (uint8_t)((flagCalibrationIsReady ? 0x01 : 0x00) |
                                       (flag_calibrando_linea ? 0x02 : 0x00) |

@@ -7,14 +7,14 @@
 extern "C" {
 #endif
 
-#define FL_LINE_SENSOR_COUNT 3
+#define FL_LINE_SENSOR_COUNT 4
 #define FL_LINE_MIN_SPREAD   120U
 
-#define IRCSAAB (estado_sensores[0] && estado_sensores[1] && estado_sensores[2])
-#define IRLSAAB (ultimo_estado_sensores[0] && ultimo_estado_sensores[1] && ultimo_estado_sensores[2])
-#define IRCSAAW (!estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2])
-#define IRLSAAW (!ultimo_estado_sensores[0] && !ultimo_estado_sensores[1] && !ultimo_estado_sensores[2])
-#define AIRAB   (estado_sensores[0] || estado_sensores[1] || estado_sensores[2])
+#define IRCSAAB (estado_sensores[0] && estado_sensores[1] && estado_sensores[2] && estado_sensores[3])
+#define IRLSAAB (ultimo_estado_sensores[0] && ultimo_estado_sensores[1] && ultimo_estado_sensores[2] && ultimo_estado_sensores[3])
+#define IRCSAAW (!estado_sensores[0] && !estado_sensores[1] && !estado_sensores[2] && !estado_sensores[3])
+#define IRLSAAW (!ultimo_estado_sensores[0] && !ultimo_estado_sensores[1] && !ultimo_estado_sensores[2] && !ultimo_estado_sensores[3])
+#define AIRAB   (estado_sensores[0] || estado_sensores[1] || estado_sensores[2] || estado_sensores[3])
 
 extern volatile uint16_t adc_filtrado[8];
 extern volatile uint8_t estado_sensores[4];
