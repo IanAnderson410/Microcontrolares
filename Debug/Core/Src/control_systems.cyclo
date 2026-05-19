@@ -1,4 +1,3 @@
-../Core/Src/control_systems.c:16:16:clamp_i16	3
-../Core/Src/control_systems.c:27:16:rate_limit_i16	3
-../Core/Src/control_systems.c:40:6:PID_PITCH	41
-../Core/Src/control_systems.c:219:9:Calcular_PID_YAW	3
+../Core/Src/control_systems.c:9:6:PID_PITCH	17
+../Core/Src/control_systems.c:82:6:FollowLine_Task	16
+../Core/Src/control_systems.c:140:9:Calcular_PID_YAW	1

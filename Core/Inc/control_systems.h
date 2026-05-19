@@ -59,7 +59,6 @@ extern float last_state_linea;
 extern float multiplicadorYaw;
 extern float yaw_error_filter_alpha;
 extern float yaw_steering_step_max;
-extern float yaw_output_limit;
 
 void PID_PITCH(void);
 void FollowLine_Task(void);

@@ -24,7 +24,6 @@ extern volatile float giro_z;
 extern float angle_roll;
 extern float angle_yaw;
 extern float error_linea;
-extern float velocidad_objetivo;
 
 uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len)
 {

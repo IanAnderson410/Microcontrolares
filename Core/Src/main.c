@@ -200,7 +200,6 @@ volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Time
 volatile    float 		FL_setpoint = 1.5f;
 			float 		yaw_error_filter_alpha = 0.70f;
 			float 		yaw_steering_step_max = 90.0f;
-			float 		yaw_output_limit = 900.0f;
 			float 		last_state_linea = 0.0f;
 			float 		error_linea;
 volatile 	uint16_t 	adc_filtrado[8] = {2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000};
@@ -230,7 +229,7 @@ volatile 	float 			RC_slow_setpoint = 0;
 volatile 	int16_t   		RC_steering = 0;
 volatile 	float 			FL_forward_setpoint = 0.0f;
 volatile 	int16_t   		FL_steering = 0;
-float 		paso = 0.08f; // Velocidad de inclinación
+float 		paso = 0.1f; // Velocidad de inclinación
 // =================[ Protocolo UNER ] =================//
 volatile 	uint16_t 		accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
 volatile 	uint16_t 		accely=0;
@@ -280,7 +279,6 @@ volatile uint8_t mpu_calibration_requested = 0;
 volatile uint32_t rc_last_packet_tick = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
-float velocidad_objetivo = 0.0f; // Reemplaza a tu viejo RC_setpoint y FL_setpoint
 float showoutput=0;
 float multiplicadorYaw 	 = 0.01;
 float error=0;
@@ -411,7 +409,7 @@ void screenScheduler(void){
         sprintf(msg, "SP:%1.2f M:%1.3f", FL_setpoint, multiplicadorYaw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 36);
-        sprintf(msg, "St:%2.0f L:%3.0f", yaw_steering_step_max, yaw_output_limit);
+        sprintf(msg, "Step:%2.0f", yaw_steering_step_max);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 48);
         sprintf(msg, "E:%+1.2f L:%u%u%u", error_linea, line_s2, line_s1, line_s0);
@@ -621,22 +619,19 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             float curve_mul = UNER_ReadFloatLE(payload + 12);
             float filter_alpha = UNER_ReadFloatLE(payload + 16);
             float steering_step = UNER_ReadFloatLE(payload + 20);
-            float output_limit = (payload_len >= 28) ? UNER_ReadFloatLE(payload + 24) : yaw_output_limit;
 
             if (kp >= 0.0f && kp <= 20000.0f &&
                 kd >= 0.0f && kd <= 5000.0f &&
                 fl_sp >= -10.0f && fl_sp <= 10.0f &&
                 curve_mul >= 0.0f && curve_mul <= 1.0f &&
                 filter_alpha >= 0.0f && filter_alpha <= 0.995f &&
-                steering_step >= 1.0f && steering_step <= 2000.0f &&
-                output_limit >= 1.0f && output_limit <= 3000.0f) {
+                steering_step >= 1.0f && steering_step <= 2000.0f) {
                 Kp_yaw = kp;
                 Kd_yaw = kd;
                 FL_setpoint = fl_sp;
                 multiplicadorYaw = curve_mul;
                 yaw_error_filter_alpha = filter_alpha;
                 yaw_steering_step_max = steering_step;
-                yaw_output_limit = output_limit;
                 uner_ack_status = 0;
             } else {
                 uner_ack_status = 1;
@@ -818,7 +813,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
-
     case CMD_RC:
         if (payload_len >= 4) {
             uint8_t active = payload[0];
@@ -826,7 +820,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             int16_t steering_cmd = UNER_ReadInt16LE(&payload[2]);
             rc_last_packet_tick = HAL_GetTick();
             flag_RC_active = (active != 0) ? 1 : 0;
-
             if (flag_RC_active) {
                 RC_setpoint = ((float)setpoint_cmd) / 10.0f;
                 RC_steering = steering_cmd;
@@ -854,8 +847,8 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             case CMD_PID_PITCH_KI: Ki = value; break;
             case CMD_PID_PITCH_KD: Kd = value; break;
             case CMD_PID_ALPHA: ALPHA_PID = value; break;
-            case CMD_PID_PITCH_LIM_INCLI: limite_inclinacion = value; break;
-            case CMD_PID_PITCH_CORECCION_RCSP: correccionRCSP = value; break;
+            case CMD_PID_PITCH_LIM_INCLI: 		limite_inclinacion = value; break;
+            case CMD_PID_PITCH_CORECCION_RCSP: 	correccionRCSP = value; break;
             case CMD_PID_YAW_KP: Kp_yaw = value; break;
             case CMD_PID_YAW_KD: Kd_yaw = value; break;
             case CMD_PID_YAW_SP: FL_setpoint = value; break;
@@ -1092,14 +1085,12 @@ int main(void)
 	    KEY_CalibrationTask();
 		UNER_Rx_Task();
 		UNER_Tx_Task();
+		Filtrar_Sensores_IR();
+		Leer_Linea_Digital();
+		if (flag_calibrando_linea){	Procesar_Calibracion_Linea();}
 		if(flag10ms){
 			flag10ms = 0;
 			Telemetry_UpdateMPU();
-			Filtrar_Sensores_IR();
-			Leer_Linea_Digital();
-			if (flag_calibrando_linea) {
-				Procesar_Calibracion_Linea();
-			}
 			FollowLine_Task();
 			if (currentMode == MODO_RC && flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
 				flag_RC_active = 0;
@@ -1109,10 +1100,7 @@ int main(void)
 			}
 			PID_PITCH();
 		}
-		if ((now - last_oled_update) >= 500) {
-			last_oled_update = now;
-			screenScheduler();
-			}
+		if((now - last_oled_update)>=500){last_oled_update = now;screenScheduler();	}
 		ESP01_Generic_Functions(now);
 		ESP01_Task();
   }

@@ -1,16 +1,6 @@
 #include "control_systems.h"
 #include "line_sensors.h"
 
-#define FL_SETPOINT_STEP             0.04f
-#define FL_ALIGN_SETPOINT            0.2f
-#define FL_ALIGN_ENTER_ERROR         0.35f
-#define FL_ALIGN_HARD_ERROR          0.75f
-#define FL_ALIGN_STEERING_LIMIT      600
-#define FL_ANGLE_90_ERROR            0.85f
-#define FL_ANGLE_90_TICKS            12U
-#define FL_ANGLE_90_SETPOINT         0.0f
-#define FL_ANGLE_90_STEERING         850
-#define FL_RECOVERY_SETPOINT         0.5f
 #define FL_RECOVERY_STEERING         700
 #define FL_SETPOINT_DECAY_INTERVAL_MS 50U
 #define FL_SETPOINT_DECAY_SCALAR      0.995f
@@ -21,6 +11,7 @@ void PID_PITCH(void)
     float gyro_rate = giro;
     float target_setpoint = setpoint;
     int16_t steering = 0;
+    static float variable_x = 1.0f;
 
     accelx = axRaw;
     accely = ayRaw;
@@ -31,15 +22,10 @@ void PID_PITCH(void)
         if (abs_angle > limite_inclinacion) {
             RC_setpoint = RC_setpoint * correccionRCSP;
         } else {
-            if (RC_slow_setpoint < RC_setpoint) {
-                RC_slow_setpoint += paso;
-            }
-            if (RC_slow_setpoint > RC_setpoint) {
-                RC_slow_setpoint -= paso;
-            }
+            if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
+            if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
         }
     }
-
     switch (currentMode) {
     case CONTROL_MODE_RC:
         target_setpoint = setpoint + RC_slow_setpoint;
@@ -48,6 +34,14 @@ void PID_PITCH(void)
     case CONTROL_MODE_FL_INICIO:
     case CONTROL_MODE_FL_BUSQUEDA_INICIAL:
     case CONTROL_MODE_FL_SIGUIENDO:
+        target_setpoint = setpoint + (FL_setpoint * variable_x);
+        steering = FL_steering;
+        variable_x -= correccionRCSP;
+        if (variable_x < 0.0f) {
+            variable_x = 0.0f;
+        }
+        break;
+
     case CONTROL_MODE_FL_RESCATE:
     case CONTROL_MODE_FL_INGRESO_A_90:
         target_setpoint = setpoint + FL_forward_setpoint;
@@ -60,57 +54,27 @@ void PID_PITCH(void)
     case CONTROL_MODE_IDLE:
     default:
         RC_slow_setpoint = 0.0f;
+        variable_x = 1.0f;
         target_setpoint = setpoint;
         steering = 0;
         break;
     }
-
     error = angle_y - target_setpoint;
-
     integral += error * CONTROL_DT_PID;
     if (integral > 2000.0f) {
         integral = 2000.0f;
     } else if (integral < -2000.0f) {
         integral = -2000.0f;
     }
-
-    float P_base = Kp * error;
-    float abs_error = (error < 0.0f) ? -error : error;
-    float P_agresivo = Kp_Agresivo * (error * abs_error);
-
-    P = P_base + P_agresivo;
+    P = Kp * error;
     I = Ki * integral;
     D = Kd * gyro_rate;
     output = P + I + D;
     showoutput = output;
     last_error = error;
 
-    if (flagMotorsAreOn) {
-        int16_t outputLeft = 0;
-        int16_t outputRigth = 0;
-
-        switch (currentMode) {
-        case CONTROL_MODE_IDLE:
-        case CONTROL_MODE_FL_PERDIDO_FAILSAFE:
-            outputLeft = (int16_t)output;
-            outputRigth = (int16_t)output;
-            break;
-        case CONTROL_MODE_RC:
-        case CONTROL_MODE_FL_INICIO:
-        case CONTROL_MODE_FL_BUSQUEDA_INICIAL:
-        case CONTROL_MODE_FL_SIGUIENDO:
-        case CONTROL_MODE_FL_RESCATE:
-        case CONTROL_MODE_FL_INGRESO_A_90:
-        default:
-            outputLeft = (int16_t)output + steering;
-            outputRigth = (int16_t)output - steering;
-            break;
-        }
-
-        Robot_Drive(outputLeft, outputRigth);
-    }
-
-    if (flagMotorsAreOn == 0 || angle_y > 35.0f || angle_y < -35.0f) {
+    if(flagMotorsAreOn){      Robot_Drive((int16_t)output + steering, (int16_t)output - steering);    }
+    if (flagMotorsAreOn == 0 || angle_y > 65.0f || angle_y < -65.0f) {
         Robot_Drive(0, 0);
     }
 }
@@ -184,7 +148,5 @@ int16_t Calcular_PID_YAW(float error_linea)
     float D_yaw = -Kd_yaw * giro_z;
     last_error_yaw = error_linea_filtrado;
 
-    float salida_yaw = P_yaw + D_yaw;
-
-    return (int16_t)salida_yaw;
+    return (int16_t)(P_yaw + D_yaw);
 }
