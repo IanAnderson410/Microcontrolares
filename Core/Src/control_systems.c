@@ -2,36 +2,53 @@
 #include "line_sensors.h"
 
 #define FL_RECOVERY_STEERING         700
-#define FL_STEERING_DEADBAND_ERROR   0.03f
+#define FL_MOTION_PHASE_MS           200U
+#define FL_BALANCE_PHASE_MS          200U
 
 void PID_PITCH(void)
 {
     float gyro_rate = giro;
     float target_setpoint = setpoint;
     int16_t steering = 0;
+    static uint32_t fl_phase_tick = 0;
+    static uint8_t fl_motion_phase = 1;
+    uint32_t now = HAL_GetTick();
 
     accelx = axRaw;
     accely = ayRaw;
     accelz = azRaw;
 
-    if (currentMode == CONTROL_MODE_RC) {
-        float abs_angle = (angle_y < 0.0f) ? -angle_y : angle_y;
-        if (abs_angle > limite_inclinacion) {
-            RC_setpoint = RC_setpoint * correccionRCSP;
-        } else {
-            if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
-            if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
-        }
-    }
+//    if (currentMode == CONTROL_MODE_RC) {
+//        float abs_angle = (angle_y < 0.0f) ? -angle_y : angle_y;
+//        if (abs_angle > limite_inclinacion) {
+//            RC_setpoint = RC_setpoint * correccionRCSP;
+//        } else {
+//            if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
+//            if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
+//        }
+//    }
     switch (currentMode) {
     case CONTROL_MODE_RC:
+
         target_setpoint = setpoint + RC_slow_setpoint;
         steering = RC_steering;
         break;
+
     case CONTROL_MODE_FL_INICIO:
     case CONTROL_MODE_FL_BUSQUEDA_INICIAL:
     case CONTROL_MODE_FL_SIGUIENDO:
-        target_setpoint = setpoint + FL_forward_setpoint;
+        if (fl_phase_tick == 0U) {
+            fl_phase_tick = now;
+            fl_motion_phase = 1U;
+        }
+
+        if ((uint32_t)(now - fl_phase_tick) >=
+            (fl_motion_phase ? FL_MOTION_PHASE_MS : FL_BALANCE_PHASE_MS)) {
+            fl_phase_tick = now;
+            fl_motion_phase = !fl_motion_phase;
+        }
+
+        target_setpoint = setpoint + (fl_motion_phase ? FL_forward_setpoint : 0.0f);
         steering = FL_steering;
         break;
 
@@ -47,6 +64,8 @@ void PID_PITCH(void)
     case CONTROL_MODE_IDLE:
     default:
         RC_slow_setpoint = 0.0f;
+        fl_phase_tick = 0U;
+        fl_motion_phase = 1U;
         target_setpoint = setpoint;
         steering = 0;
         break;
@@ -65,34 +84,7 @@ void PID_PITCH(void)
     showoutput = output;
     last_error = error;
 
-    if (flagMotorsAreOn) {
-        int16_t base_output = (int16_t)output;
-        int16_t output_left = base_output;
-        int16_t output_right = base_output;
-
-        switch (currentMode) {
-        case CONTROL_MODE_RC:
-        case CONTROL_MODE_FL_INGRESO_A_90:
-            output_left = base_output + steering;
-            output_right = base_output - steering;
-            break;
-
-        case CONTROL_MODE_FL_BUSQUEDA_INICIAL:
-        case CONTROL_MODE_FL_SIGUIENDO:
-        case CONTROL_MODE_FL_RESCATE:
-            if (steering > 0) {
-                output_right = base_output - steering;
-            } else if (steering < 0) {
-                output_left = base_output + steering;
-            }
-            break;
-
-        default:
-            break;
-        }
-
-        Robot_Drive(output_left, output_right);
-    }
+    if(flagMotorsAreOn){      Robot_Drive((int16_t)output + steering, (int16_t)output - steering);    }
     if (flagMotorsAreOn == 0 || angle_y > 65.0f || angle_y < -65.0f) {
         Robot_Drive(0, 0);
     }
@@ -120,14 +112,7 @@ void FollowLine_Task(void)
         } else if (error_linea < -0.05f) {
             last_line_dir = -1;
         }
-
-        if (error_linea > -FL_STEERING_DEADBAND_ERROR &&
-            error_linea < FL_STEERING_DEADBAND_ERROR) {
-            target_steering = 0.0f;
-        } else {
-            target_steering = (float)Calcular_PID_YAW(error_linea);
-        }
-
+        target_steering = (float)Calcular_PID_YAW(error_linea);
         FL_forward_setpoint = FL_setpoint;
     } else {
         target_steering = (float)(last_line_dir * FL_RECOVERY_STEERING);
@@ -144,14 +129,6 @@ void FollowLine_Task(void)
 
     fl_steering_slow += delta_steering;
     FL_steering = (int16_t)fl_steering_slow;
-
-    if (AIRAB) {
-        float abs_steering = (FL_steering < 0) ? -(float)FL_steering : (float)FL_steering;
-        FL_forward_setpoint = FL_setpoint - (abs_steering * multiplicadorYaw);
-        if (FL_forward_setpoint < 0.0f) {
-            FL_forward_setpoint = 0.0f;
-        }
-    }
 }
 
 int16_t Calcular_PID_YAW(float error_linea)
