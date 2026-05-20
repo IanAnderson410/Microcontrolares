@@ -24,7 +24,7 @@ extern volatile uint16_t sensor_max[4];
 extern volatile uint16_t sensor_threshold[4];
 extern volatile uint8_t flag_calibrando_linea;
 extern volatile uint8_t flagCalibrationIsReady;
-extern uint16_t adc_buffer[8];
+extern volatile uint16_t adc_buffer[8];
 extern float error_linea;
 extern float last_state_linea;
 

@@ -3,7 +3,8 @@
 void Filtrar_Sensores_IR(void)
 {
     for (int i = 0; i < FL_LINE_SENSOR_COUNT; i++) {
-        adc_filtrado[i] = (adc_filtrado[i] * 9 + adc_buffer[i]) / 10;
+        uint16_t adc_sample = adc_buffer[i];
+        adc_filtrado[i] = (adc_filtrado[i] * 7 + adc_sample * 3) / 10;
     }
 }
 
@@ -63,7 +64,7 @@ void Finalizar_Calibracion_Linea(void)
     flag_calibrando_linea = 0;
 
     for (int i = 0; i < FL_LINE_SENSOR_COUNT; i++) {
-        if ((sensor_max[i] > sensor_min[i]) && ((sensor_max[i] - sensor_min[i]) > 80)) {
+        if ((sensor_max[i] > sensor_min[i]) && ((sensor_max[i] - sensor_min[i]) > FL_LINE_MIN_SPREAD)) {
             sensor_threshold[i] = (sensor_max[i] + sensor_min[i]) / 2;
         } else {
             sensor_threshold[i] = fallback_threshold[i];

@@ -2,8 +2,6 @@
 #include "line_sensors.h"
 
 #define FL_RECOVERY_STEERING         700
-#define FL_MOTION_PHASE_MS           200U
-#define FL_BALANCE_PHASE_MS          200U
 
 void PID_PITCH(void)
 {
@@ -18,19 +16,9 @@ void PID_PITCH(void)
     accely = ayRaw;
     accelz = azRaw;
 
-//    if (currentMode == CONTROL_MODE_RC) {
-//        float abs_angle = (angle_y < 0.0f) ? -angle_y : angle_y;
-//        if (abs_angle > limite_inclinacion) {
-//            RC_setpoint = RC_setpoint * correccionRCSP;
-//        } else {
-//            if (RC_slow_setpoint < RC_setpoint) RC_slow_setpoint += paso;
-//            if (RC_slow_setpoint > RC_setpoint) RC_slow_setpoint -= paso;
-//        }
-//    }
     switch (currentMode) {
     case CONTROL_MODE_RC:
-
-        target_setpoint = setpoint + RC_slow_setpoint;
+        target_setpoint = setpoint + RC_setpoint;
         steering = RC_steering;
         break;
 
@@ -42,19 +30,19 @@ void PID_PITCH(void)
             fl_motion_phase = 1U;
         }
 
-        if ((uint32_t)(now - fl_phase_tick) >=
-            (fl_motion_phase ? FL_MOTION_PHASE_MS : FL_BALANCE_PHASE_MS)) {
+        uint16_t phase_ms = fl_motion_phase ? FL_motion_phase_ms : FL_balance_phase_ms;
+        if ((uint32_t)(now - fl_phase_tick) >= phase_ms) {
             fl_phase_tick = now;
             fl_motion_phase = !fl_motion_phase;
         }
 
-        target_setpoint = setpoint + (fl_motion_phase ? FL_forward_setpoint : 0.0f);
+        target_setpoint = setpoint + (fl_motion_phase ? FL_setpoint : 0.0f);
         steering = FL_steering;
         break;
 
     case CONTROL_MODE_FL_RESCATE:
     case CONTROL_MODE_FL_INGRESO_A_90:
-        target_setpoint = setpoint + FL_forward_setpoint;
+        target_setpoint = setpoint;
         steering = FL_steering;
         break;
     case CONTROL_MODE_FL_PERDIDO_FAILSAFE:
@@ -63,7 +51,6 @@ void PID_PITCH(void)
         break;
     case CONTROL_MODE_IDLE:
     default:
-        RC_slow_setpoint = 0.0f;
         fl_phase_tick = 0U;
         fl_motion_phase = 1U;
         target_setpoint = setpoint;
@@ -100,7 +87,6 @@ void FollowLine_Task(void)
         currentMode > CONTROL_MODE_FL_INGRESO_A_90 ||
         currentMode == CONTROL_MODE_FL_INICIO ||
         flag_calibrando_linea) {
-        FL_forward_setpoint = 0.0f;
         FL_steering = 0;
         fl_steering_slow = 0.0f;
         return;
@@ -113,10 +99,8 @@ void FollowLine_Task(void)
             last_line_dir = -1;
         }
         target_steering = (float)Calcular_PID_YAW(error_linea);
-        FL_forward_setpoint = FL_setpoint;
     } else {
         target_steering = (float)(last_line_dir * FL_RECOVERY_STEERING);
-        FL_forward_setpoint = 0.0f;
     }
 
     float delta_steering = target_steering - fl_steering_slow;

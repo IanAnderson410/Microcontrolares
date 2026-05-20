@@ -434,7 +434,6 @@ extern volatile uint8_t uner_telemetry_enabled;
 extern volatile uint8_t flag_RC_active;
 extern volatile uint32_t rc_last_packet_tick;
 extern volatile float RC_setpoint;
-extern volatile float RC_slow_setpoint;
 extern volatile int16_t RC_steering;
 extern uint16_t delayHB;
 

@@ -144,7 +144,8 @@ enum {
        CMD_TELEMETRY_STOP           = 61,
        CMD_HTTP_SOFTAP              = 62,
        CMD_SET_YAW_PD               = 63,
-       CMD_SET_YAW_CONFIG           = 64
+       CMD_SET_YAW_CONFIG           = 64,
+       CMD_SET_FL_CONFIG            = 65
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -194,8 +195,8 @@ volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Time
 			float			correccionRCSP = 0.98;
 			float 			limite_inclinacion = 3.0f;
 // =================[ Variables de Control PID YAW] ================= //
-			float 		Kp_yaw = 2410.0f;
-			float 		Kd_yaw = 10.0f;
+			float 		Kp_yaw = 100.0f;
+			float 		Kd_yaw = 0.0f;
 			float 		last_error_yaw = 0;
 volatile    float 		FL_setpoint = 1.5f;
 			float 		yaw_error_filter_alpha = 0.70f;
@@ -222,13 +223,13 @@ volatile 	uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estam
 			float 			gyro_bias_z ;
 // =================[ Buffers de Sensores ] =================//
 			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
-			uint16_t 		adc_buffer[8]; // El buffer que llena el DMA
+volatile 	uint16_t 		adc_buffer[8]; // El buffer que llena el DMA
 // =================[ Modo Radio Control ] =================//
 volatile 	float 			RC_setpoint 			= 0;
-volatile 	float 			RC_slow_setpoint = 0;
 volatile 	int16_t   		RC_steering = 0;
-volatile 	float 			FL_forward_setpoint = 0.0f;
 volatile 	int16_t   		FL_steering = 0;
+volatile    uint16_t        FL_motion_phase_ms = 200;
+volatile    uint16_t        FL_balance_phase_ms = 400;
 float 		paso = 0.1f; // Velocidad de inclinación
 // =================[ Protocolo UNER ] =================//
 volatile 	uint16_t 		accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
@@ -390,10 +391,10 @@ void screenScheduler(void){
         sprintf(msg, "L:%u%u%u%u", line_s3, line_s2, line_s1, line_s0);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 42);
-        snprintf(msg, sizeof(msg), "ADC:%u %u", adc_filtrado[0], adc_filtrado[1]);
+        snprintf(msg, sizeof(msg), "R:%u %u", adc_buffer[0], adc_buffer[1]);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 54);
-        snprintf(msg, sizeof(msg), "ADC2:%u", adc_filtrado[2]);
+        snprintf(msg, sizeof(msg), "R:%u %u", adc_buffer[2], adc_buffer[3]);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_UpdateScreen();
         return;
@@ -412,7 +413,7 @@ void screenScheduler(void){
         sprintf(msg, "Step:%2.0f", yaw_steering_step_max);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 48);
-        sprintf(msg, "E:%+1.2f L:%u%u%u", error_linea, line_s2, line_s1, line_s0);
+        sprintf(msg, "E:%+1.2f L:%u%u%u%u", error_linea, line_s3, line_s2, line_s1, line_s0);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_UpdateScreen();
         return;
@@ -612,23 +613,20 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         }
         break;
     case CMD_SET_YAW_CONFIG:
-        if (payload_len >= 24) {
+        if (payload_len >= 20) {
             float kp = UNER_ReadFloatLE(payload);
             float kd = UNER_ReadFloatLE(payload + 4);
-            float fl_sp = UNER_ReadFloatLE(payload + 8);
-            float curve_mul = UNER_ReadFloatLE(payload + 12);
-            float filter_alpha = UNER_ReadFloatLE(payload + 16);
-            float steering_step = UNER_ReadFloatLE(payload + 20);
+            float curve_mul = UNER_ReadFloatLE(payload + 8);
+            float filter_alpha = UNER_ReadFloatLE(payload + 12);
+            float steering_step = UNER_ReadFloatLE(payload + 16);
 
             if (kp >= 0.0f && kp <= 20000.0f &&
                 kd >= 0.0f && kd <= 5000.0f &&
-                fl_sp >= -10.0f && fl_sp <= 10.0f &&
                 curve_mul >= 0.0f && curve_mul <= 1.0f &&
                 filter_alpha >= 0.0f && filter_alpha <= 0.995f &&
                 steering_step >= 1.0f && steering_step <= 2000.0f) {
                 Kp_yaw = kp;
                 Kd_yaw = kd;
-                FL_setpoint = fl_sp;
                 multiplicadorYaw = curve_mul;
                 yaw_error_filter_alpha = filter_alpha;
                 yaw_steering_step_max = steering_step;
@@ -641,6 +639,35 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         }
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_SET_YAW_CONFIG;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+    case CMD_SET_FL_CONFIG:
+        if (payload_len >= 6) {
+            float fl_sp = UNER_ReadFloatLE(payload);
+            uint16_t motion_ms = (uint16_t)payload[4] | ((uint16_t)payload[5] << 8);
+            uint16_t balance_ms = motion_ms;
+
+            if (payload_len >= 8) {
+                balance_ms = (uint16_t)payload[6] | ((uint16_t)payload[7] << 8);
+            }
+
+            if (fl_sp >= -10.0f && fl_sp <= 10.0f &&
+                motion_ms >= 20U && motion_ms <= 2000U &&
+                balance_ms >= 20U && balance_ms <= 5000U) {
+                FL_setpoint = fl_sp;
+                FL_motion_phase_ms = motion_ms;
+                FL_balance_phase_ms = balance_ms;
+                uner_ack_status = 0;
+            } else {
+                uner_ack_status = 1;
+            }
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_SET_FL_CONFIG;
             uner_ack_seq = seq;
             uner_ack_pending = 1;
         }
@@ -659,7 +686,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
     case CMD_STOP:
         flagMotorsAreOn = 0;
         RC_setpoint = 0.0f;
-        RC_slow_setpoint = 0.0f;
         RC_steering = 0;
         Robot_Drive(0, 0);
         uner_ack_status = 0;
@@ -723,7 +749,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             flagMotorsAreOn = (payload[0] != 0) ? 1 : 0;
             if (!flagMotorsAreOn) {
                 RC_setpoint = 0.0f;
-                RC_slow_setpoint = 0.0f;
                 RC_steering = 0;
                 Robot_Drive(0, 0);
             }
@@ -779,10 +804,10 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_CHANGE_SETPOINT_FL:
         if (payload_len >= 4) {
-            setpoint = UNER_ReadFloatLE(payload);
+            FL_setpoint = UNER_ReadFloatLE(payload);
             uner_ack_status = 0;
         } else if (payload_len >= 2) {
-            setpoint = (float)UNER_ReadInt16LE(payload);
+            FL_setpoint = (float)UNER_ReadInt16LE(payload);
             uner_ack_status = 0;
         } else {
             uner_ack_status = 2;
@@ -841,7 +866,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 RC_steering = steering_cmd;
             } else {
                 RC_setpoint = 0.0f;
-                RC_slow_setpoint = 0.0f;
                 RC_steering = 0;
             }
         }
@@ -1064,7 +1088,6 @@ int main(void)
       }
       MPU6050_Init(&hi2c1);
       HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_buffer, 8);
-      HAL_TIM_OC_Start(&htim5, TIM_CHANNEL_1);
       HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
       HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
       Robot_Drive(0, 0);
@@ -1096,14 +1119,18 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  	static uint32_t last_oled_update = 0;
+	  	static uint32_t last_ir_update = 0;
 		uint32_t now = HAL_GetTick();
 	  	ESP01_App_Task();
 	    KEY_CalibrationTask();
 		UNER_Rx_Task();
 		UNER_Tx_Task();
-		Filtrar_Sensores_IR();
-		Leer_Linea_Digital();
-		if (flag_calibrando_linea){	Procesar_Calibracion_Linea();}
+		if ((now - last_ir_update) >= 1U) {
+			last_ir_update = now;
+			Filtrar_Sensores_IR();
+			Leer_Linea_Digital();
+			if (flag_calibrando_linea){	Procesar_Calibracion_Linea();}
+		}
 		if(flag10ms){
 			flag10ms = 0;
 			Telemetry_UpdateMPU();
@@ -1111,7 +1138,6 @@ int main(void)
 			if (currentMode == MODO_RC && flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
 				flag_RC_active = 0;
 				RC_setpoint = 0.0f;
-				RC_slow_setpoint = 0.0f;
 				RC_steering = 0;
 			}
 			PID_PITCH();
@@ -1192,10 +1218,10 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = ENABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T5_CC1;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 8;
   hadc1.Init.DMAContinuousRequests = ENABLE;
@@ -1501,7 +1527,7 @@ static void MX_TIM5_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 8999;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_OC_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
