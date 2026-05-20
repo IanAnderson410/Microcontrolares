@@ -21,6 +21,7 @@ typedef struct __attribute__((packed)) {
 } PayloadDataV1_t;
 
 extern volatile float giro_z;
+extern volatile float imu_velocity_mps;
 extern float angle_roll;
 extern float angle_yaw;
 extern float error_linea;
@@ -173,7 +174,13 @@ uint8_t UNER_SendTelemetryV1(void)
     payload.yaw_cdeg = (int16_t)(angle_yaw * 100.0f);
     payload.pos_x_mm = (int32_t)(error_linea * 1000.0f);
     payload.pos_y_mm = (int32_t)((currentMode >= CONTROL_MODE_FL_INICIO) ? FL_steering : RC_steering);
-    payload.velocidad_mm_s = (int16_t)(((currentMode >= CONTROL_MODE_FL_INICIO) ? FL_setpoint : RC_setpoint) * 1000.0f);
+    int32_t velocity_mm_s = (int32_t)(imu_velocity_mps * 1000.0f);
+    if (velocity_mm_s > 32767) {
+        velocity_mm_s = 32767;
+    } else if (velocity_mm_s < -32768) {
+        velocity_mm_s = -32768;
+    }
+    payload.velocidad_mm_s = (int16_t)velocity_mm_s;
     payload.modo = currentMode;
     payload.infoAdicional = (uint8_t)((flagCalibrationIsReady ? 0x01 : 0x00) |
                                       (flag_calibrando_linea ? 0x02 : 0x00) |

@@ -27,6 +27,8 @@ extern volatile uint16_t accely;
 extern volatile uint16_t accelz;
 extern volatile float giro;
 extern volatile float giro_z;
+extern volatile float imu_accel_forward_mps2;
+extern volatile float imu_velocity_mps;
 extern volatile float RC_setpoint;
 extern volatile int16_t RC_steering;
 extern volatile float FL_setpoint;

@@ -2,6 +2,7 @@
 #include "line_sensors.h"
 
 #define FL_RECOVERY_STEERING         700
+#define FL_BALANCE_ONLY_STEERING     250
 
 void PID_PITCH(void)
 {
@@ -36,8 +37,12 @@ void PID_PITCH(void)
             fl_motion_phase = !fl_motion_phase;
         }
 
-        target_setpoint = setpoint + (fl_motion_phase ? FL_setpoint : 0.0f);
         steering = FL_steering;
+        if (steering > FL_BALANCE_ONLY_STEERING || steering < -FL_BALANCE_ONLY_STEERING) {
+            target_setpoint = setpoint;
+        } else {
+            target_setpoint = setpoint + (fl_motion_phase ? FL_setpoint : 0.0f);
+        }
         break;
 
     case CONTROL_MODE_FL_RESCATE:

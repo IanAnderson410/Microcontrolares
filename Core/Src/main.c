@@ -238,6 +238,8 @@ volatile 	uint16_t 		accely=0;
 volatile 	uint16_t		accelz=0;
 volatile 	float 			giro=0;
 volatile 	float			giro_z=0;
+volatile 	float 			imu_accel_forward_mps2 = 0.0f;
+volatile 	float 			imu_velocity_mps = 0.0f;
 // =================[ I2C Scheduler ] =================//
 volatile 	uint8_t 		oled_update_requested = 0;
 volatile 	uint8_t 		oled_current_page = 0;
@@ -360,11 +362,16 @@ void Telemetry_UpdateMPU(void)
     float gyro_pitch_rate = -(((float)gyPitchRaw - gyro_bias_y) / 131.0f);
     float gyro_yaw_rate = (((float)gzYawRaw - gyro_bias_z) / 131.0f);
     float pitch_accel = atan2f((float)axRaw - accel_bias_x, (float)azRaw - accel_bias_z) * 57.2957f;
+    float accel_x_mps2 = ((((float)axRaw - accel_bias_x) / 16384.0f) * 9.80665f);
+    float pitch_rad = angle_y * 0.0174532925f;
 
     giro = gyro_pitch_rate;
     giro_z = gyro_yaw_rate;
     angle_y = ALPHA_PID * (angle_y + gyro_pitch_rate * DT_PID) + (1.0f - ALPHA_PID) * pitch_accel;
     angle_yaw += gyro_yaw_rate * DT_PID;
+    imu_accel_forward_mps2 = accel_x_mps2 - (sinf(pitch_rad) * 9.80665f);
+
+    imu_velocity_mps += imu_accel_forward_mps2 * DT_PID;
 
     accelx = axRaw;
     accely = ayRaw;
@@ -403,18 +410,21 @@ void screenScheduler(void){
 
     if (flagOLED == 1) {
         SSD1306_GotoXY(0, 0);
-        SSD1306_Puts("YAW CONFIG", &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_GotoXY(0, 12);
-        sprintf(msg, "Kp:%4.0f Kd:%3.0f", Kp_yaw, Kd_yaw);
+        SSD1306_Puts("YAW/FL CFG", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 10);
+        sprintf(msg, "Kp:%4.0f Kd:%4.0f", Kp_yaw, Kd_yaw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_GotoXY(0, 24);
-        sprintf(msg, "SP:%1.2f M:%1.3f", FL_setpoint, multiplicadorYaw);
+        SSD1306_GotoXY(0, 20);
+        sprintf(msg, "SP:%1.2f Mul:%1.3f", FL_setpoint, multiplicadorYaw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_GotoXY(0, 36);
-        sprintf(msg, "St:%2.0f L:%3.0f", yaw_steering_step_max, yaw_steering_limit);
+        SSD1306_GotoXY(0, 30);
+        sprintf(msg, "A:%1.2f St:%4.0f", yaw_error_filter_alpha, yaw_steering_step_max);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_GotoXY(0, 48);
-        sprintf(msg, "E:%+1.2f L:%u%u%u%u", error_linea, line_s3, line_s2, line_s1, line_s0);
+        SSD1306_GotoXY(0, 40);
+        sprintf(msg, "Lim:%4.0f", yaw_steering_limit);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 50);
+        sprintf(msg, "Mv:%u Bal:%u", FL_motion_phase_ms, FL_balance_phase_ms);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_UpdateScreen();
         return;
@@ -433,7 +443,7 @@ void screenScheduler(void){
         sprintf(msg, "IR:%4u %4u", adc_filtrado[2], adc_filtrado[3]);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 48);
-        sprintf(msg, "LINEA:%u%u%u%u", line_s3, line_s2, line_s1, line_s0);
+        sprintf(msg, "V:%2.2f A:%2.2f", imu_velocity_mps, imu_accel_forward_mps2);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_UpdateScreen();
         return;
