@@ -112,6 +112,13 @@ void FollowLine_Task(void)
     }
 
     fl_steering_slow += delta_steering;
+    if (yaw_steering_limit > 0.0f) {
+        if (fl_steering_slow > yaw_steering_limit) {
+            fl_steering_slow = yaw_steering_limit;
+        } else if (fl_steering_slow < -yaw_steering_limit) {
+            fl_steering_slow = -yaw_steering_limit;
+        }
+    }
     FL_steering = (int16_t)fl_steering_slow;
 }
 

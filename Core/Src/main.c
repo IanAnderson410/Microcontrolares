@@ -201,6 +201,7 @@ volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Time
 volatile    float 		FL_setpoint = 1.5f;
 			float 		yaw_error_filter_alpha = 0.70f;
 			float 		yaw_steering_step_max = 90.0f;
+			float 		yaw_steering_limit = 500.0f;
 			float 		last_state_linea = 0.0f;
 			float 		error_linea;
 volatile 	uint16_t 	adc_filtrado[8] = {2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000};
@@ -410,7 +411,7 @@ void screenScheduler(void){
         sprintf(msg, "SP:%1.2f M:%1.3f", FL_setpoint, multiplicadorYaw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 36);
-        sprintf(msg, "Step:%2.0f", yaw_steering_step_max);
+        sprintf(msg, "St:%2.0f L:%3.0f", yaw_steering_step_max, yaw_steering_limit);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 48);
         sprintf(msg, "E:%+1.2f L:%u%u%u%u", error_linea, line_s3, line_s2, line_s1, line_s0);
@@ -619,17 +620,24 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             float curve_mul = UNER_ReadFloatLE(payload + 8);
             float filter_alpha = UNER_ReadFloatLE(payload + 12);
             float steering_step = UNER_ReadFloatLE(payload + 16);
+            float steering_limit = yaw_steering_limit;
+
+            if (payload_len >= 24) {
+                steering_limit = UNER_ReadFloatLE(payload + 20);
+            }
 
             if (kp >= 0.0f && kp <= 20000.0f &&
                 kd >= 0.0f && kd <= 5000.0f &&
                 curve_mul >= 0.0f && curve_mul <= 1.0f &&
                 filter_alpha >= 0.0f && filter_alpha <= 0.995f &&
-                steering_step >= 1.0f && steering_step <= 2000.0f) {
+                steering_step >= 1.0f && steering_step <= 2000.0f &&
+                steering_limit >= 0.0f && steering_limit <= 4000.0f) {
                 Kp_yaw = kp;
                 Kd_yaw = kd;
                 multiplicadorYaw = curve_mul;
                 yaw_error_filter_alpha = filter_alpha;
                 yaw_steering_step_max = steering_step;
+                yaw_steering_limit = steering_limit;
                 uner_ack_status = 0;
             } else {
                 uner_ack_status = 1;
