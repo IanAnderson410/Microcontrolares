@@ -145,12 +145,22 @@ enum {
        CMD_HTTP_SOFTAP              = 62,
        CMD_SET_YAW_PD               = 63,
        CMD_SET_YAW_CONFIG           = 64,
-       CMD_SET_FL_CONFIG            = 65
+       CMD_SET_FL_CONFIG            = 65,
+       CMD_MPU_NOISE_START_OFF      = 70,
+       CMD_MPU_NOISE_START_ON       = 71,
+       CMD_MPU_NOISE_DATA           = 72,
+       CMD_MPU_NOISE_DONE           = 73
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
 
 ESP01_App_t ESP = {0};
+
+typedef struct __attribute__((packed)) {
+    int16_t ax;
+    int16_t az;
+    int16_t gy;
+} MpuNoiseSample_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -159,6 +169,9 @@ ESP01_App_t ESP = {0};
 // ================= [ PID ] ================= //
 //#define 	ALPHA_PID 			0.98f    // Suaviza las vibraciones del acelerómetro
 #define 	DT_PID 				0.01f
+#define     MPU_NOISE_CAPTURE_MS         4000U
+#define     MPU_NOISE_SAMPLES_PER_PACKET 25U
+#define     MPU_NOISE_MOTOR_PWM          3599
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		        64
 #define     ESP01_RX_DMA_SIZE          256
@@ -178,6 +191,7 @@ volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
 volatile    uint8_t			flag10ms  				=	0;
+volatile    uint8_t         flag1ms_count           =   0;
 // ================= [ Counters ] ================= //
 volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Timer 4 para manejar el HeartBit*/
 // Nuevas variables para compensar la diferencia entre motores
@@ -239,7 +253,10 @@ volatile 	uint16_t		accelz=0;
 volatile 	float 			giro=0;
 volatile 	float			giro_z=0;
 volatile 	float 			imu_accel_forward_mps2 = 0.0f;
+volatile 	float 			imu_accel_velocity_mps2 = 0.0f;
 volatile 	float 			imu_velocity_mps = 0.0f;
+volatile 	float 			imu_accel_velocity_raw = 0.0f;
+volatile 	float 			imu_velocity_raw = 0.0f;
 // =================[ I2C Scheduler ] =================//
 volatile 	uint8_t 		oled_update_requested = 0;
 volatile 	uint8_t 		oled_current_page = 0;
@@ -268,6 +285,15 @@ volatile uint8_t uner_ack_cmd = 0;
 volatile uint8_t uner_ack_seq = 0;
 volatile uint8_t uner_ack_status = 0;
 volatile uint8_t uner_telemetry_enabled = 0;
+volatile uint8_t mpu_noise_capture_active = 0;
+volatile uint8_t mpu_noise_condition = 0;
+volatile uint8_t mpu_noise_done_pending = 0;
+volatile uint16_t mpu_noise_total_samples = 0;
+volatile uint16_t mpu_noise_dropped_packets = 0;
+static MpuNoiseSample_t mpu_noise_samples[MPU_NOISE_SAMPLES_PER_PACKET];
+static uint8_t mpu_noise_sample_index = 0;
+static uint16_t mpu_noise_packet_id = 0;
+static uint16_t mpu_noise_packet_first_sample = 0;
 volatile uint8_t uner_tx_busy = 0;
 volatile uint32_t uner_tx_ready_count = 0;
 volatile uint32_t uner_tx_busy_count = 0;
@@ -333,7 +359,13 @@ void ESP01_Http_Task(void);
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len);
 void Telemetry_UpdateMPU(void);
 void screenScheduler(void);
+void OLED_RequestUpdate(void);
+void OLED_UpdateTask(void);
 void KEY_CalibrationTask(void);
+void MpuNoise_Start(uint8_t motors_on);
+void MpuNoise_Task1ms(void);
+void MpuNoise_Finish(void);
+void Robot_Drive(int16_t speed_L, int16_t speed_R);
 /**
  * @details 							Crea una respuesta en forma de impulso con los motores la cual es proporcional
  * 										al error (pitch) del robot.	Implementa un filtro complementario para fusionar
@@ -354,79 +386,234 @@ void Telemetry_UpdateMPU(void)
     }
 
     axRaw = (int16_t)((buffer[0] << 8) | buffer[1]);
-    ayRaw = (int16_t)((buffer[2] << 8) | buffer[3]);
     azRaw = (int16_t)((buffer[4] << 8) | buffer[5]);
     gyPitchRaw = (int16_t)((buffer[10] << 8) | buffer[11]);
-    gzYawRaw = (int16_t)((buffer[12] << 8) | buffer[13]);
+    ayRaw = 0;
+    gzYawRaw = 0;
 
-    float gyro_pitch_rate = -(((float)gyPitchRaw - gyro_bias_y) / 131.0f);
-    float gyro_yaw_rate = (((float)gzYawRaw - gyro_bias_z) / 131.0f);
-    float pitch_accel = atan2f((float)axRaw - accel_bias_x, (float)azRaw - accel_bias_z) * 57.2957f;
-    float accel_x_mps2 = ((((float)axRaw - accel_bias_x) / 16384.0f) * 9.80665f);
-    float pitch_rad = angle_y * 0.0174532925f;
+    const float accel_lpf_alpha = 0.85f;
+    const float gyro_hpf_alpha = 0.92f;
+    const float complementary_alpha = 0.96f;
+    static float accel_x_lpf = 0.0f;
+    static float accel_z_lpf = 16384.0f;
+    static float gyro_y_prev_dps = 0.0f;
+    static float gyro_y_hpf_dps = 0.0f;
+    static float tilt_xz_deg = 0.0f;
+    static float velocity_accel_bias_raw = 0.0f;
+    static uint8_t velocity_filter_ready = 0;
 
-    giro = gyro_pitch_rate;
-    giro_z = gyro_yaw_rate;
-    angle_y = ALPHA_PID * (angle_y + gyro_pitch_rate * DT_PID) + (1.0f - ALPHA_PID) * pitch_accel;
-    angle_yaw += gyro_yaw_rate * DT_PID;
-    imu_accel_forward_mps2 = accel_x_mps2 - (sinf(pitch_rad) * 9.80665f);
+    giro = 0.0f;
+    giro_z = 0.0f;
+    angle_roll = 0.0f;
+    angle_yaw = 0.0f;
 
-    imu_velocity_mps += imu_accel_forward_mps2 * DT_PID;
+    if (!velocity_filter_ready) {
+        accel_x_lpf = (float)axRaw;
+        accel_z_lpf = (float)azRaw;
+        velocity_accel_bias_raw = 0.0f;
+        velocity_filter_ready = 1;
+    }
+
+    accel_x_lpf = (accel_lpf_alpha * accel_x_lpf) + ((1.0f - accel_lpf_alpha) * (float)axRaw);
+    accel_z_lpf = (accel_lpf_alpha * accel_z_lpf) + ((1.0f - accel_lpf_alpha) * (float)azRaw);
+
+    float gyro_y_dps = -(((float)gyPitchRaw - gyro_bias_y) / 131.0f);
+    gyro_y_hpf_dps = gyro_hpf_alpha * (gyro_y_hpf_dps + gyro_y_dps - gyro_y_prev_dps);
+    gyro_y_prev_dps = gyro_y_dps;
+
+    float accel_x_no_bias = accel_x_lpf - accel_bias_x;
+    float accel_z_no_bias = accel_z_lpf - accel_bias_z;
+    float accel_tilt_xz_deg = atan2f(accel_x_no_bias, accel_z_no_bias) * 57.2957795f;
+    tilt_xz_deg = complementary_alpha * (tilt_xz_deg + gyro_y_hpf_dps * DT_PID) +
+                  (1.0f - complementary_alpha) * accel_tilt_xz_deg;
+
+    float gravity_x_raw = sinf(tilt_xz_deg * 0.0174532925f) * 16384.0f;
+    float linear_accel_x_raw = accel_x_no_bias - gravity_x_raw;
+
+    velocity_accel_bias_raw = (0.999f * velocity_accel_bias_raw) + (0.001f * linear_accel_x_raw);
+    imu_accel_velocity_raw = linear_accel_x_raw - velocity_accel_bias_raw;
+
+    if (imu_accel_velocity_raw > -134.0f && imu_accel_velocity_raw < 134.0f) {
+        imu_accel_velocity_raw = 0.0f;
+    }
+
+    if (imu_accel_velocity_raw == 0.0f) {
+        imu_velocity_raw *= 0.96f;
+        if (imu_velocity_raw > -17.0f && imu_velocity_raw < 17.0f) {
+            imu_velocity_raw = 0.0f;
+        }
+    } else {
+        imu_velocity_raw += imu_accel_velocity_raw * DT_PID;
+    }
+
+    angle_y = tilt_xz_deg;
+    giro = gyro_y_hpf_dps;
+    imu_accel_forward_mps2 = linear_accel_x_raw;
+    imu_accel_velocity_mps2 = imu_accel_velocity_raw;
+    imu_velocity_mps = imu_velocity_raw;
 
     accelx = axRaw;
     accely = ayRaw;
     accelz = azRaw;
 }
 
+void MpuNoise_Start(uint8_t motors_on)
+{
+    __disable_irq();
+    mpu_noise_capture_active = 0;
+    flag1ms_count = 0;
+    __enable_irq();
+
+    uner_telemetry_enabled = 0;
+    mpu_noise_condition = motors_on ? 1U : 0U;
+    mpu_noise_done_pending = 0;
+    mpu_noise_total_samples = 0;
+    mpu_noise_dropped_packets = 0;
+    mpu_noise_sample_index = 0;
+    mpu_noise_packet_id = 0;
+    mpu_noise_packet_first_sample = 0;
+    ESP.uner_tx_head = 0;
+    ESP.uner_tx_tail = 0;
+    ESP.uner_tx_count = 0;
+    uner_tx_last_try_tick = 0;
+
+    if (motors_on) {
+        flagMotorsAreOn = 1;
+        Robot_Drive(MPU_NOISE_MOTOR_PWM, MPU_NOISE_MOTOR_PWM);
+    } else {
+        flagMotorsAreOn = 0;
+        Robot_Drive(0, 0);
+    }
+
+    __disable_irq();
+    mpu_noise_capture_active = 1;
+    __enable_irq();
+}
+
+void MpuNoise_Finish(void)
+{
+    if (mpu_noise_sample_index > 0) {
+        if (!UNER_SendNoisePacketV1(mpu_noise_condition,
+                                    mpu_noise_packet_id,
+                                    mpu_noise_packet_first_sample,
+                                    mpu_noise_samples,
+                                    mpu_noise_sample_index)) {
+            mpu_noise_dropped_packets++;
+        }
+        mpu_noise_sample_index = 0;
+        mpu_noise_packet_id++;
+    }
+
+    Robot_Drive(0, 0);
+    flagMotorsAreOn = 0;
+    mpu_noise_done_pending = 1;
+}
+
+void MpuNoise_Task1ms(void)
+{
+    uint8_t buffer[12];
+
+    if (!mpu_noise_capture_active) {
+        return;
+    }
+
+    if (mpu_noise_total_samples >= MPU_NOISE_CAPTURE_MS) {
+        mpu_noise_capture_active = 0;
+        MpuNoise_Finish();
+        return;
+    }
+
+    if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, 0x3B, 1, buffer, sizeof(buffer), 2) != HAL_OK) {
+        return;
+    }
+
+    MpuNoiseSample_t *sample = &mpu_noise_samples[mpu_noise_sample_index];
+    sample->ax = (int16_t)((buffer[0] << 8) | buffer[1]);
+    sample->az = (int16_t)((buffer[4] << 8) | buffer[5]);
+    sample->gy = (int16_t)((buffer[10] << 8) | buffer[11]);
+
+    mpu_noise_sample_index++;
+    mpu_noise_total_samples++;
+
+    if (mpu_noise_sample_index >= MPU_NOISE_SAMPLES_PER_PACKET) {
+        if (!UNER_SendNoisePacketV1(mpu_noise_condition,
+                                    mpu_noise_packet_id,
+                                    mpu_noise_packet_first_sample,
+                                    mpu_noise_samples,
+                                    MPU_NOISE_SAMPLES_PER_PACKET)) {
+            mpu_noise_dropped_packets++;
+        }
+        mpu_noise_packet_id++;
+        mpu_noise_packet_first_sample = mpu_noise_total_samples;
+        mpu_noise_sample_index = 0;
+    }
+}
+
+void OLED_RequestUpdate(void)
+{
+    oled_current_page = 0;
+    oled_update_requested = 1;
+}
+
+void OLED_UpdateTask(void)
+{
+    if (!oled_update_requested || oled_is_busy) {
+        return;
+    }
+
+    if (oled_current_page < 8) {
+        SSD1306_UpdatePage_DMA(oled_current_page);
+        oled_current_page++;
+    } else {
+        oled_current_page = 0;
+        oled_update_requested = 0;
+    }
+}
+
 void screenScheduler(void){
     if (!esp01_oled_ready) {
         return;
     }
+    if (oled_update_requested || oled_is_busy) {
+        return;
+    }
 
     SSD1306_Fill(SSD1306_COLOR_BLACK);
-    uint8_t line_s0 = estado_sensores[0] ? 1U : 0U;
-    uint8_t line_s1 = estado_sensores[1] ? 1U : 0U;
-    uint8_t line_s2 = estado_sensores[2] ? 1U : 0U;
-    uint8_t line_s3 = estado_sensores[3] ? 1U : 0U;
-
     if (flagOLED == 0) {
         SSD1306_GotoXY(0, 0);
-        SSD1306_Puts("LINE ERROR", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_Puts("MPU VELOCITY", &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 14);
-        sprintf(msg, "E:%+1.3f", error_linea);
+        sprintf(msg, "AX:%d", axRaw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 28);
-        sprintf(msg, "L:%u%u%u%u", line_s3, line_s2, line_s1, line_s0);
+        sprintf(msg, "AZ:%d", azRaw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 42);
-        snprintf(msg, sizeof(msg), "R:%u %u", adc_buffer[0], adc_buffer[1]);
+        snprintf(msg, sizeof(msg), "Araw:%ld", (long)imu_accel_velocity_raw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 54);
-        snprintf(msg, sizeof(msg), "R:%u %u", adc_buffer[2], adc_buffer[3]);
+        snprintf(msg, sizeof(msg), "Vraw:%ld", (long)imu_velocity_raw);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_UpdateScreen();
+        OLED_RequestUpdate();
         return;
     }
 
     if (flagOLED == 1) {
         SSD1306_GotoXY(0, 0);
-        SSD1306_Puts("YAW/FL CFG", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_Puts("MPU FILTER", &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 10);
-        sprintf(msg, "Kp:%4.0f Kd:%4.0f", Kp_yaw, Kd_yaw);
+        sprintf(msg, "Tilt:%2.2f", angle_y);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 20);
-        sprintf(msg, "SP:%1.2f Mul:%1.3f", FL_setpoint, multiplicadorYaw);
+        sprintf(msg, "GyHP:%2.2f", giro);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 30);
-        sprintf(msg, "A:%1.2f St:%4.0f", yaw_error_filter_alpha, yaw_steering_step_max);
+        sprintf(msg, "A:%2.2f", imu_accel_velocity_mps2);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_GotoXY(0, 40);
-        sprintf(msg, "Lim:%4.0f", yaw_steering_limit);
+        SSD1306_GotoXY(0, 42);
+        sprintf(msg, "V:%2.2f", imu_velocity_mps);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_GotoXY(0, 50);
-        sprintf(msg, "Mv:%u Bal:%u", FL_motion_phase_ms, FL_balance_phase_ms);
-        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_UpdateScreen();
+        OLED_RequestUpdate();
         return;
     }
 
@@ -443,9 +630,9 @@ void screenScheduler(void){
         sprintf(msg, "IR:%4u %4u", adc_filtrado[2], adc_filtrado[3]);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 48);
-        sprintf(msg, "V:%2.2f A:%2.2f", imu_velocity_mps, imu_accel_forward_mps2);
+        sprintf(msg, "V:%2.2f A:%2.2f", imu_velocity_mps, imu_accel_velocity_mps2);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_UpdateScreen();
+        OLED_RequestUpdate();
         return;
     }
 
@@ -468,7 +655,7 @@ void screenScheduler(void){
     SSD1306_GotoXY(24, 10);
     SSD1306_Puts(ip_address, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 20);
-    sprintf(msg, "W:%d U:%d L:%u%u%u%u", flagWIFI, ESP.udp_connected, line_s3, line_s2, line_s1, line_s0);
+    sprintf(msg, "W:%d U:%d", flagWIFI, ESP.udp_connected);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 30);
     sprintf(msg, "TX:%lu RX:%lu", (unsigned long)esp01_tx_count, (unsigned long)esp01_rx_count);
@@ -485,7 +672,7 @@ void screenScheduler(void){
              (unsigned long)uner_tx_recover_count,
              esp01_last_debug);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-    SSD1306_UpdateScreen();
+    OLED_RequestUpdate();
     return;
 
 	if (!oled_is_busy) {
@@ -577,6 +764,82 @@ void screenScheduler(void){
 }
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len)
 {
+    switch (cmd) {
+    case CMD_ALIVE:
+        esp01_alive_count++;
+        uner_ack_status = 0;
+        break;
+    case CMD_TELEMETRY_START:
+        uner_telemetry_enabled = 1;
+        uner_next_telemetry_tick = HAL_GetTick();
+        uner_ack_status = 0;
+        break;
+    case CMD_TELEMETRY_STOP:
+        uner_telemetry_enabled = 0;
+        uner_ack_status = 0;
+        break;
+    case CMD_HTTP_SOFTAP:
+        uner_telemetry_enabled = 0;
+        esp01_http_softap_requested = 1;
+        uner_ack_status = 0;
+        break;
+    case CMD_MPU_NOISE_START_OFF:
+        MpuNoise_Start(0);
+        uner_ack_status = 0;
+        break;
+    case CMD_MPU_NOISE_START_ON:
+        MpuNoise_Start(1);
+        uner_ack_status = 0;
+        break;
+    case CMD_CALIBRATE:
+        flagCalibrationIsReady = 0;
+        mpu_calibration_requested = 1;
+        uner_ack_status = 0;
+        break;
+    case CMD_SET_HB:
+        if (payload_len >= 1) {
+            uint16_t requested_delay = payload[0];
+            if (payload_len >= 2) {
+                requested_delay = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
+            }
+            if (requested_delay >= 1 && requested_delay <= 200) {
+                delayHB = requested_delay;
+                uner_ack_status = 0;
+            } else {
+                uner_ack_status = 1;
+            }
+        } else {
+            uner_ack_status = 2;
+        }
+        break;
+    case CMD_CHANGE_OLED_SCREEN:
+        if (payload_len >= 1) {
+            uint16_t requested_page = payload[0];
+            if (payload_len >= 2) {
+                requested_page = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
+            }
+            if (requested_page <= 2) {
+                flagOLED = (uint8_t)requested_page;
+                uner_ack_status = 0;
+            } else {
+                uner_ack_status = 1;
+            }
+        } else {
+            uner_ack_status = 2;
+        }
+        break;
+    default:
+        uner_ack_status = 1;
+        break;
+    }
+
+    if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+        uner_ack_cmd = cmd;
+        uner_ack_seq = seq;
+        uner_ack_pending = 1;
+    }
+    return;
+
     switch (cmd) {
     case CMD_ALIVE:
         esp01_alive_count++;
@@ -1016,15 +1279,28 @@ void ESP01_Generic_Functions(uint32_t now){
 			uner_next_telemetry_tick = now + 50;
 		}
 	}
+    if (mpu_noise_done_pending && ESP.udp_connected && !uner_tx_busy && ESP.uner_tx_count == 0) {
+        if (UNER_SendNoiseDoneV1(mpu_noise_condition, mpu_noise_total_samples, mpu_noise_dropped_packets)) {
+            mpu_noise_done_pending = 0;
+        }
+    }
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
     if (htim->Instance == TIM4) {
-        ESP01_Timeout10ms();
-        flag10ms=1;
-        counterHB++;
-        if (counterHB >= delayHB) {
-            counterHB = 0;
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+        static uint8_t tick10ms = 0;
+        if (flag1ms_count < 10) {
+            flag1ms_count++;
+        }
+        tick10ms++;
+        if (tick10ms >= 10) {
+            tick10ms = 0;
+            ESP01_Timeout10ms();
+            flag10ms=1;
+            counterHB++;
+            if (counterHB >= delayHB) {
+                counterHB = 0;
+                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+            }
         }
     }
 }
@@ -1056,6 +1332,22 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
     if (huart->Instance == USART1) {
         __HAL_UART_CLEAR_OREFLAG(huart);
         HAL_UART_Receive_IT(&huart1, &ESP.AT_Rx_data, 1);
+    }
+}
+
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    if (hi2c->Instance == I2C1) {
+        oled_is_busy = 0;
+    }
+}
+
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
+{
+    if (hi2c->Instance == I2C1) {
+        oled_current_page = 0;
+        oled_update_requested = 0;
+        oled_is_busy = 0;
     }
 }
 /* USER CODE END 0 */
@@ -1093,9 +1385,7 @@ int main(void)
       MX_TIM2_Init();
       MX_TIM3_Init();
       MX_TIM4_Init();
-      MX_TIM5_Init();
       MX_USART1_UART_Init();
-      MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
       /* ================= [ ESP01 AT OFICIAL ] ================= */
       memset(ip_address, 0, sizeof(ip_address));
@@ -1105,10 +1395,6 @@ int main(void)
           screenScheduler();
       }
       MPU6050_Init(&hi2c1);
-      HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_buffer, 8);
-      HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-      HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-      Robot_Drive(0, 0);
       ESP.uner_rx_read = 0;
       ESP.uner_rx_write = 0;
       ESP.uner_tx_head = 0;
@@ -1126,6 +1412,9 @@ int main(void)
       ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
       ESP01_StartTransport();
       ESP.udp_started = 1;
+      HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+      HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+      Robot_Drive(0, 0);
       HAL_TIM_Base_Start_IT(&htim4);
   /* USER CODE END 2 */
 
@@ -1137,30 +1426,26 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  	static uint32_t last_oled_update = 0;
-	  	static uint32_t last_ir_update = 0;
 		uint32_t now = HAL_GetTick();
 	  	ESP01_App_Task();
-	    KEY_CalibrationTask();
 		UNER_Rx_Task();
 		UNER_Tx_Task();
-		if ((now - last_ir_update) >= 1U) {
-			last_ir_update = now;
-			Filtrar_Sensores_IR();
-			Leer_Linea_Digital();
-			if (flag_calibrando_linea){	Procesar_Calibracion_Linea();}
+		while(flag1ms_count > 0){
+			__disable_irq();
+			flag1ms_count--;
+			__enable_irq();
+			MpuNoise_Task1ms();
 		}
 		if(flag10ms){
 			flag10ms = 0;
-			Telemetry_UpdateMPU();
-			FollowLine_Task();
-			if (currentMode == MODO_RC && flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
-				flag_RC_active = 0;
-				RC_setpoint = 0.0f;
-				RC_steering = 0;
+			if(!mpu_noise_capture_active){
+				Telemetry_UpdateMPU();
 			}
-			PID_PITCH();
 		}
-		if((now - last_oled_update)>=500){last_oled_update = now;screenScheduler();	}
+		if(!mpu_noise_capture_active){
+			OLED_UpdateTask();
+			if((now - last_oled_update)>=50){last_oled_update = now;screenScheduler();	}
+		}
 		ESP01_Generic_Functions(now);
 		ESP01_Task();
   }
@@ -1490,7 +1775,7 @@ static void MX_TIM4_Init(void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 719;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 999;
+  htim4.Init.Period = 99;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)

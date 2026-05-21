@@ -650,6 +650,7 @@ void ssd1306_I2C_Write(uint8_t address, uint8_t reg, uint8_t data) {
 
 void SSD1306_UpdatePage_DMA(uint8_t page) {
     if (page >= 8) return;
+    if (oled_is_busy) return;
 
     // --- ARMAMOS TODO EL PAQUETE EN LA RAM (0 bloqueos) ---
 
@@ -675,6 +676,7 @@ void SSD1306_UpdatePage_DMA(uint8_t page) {
   //  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     // --- DISPARAMOS EL DMA UNA SOLA VEZ ---
     // Esto retorna instantáneamente. Cero bloqueos. El hardware hace todo.
+    oled_is_busy = 1;
     if (HAL_I2C_Master_Transmit_DMA(SSD1306_I2C, SSD1306_I2C_ADDR, dma_page_buffer, 135) != HAL_OK) {
             // Si el DMA falló en arrancar (por ejemplo, bus ocupado por ruido)
             // Forzamos el reinicio de las banderas para que no se quede trabado para siempre

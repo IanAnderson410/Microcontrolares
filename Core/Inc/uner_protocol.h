@@ -16,7 +16,7 @@ extern "C" {
 #define UNER_TELEMETRY_PERIOD_MS 100
 #define UNER_TX_RECOVERY_MS      1000
 #define UNER_V1_VERSION          1
-#define UNER_V1_MAX_PAYLOAD      64
+#define UNER_V1_MAX_PAYLOAD      180
 #define UNER_V1_FLAG_ACK_REQUIRED 0x01
 #define UNER_V1_FLAG_ACK          0x02
 
@@ -37,6 +37,8 @@ uint8_t UNER_QueueTx(const uint8_t *data, uint16_t len);
 void UNER_Tx_Task(void);
 uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status);
 uint8_t UNER_SendTelemetryV1(void);
+uint8_t UNER_SendNoisePacketV1(uint8_t condition, uint16_t packet_id, uint16_t first_sample, const void *samples, uint8_t sample_count);
+uint8_t UNER_SendNoiseDoneV1(uint8_t condition, uint16_t total_samples, uint16_t dropped_packets);
 uint8_t UNER_Send(const uint8_t cmd, const uint8_t *payload, uint8_t payload_len);
 uint8_t UNER_SendInt16(uint8_t cmd, int16_t value);
 void UNER_Rx_Task(void);

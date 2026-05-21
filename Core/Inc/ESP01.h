@@ -45,8 +45,8 @@ typedef enum{
 #define ESP01RXBUFAT		128
 #define ESP01TXBUFAT		256
 #define ESP01_UNER_RX_RING_SIZE 128
-#define ESP01_UNER_TX_QUEUE_DEPTH 4
-#define ESP01_UNER_TX_FRAME_MAX 80
+#define ESP01_UNER_TX_QUEUE_DEPTH 8
+#define ESP01_UNER_TX_FRAME_MAX 200
 
 #ifndef ESP01_UDP_LOCAL_PORT
 #define ESP01_UDP_LOCAL_PORT       8888
@@ -57,7 +57,7 @@ typedef enum{
 #define ESP01_TRANSPORT_UDP        0
 #define ESP01_TRANSPORT_TCP        1
 #ifndef ESP01_TRANSPORT
-#define ESP01_TRANSPORT            ESP01_TRANSPORT_UDP
+#define ESP01_TRANSPORT            ESP01_TRANSPORT_TCP
 #endif
 #define ESP01_APP_MODE_QT          0
 #define ESP01_APP_MODE_HTTP_SOFTAP 1
@@ -75,11 +75,11 @@ typedef enum{
 #define ESP01_WIFI_PROFILE_HOME        1
 #define ESP01_WIFI_PROFILE_LAB         2
 #ifndef ESP01_WIFI_PROFILE
-#define ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_UNIVERSITY
+#define ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_HOME
 #endif
 
 #if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
-#define WIFI_SSID                  "InternetPlus_872f10"
+#define WIFI_SSID                  "InternetPlus"
 #define WIFI_PASSWORD              "wlan78d0ef"
 #define ESP01_QT_REMOTE_IP         "192.168.1.3"
 #elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_LAB

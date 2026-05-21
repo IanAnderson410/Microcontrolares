@@ -1,10 +1,10 @@
 #include "uner_protocol.h"
-#include "control_systems.h"
-#include "line_sensors.h"
 #include <string.h>
 
 #define UNER_CMD_ACK 1
 #define UNER_CMD_DATA 17
+#define UNER_CMD_MPU_NOISE_DATA 72
+#define UNER_CMD_MPU_NOISE_DONE 73
 
 typedef struct __attribute__((packed)) {
     int16_t     acc_x, acc_y, acc_z;
@@ -12,19 +12,22 @@ typedef struct __attribute__((packed)) {
     int16_t     pitch_cdeg;
     int16_t     roll_cdeg;
     int16_t     yaw_cdeg;
-    int32_t     pos_x_mm;
-    int32_t     pos_y_mm;
+    int32_t     accel_raw;
+    int32_t     velocity_raw;
     int16_t     velocidad_mm_s;
     uint8_t     modo;
-    uint16_t    IR[8];
+    uint16_t    reserved[8];
     uint8_t     infoAdicional;
 } PayloadDataV1_t;
 
-extern volatile float giro_z;
-extern volatile float imu_velocity_mps;
-extern float angle_roll;
-extern float angle_yaw;
-extern float error_linea;
+extern volatile uint16_t accelx;
+extern volatile uint16_t accelz;
+extern volatile float giro;
+extern volatile float angle_y;
+extern volatile float imu_accel_velocity_raw;
+extern volatile float imu_velocity_raw;
+extern volatile uint8_t currentMode;
+extern volatile uint8_t flagCalibrationIsReady;
 
 uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len)
 {
@@ -165,35 +168,62 @@ uint8_t UNER_SendTelemetryV1(void)
     PayloadDataV1_t payload;
 
     payload.acc_x = (int16_t)accelx;
-    payload.acc_y = (int16_t)accely;
+    payload.acc_y = 0;
     payload.acc_z = (int16_t)accelz;
     payload.gyro_pitch = (int16_t)giro;
-    payload.gyro_yaw = (int16_t)giro_z;
+    payload.gyro_yaw = 0;
     payload.pitch_cdeg = (int16_t)(angle_y * 100.0f);
-    payload.roll_cdeg = (int16_t)(angle_roll * 100.0f);
-    payload.yaw_cdeg = (int16_t)(angle_yaw * 100.0f);
-    payload.pos_x_mm = (int32_t)(error_linea * 1000.0f);
-    payload.pos_y_mm = (int32_t)((currentMode >= CONTROL_MODE_FL_INICIO) ? FL_steering : RC_steering);
-    int32_t velocity_mm_s = (int32_t)(imu_velocity_mps * 1000.0f);
-    if (velocity_mm_s > 32767) {
-        velocity_mm_s = 32767;
-    } else if (velocity_mm_s < -32768) {
-        velocity_mm_s = -32768;
+    payload.roll_cdeg = 0;
+    payload.yaw_cdeg = 0;
+    payload.accel_raw = (int32_t)imu_accel_velocity_raw;
+    payload.velocity_raw = (int32_t)imu_velocity_raw;
+    int32_t velocity_raw = (int32_t)imu_velocity_raw;
+    if (velocity_raw > 32767) {
+        velocity_raw = 32767;
+    } else if (velocity_raw < -32768) {
+        velocity_raw = -32768;
     }
-    payload.velocidad_mm_s = (int16_t)velocity_mm_s;
+    payload.velocidad_mm_s = (int16_t)velocity_raw;
     payload.modo = currentMode;
-    payload.infoAdicional = (uint8_t)((flagCalibrationIsReady ? 0x01 : 0x00) |
-                                      (flag_calibrando_linea ? 0x02 : 0x00) |
-                                      ((estado_sensores[0] & 0x01) << 2) |
-                                      ((estado_sensores[1] & 0x01) << 3) |
-                                      ((estado_sensores[2] & 0x01) << 4) |
-                                      ((estado_sensores[3] & 0x01) << 5));
-
     for (uint8_t i = 0; i < 8; i++) {
-        payload.IR[i] = adc_filtrado[i];
+        payload.reserved[i] = 0;
     }
+    payload.infoAdicional = flagCalibrationIsReady ? 0x01 : 0x00;
 
     return UNER_SendV1(UNER_CMD_DATA, 0, (const uint8_t *)&payload, sizeof(payload));
+}
+
+uint8_t UNER_SendNoisePacketV1(uint8_t condition, uint16_t packet_id, uint16_t first_sample, const void *samples, uint8_t sample_count)
+{
+    uint8_t payload[6 + (25 * 6)];
+    uint16_t sample_bytes = (uint16_t)sample_count * 6U;
+
+    if (samples == NULL || sample_count == 0 || sample_count > 25 || (6U + sample_bytes) > UNER_V1_MAX_PAYLOAD) {
+        return 0;
+    }
+
+    payload[0] = (uint8_t)(packet_id & 0xFF);
+    payload[1] = (uint8_t)((packet_id >> 8) & 0xFF);
+    payload[2] = condition;
+    payload[3] = sample_count;
+    payload[4] = (uint8_t)(first_sample & 0xFF);
+    payload[5] = (uint8_t)((first_sample >> 8) & 0xFF);
+    memcpy(&payload[6], samples, sample_bytes);
+
+    return UNER_SendV1(UNER_CMD_MPU_NOISE_DATA, 0, payload, (uint8_t)(6U + sample_bytes));
+}
+
+uint8_t UNER_SendNoiseDoneV1(uint8_t condition, uint16_t total_samples, uint16_t dropped_packets)
+{
+    uint8_t payload[5];
+
+    payload[0] = condition;
+    payload[1] = (uint8_t)(total_samples & 0xFF);
+    payload[2] = (uint8_t)((total_samples >> 8) & 0xFF);
+    payload[3] = (uint8_t)(dropped_packets & 0xFF);
+    payload[4] = (uint8_t)((dropped_packets >> 8) & 0xFF);
+
+    return UNER_SendV1(UNER_CMD_MPU_NOISE_DONE, 0, payload, sizeof(payload));
 }
 
 uint8_t UNER_Send(const uint8_t cmd, const uint8_t *payload, uint8_t payload_len)
