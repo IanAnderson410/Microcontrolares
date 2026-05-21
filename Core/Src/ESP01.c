@@ -148,8 +148,11 @@ void ESP01_SetWIFI(const char *ssid, const char *password){
 	strncpy(esp01PASSWORD, password, 32);
 	esp01PASSWORD[31] = '\0';
 
-	esp01TimeoutTask = 50;
-	esp01ATSate = ESP01ATHARDRST0;
+	if (esp01Handle.DoCHPD != NULL) {
+		esp01Handle.DoCHPD(1);
+	}
+	esp01TimeoutTask = 200;
+	esp01ATSate = ESP01ATAT;
 
 	esp01TriesAT = 0;
 
