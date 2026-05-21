@@ -509,6 +509,7 @@ private:
 
     QFile noiseCsvFile;
     QLabel *noiseStatusLabel = nullptr;
+    QLineEdit *noiseRobotIpEdit = nullptr;
     bool noiseCaptureActive = false;
     bool noiseCaptureMotorsOn = false;
     uint32_t noiseRowsWritten = 0;

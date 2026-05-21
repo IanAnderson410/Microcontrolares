@@ -330,8 +330,8 @@ MainWindow::MainWindow(QWidget *parent)
         widget->hide();
     }
 
-    setWindowTitle("MPU Motor Noise Capture");
-    resize(520, 260);
+    setWindowTitle("MPU Motor Noise Capture UDP");
+    resize(520, 300);
 
     QLabel *title = new QLabel("MPU MOTOR NOISE CAPTURE", ui->centralwidget);
     title->setGeometry(30, 25, 460, 35);
@@ -339,8 +339,16 @@ MainWindow::MainWindow(QWidget *parent)
     title->setStyleSheet("font-size: 20px; font-weight: bold;");
     title->show();
 
+    QLabel *robotIpLabel = new QLabel("Robot IP", ui->centralwidget);
+    robotIpLabel->setGeometry(55, 70, 80, 24);
+    robotIpLabel->show();
+
+    noiseRobotIpEdit = new QLineEdit("192.168.1.49", ui->centralwidget);
+    noiseRobotIpEdit->setGeometry(135, 70, 170, 24);
+    noiseRobotIpEdit->show();
+
     QPushButton *motorsOffButton = new QPushButton("RUN 4s - MOTORS OFF", ui->centralwidget);
-    motorsOffButton->setGeometry(55, 85, 185, 60);
+    motorsOffButton->setGeometry(55, 115, 185, 60);
     motorsOffButton->setStyleSheet("background-color: rgb(40, 110, 170); color: white; font-weight: bold; border-radius: 6px;");
     motorsOffButton->show();
     connect(motorsOffButton, &QPushButton::clicked, this, [this]() {
@@ -348,23 +356,24 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     QPushButton *motorsOnButton = new QPushButton("RUN 4s - MOTORS MAX", ui->centralwidget);
-    motorsOnButton->setGeometry(280, 85, 185, 60);
+    motorsOnButton->setGeometry(280, 115, 185, 60);
     motorsOnButton->setStyleSheet("background-color: rgb(170, 60, 45); color: white; font-weight: bold; border-radius: 6px;");
     motorsOnButton->show();
     connect(motorsOnButton, &QPushButton::clicked, this, [this]() {
         startNoiseExperiment(true);
     });
 
-    noiseStatusLabel = new QLabel("Connect TCP, then choose an experiment.", ui->centralwidget);
-    noiseStatusLabel->setGeometry(30, 170, 460, 35);
+    noiseStatusLabel = new QLabel("UDP ready. Set robot IP, then choose an experiment.", ui->centralwidget);
+    noiseStatusLabel->setGeometry(30, 205, 460, 45);
     noiseStatusLabel->setAlignment(Qt::AlignCenter);
     noiseStatusLabel->setStyleSheet("background-color: rgb(35, 35, 35); color: white; border-radius: 6px;");
     noiseStatusLabel->show();
 
-    if (tcpServer->listen(QHostAddress::AnyIPv4, 8888)) {
-        noiseStatusLabel->setText("TCP server ready on port 8888. Waiting for robot...");
+    if (udpSocket->bind(QHostAddress::AnyIPv4, 8888, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)) {
+        udpReady = true;
+        noiseStatusLabel->setText("UDP ready on local port 8888. Set robot IP.");
     } else {
-        noiseStatusLabel->setText("TCP server error: " + tcpServer->errorString());
+        noiseStatusLabel->setText("UDP bind error: " + udpSocket->errorString());
     }
 }
 MainWindow::~MainWindow()
@@ -914,10 +923,22 @@ void MainWindow::closeNoiseCsv(const QString &reason)
 
 void MainWindow::startNoiseExperiment(bool motorsOn)
 {
-    bool tcpReady = tcpClient != nullptr && tcpClient->state() == QAbstractSocket::ConnectedState;
-    if (!tcpReady) {
+    if (!udpReady) {
         if (noiseStatusLabel != nullptr) {
-            noiseStatusLabel->setText("TCP is not connected.");
+            noiseStatusLabel->setText("UDP is not ready.");
+        }
+        return;
+    }
+
+    if (noiseRobotIpEdit == nullptr) {
+        return;
+    }
+
+    udpRemoteAddress = QHostAddress(noiseRobotIpEdit->text().trimmed());
+    udpRemotePort = 8888;
+    if (udpRemoteAddress.isNull()) {
+        if (noiseStatusLabel != nullptr) {
+            noiseStatusLabel->setText("Invalid robot IP.");
         }
         return;
     }
@@ -929,6 +950,9 @@ void MainWindow::startNoiseExperiment(bool motorsOn)
 
     QByteArray payload;
     enviarComando(motorsOn ? CMD_MPU_NOISE_START_ON : CMD_MPU_NOISE_START_OFF, payload);
+    if (noiseStatusLabel != nullptr) {
+        noiseStatusLabel->setText(QString("UDP command sent to %1:8888").arg(udpRemoteAddress.toString()));
+    }
 }
 
 void MainWindow::processUnerV1Datagram(const QByteArray &data)
