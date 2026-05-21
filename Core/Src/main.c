@@ -637,40 +637,27 @@ void screenScheduler(void){
     }
 
     SSD1306_GotoXY(0, 0);
-			#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
-				SSD1306_Puts("ESP01 HTTP", &Font_7x10, SSD1306_COLOR_WHITE);
-			#else
-				if (esp01_http_softap_active) {
-					SSD1306_Puts("ESP01 HTTP", &Font_7x10, SSD1306_COLOR_WHITE);
-				} else {
-			#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
-					SSD1306_Puts("ESP01 TCP", &Font_7x10, SSD1306_COLOR_WHITE);
-			#else
-					SSD1306_Puts("ESP01 UDP", &Font_7x10, SSD1306_COLOR_WHITE);
-			#endif
-				}
-			#endif
+#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
+    SSD1306_Puts("TCP NOISE TEST", &Font_7x10, SSD1306_COLOR_WHITE);
+#else
+    SSD1306_Puts("UDP NOISE TEST", &Font_7x10, SSD1306_COLOR_WHITE);
+#endif
     SSD1306_GotoXY(0, 10);
-    SSD1306_Puts("", &Font_7x10, SSD1306_COLOR_WHITE);
-    SSD1306_GotoXY(24, 10);
-    SSD1306_Puts(ip_address, &Font_7x10, SSD1306_COLOR_WHITE);
+    snprintf(msg, sizeof(msg), "SSID:%s", WIFI_SSID);
+    SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 20);
-    sprintf(msg, "W:%d U:%d", flagWIFI, ESP.udp_connected);
+    snprintf(msg, sizeof(msg), "PC:%s", ESP01_QT_REMOTE_IP);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 30);
-    sprintf(msg, "TX:%lu RX:%lu", (unsigned long)esp01_tx_count, (unsigned long)esp01_rx_count);
+    snprintf(msg, sizeof(msg), "ESP:%s", ip_address);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 40);
-    sprintf(msg, "A:%lu K:%lu O:%lu",
-            (unsigned long)esp01_alive_count,
-            (unsigned long)esp01_ack_count,
-            (unsigned long)uner_tx_ok_count);
+    snprintf(msg, sizeof(msg), "W:%u TCP:%u", flagWIFI, ESP.udp_connected);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 52);
-    snprintf(msg, sizeof(msg), "B:%lu R:%lu %.3s",
-             (unsigned long)uner_tx_busy_count,
-             (unsigned long)uner_tx_recover_count,
-             esp01_last_debug);
+    snprintf(msg, sizeof(msg), "DBG:%.3s R:%lu",
+             esp01_last_debug,
+             (unsigned long)uner_tx_recover_count);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     OLED_RequestUpdate();
     return;
