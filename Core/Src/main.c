@@ -652,12 +652,12 @@ void screenScheduler(void){
     snprintf(msg, sizeof(msg), "ESP:%s", ip_address);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 40);
-    snprintf(msg, sizeof(msg), "W:%u TCP:%u", flagWIFI, ESP.udp_connected);
+    snprintf(msg, sizeof(msg), "W:%u T:%u RX:%lu", flagWIFI, ESP.udp_connected, (unsigned long)esp01_rx_count);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 52);
-    snprintf(msg, sizeof(msg), "DBG:%.3s R:%lu",
+    snprintf(msg, sizeof(msg), "%.3s %.10s",
              esp01_last_debug,
-             (unsigned long)uner_tx_recover_count);
+             esp01_last_rx);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
     OLED_RequestUpdate();
     return;
