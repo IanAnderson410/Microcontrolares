@@ -192,6 +192,7 @@ volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el P
 volatile	uint8_t			flag_RC_active			=	0;
 volatile    uint8_t			flag10ms  				=	0;
 volatile    uint8_t         flag1ms_count           =   0;
+volatile    uint8_t         mpu_noise_timer_1ms     =   0;
 // ================= [ Counters ] ================= //
 volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Timer 4 para manejar el HeartBit*/
 // Nuevas variables para compensar la diferencia entre motores
@@ -462,6 +463,9 @@ void MpuNoise_Start(uint8_t motors_on)
     __disable_irq();
     mpu_noise_capture_active = 0;
     flag1ms_count = 0;
+    mpu_noise_timer_1ms = 1;
+    __HAL_TIM_SET_AUTORELOAD(&htim4, 99);
+    __HAL_TIM_SET_COUNTER(&htim4, 0);
     __enable_irq();
 
     uner_telemetry_enabled = 0;
@@ -507,6 +511,12 @@ void MpuNoise_Finish(void)
     Robot_Drive(0, 0);
     flagMotorsAreOn = 0;
     mpu_noise_done_pending = 1;
+    __disable_irq();
+    mpu_noise_timer_1ms = 0;
+    flag1ms_count = 0;
+    __HAL_TIM_SET_AUTORELOAD(&htim4, 999);
+    __HAL_TIM_SET_COUNTER(&htim4, 0);
+    __enable_irq();
 }
 
 void MpuNoise_Task1ms(void)
@@ -1275,10 +1285,14 @@ void ESP01_Generic_Functions(uint32_t now){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
     if (htim->Instance == TIM4) {
         static uint8_t tick10ms = 0;
-        if (flag1ms_count < 10) {
-            flag1ms_count++;
+        if (mpu_noise_timer_1ms) {
+            if (flag1ms_count < 10) {
+                flag1ms_count++;
+            }
+            tick10ms++;
+        } else {
+            tick10ms = 10;
         }
-        tick10ms++;
         if (tick10ms >= 10) {
             tick10ms = 0;
             ESP01_Timeout10ms();
@@ -1762,7 +1776,7 @@ static void MX_TIM4_Init(void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 719;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 99;
+  htim4.Init.Period = 999;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
