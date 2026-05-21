@@ -495,6 +495,10 @@ void onESP01ChangeState(_eESP01STATUS esp01State)
 			ip_address[15] = '\0';
 			ip_received_flag = 1;
 			flagWIFI = 1;
+			if (!ESP.udp_connected) {
+				ESP01_StartTransport();
+				ESP.udp_started = 1;
+			}
 		}
 		break;
 	}
@@ -545,7 +549,21 @@ void onESP01Debug(const char *dbgStr)
 
 	const char *failStr = NULL;
 
-	if (strncmp(dbgStr, "FAIL_SENDOK", 11) == 0) {
+	if (strncmp(dbgStr, "+&DBGESP01HARDRESET", 20) == 0) {
+		failStr = "RST";
+	} else if (strncmp(dbgStr, "+&DBGESP01AT", 12) == 0) {
+		failStr = "AT";
+	} else if (strncmp(dbgStr, "+&DBGESP01ATCWMODE", 18) == 0) {
+		failStr = "MOD";
+	} else if (strncmp(dbgStr, "+&DBGESP01ATCWJAP", 17) == 0) {
+		failStr = "JAP";
+	} else if (strncmp(dbgStr, "+&DBGESP01CIFSR", 15) == 0) {
+		failStr = "IP?";
+	} else if (strncmp(dbgStr, "+&DBGESP01ATCIPSTART", 20) == 0) {
+		failStr = "TCP";
+	} else if (strncmp(dbgStr, "+&DBGESP01ATCIPCLOSE", 20) == 0) {
+		failStr = "CLS";
+	} else if (strncmp(dbgStr, "FAIL_SENDOK", 11) == 0) {
 		failStr = "SOK";
 	} else if (strncmp(dbgStr, "FAIL_PROMPT", 11) == 0) {
 		failStr = "PRM";
