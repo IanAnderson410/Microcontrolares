@@ -13,8 +13,31 @@
  * test bench shifted the dominant band to roughly 32-52 Hz, with important
  * peaks near 34, 37, 39, 44 and 49 Hz. Acc Z showed stronger higher-frequency
  * structural components around 76-78 Hz, 105 Hz, 133-149 Hz and 166-184 Hz.
- * Next step: repeat the same capture with digital filters applied, then compare
- * raw vs filtered spectra before committing the filtered firmware.
+ *
+ * Filter experiment notes:
+ * - First filtered run used digital notches plus a software low-pass. It reduced
+ *   Acc Z and partially helped Acc X, but Gyro Y remained strongly disturbed.
+ * - Current filtered firmware uses the MPU6050 hardware DLPF through register
+ *   0x1A = 0x02 and keeps only digital notches at 29, 34 and 39 Hz for Acc X
+ *   and Gyro Y. The software low-pass was removed.
+ * - Network profile for this run: FCAL, Qt TCP server at 172.23.224.234:8888.
+ *
+ * Latest filtered capture:
+ * - motors_off: complete 4000 samples, 160 packets, no loss.
+ * - motors_on: internally clean but incomplete, 1717 samples, 69 packets,
+ *   no gaps inside the captured interval.
+ * - Common interval used for comparison: 0-1716 ms, fs = 1 kHz, resolution
+ *   approximately 0.582 Hz.
+ * - Dominant motor-induced band moved to 13-24 Hz, especially 13.4, 15.14,
+ *   18.05, 20.38 and 23.88 Hz.
+ * - Gyro Y std increased about 61x and Acc X std about 35x in the common
+ *   interval. Acc Z was dominated mostly by 92-153 Hz and 182 Hz.
+ * - Conclusion: the 29/34/39 Hz notches plus MPU DLPF do not solve the main
+ *   low-frequency disturbance. Frequencies around 13-24 Hz are too close to
+ *   real balance dynamics to reject blindly with aggressive notches. The short
+ *   motors_on capture also suggests motor load may disturb power, ground, EMI
+ *   or TCP stability, so electrical/mechanical mitigation is required before
+ *   treating the MPU6050 as a reliable speed sensor.
  */
 /**
   ******************************************************************************
@@ -178,6 +201,22 @@ typedef struct __attribute__((packed)) {
     int16_t az;
     int16_t gy;
 } MpuNoiseSample_t;
+
+typedef struct {
+    float b0, b1, b2;
+    float a1, a2;
+    float z1, z2;
+} MpuNoiseBiquad_t;
+
+typedef struct {
+    MpuNoiseBiquad_t ax_notch_29;
+    MpuNoiseBiquad_t ax_notch_34;
+    MpuNoiseBiquad_t ax_notch_39;
+    MpuNoiseBiquad_t gy_notch_29;
+    MpuNoiseBiquad_t gy_notch_34;
+    MpuNoiseBiquad_t gy_notch_39;
+    uint8_t ready;
+} MpuNoiseFilterBank_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -312,6 +351,7 @@ volatile uint16_t mpu_noise_dropped_packets = 0;
 static MpuNoiseSample_t mpu_noise_samples[MPU_NOISE_MAX_SAMPLES];
 static uint16_t mpu_noise_transfer_index = 0;
 static uint16_t mpu_noise_transfer_packet_id = 0;
+static MpuNoiseFilterBank_t mpu_noise_filters;
 volatile uint8_t uner_tx_busy = 0;
 volatile uint32_t uner_tx_ready_count = 0;
 volatile uint32_t uner_tx_busy_count = 0;
@@ -384,6 +424,8 @@ void MpuNoise_Start(uint8_t motors_on);
 void MpuNoise_Task1ms(void);
 void MpuNoise_Finish(void);
 void MpuNoise_TransferTask(void);
+void MpuNoise_ResetFilters(void);
+void MpuNoise_FilterSample(MpuNoiseSample_t *sample);
 void Robot_Drive(int16_t speed_L, int16_t speed_R);
 /**
  * @details 							Crea una respuesta en forma de impulso con los motores la cual es proporcional
@@ -476,6 +518,97 @@ void Telemetry_UpdateMPU(void)
     accelz = azRaw;
 }
 
+static void MpuNoise_BiquadClear(MpuNoiseBiquad_t *f)
+{
+    f->z1 = 0.0f;
+    f->z2 = 0.0f;
+}
+
+static void MpuNoise_BiquadPrime(MpuNoiseBiquad_t *f, float x)
+{
+    f->z1 = (1.0f - f->b0) * x;
+    f->z2 = (f->b2 - f->a2) * x;
+}
+
+static float MpuNoise_BiquadProcess(MpuNoiseBiquad_t *f, float x)
+{
+    float y = (f->b0 * x) + f->z1;
+    f->z1 = (f->b1 * x) - (f->a1 * y) + f->z2;
+    f->z2 = (f->b2 * x) - (f->a2 * y);
+    return y;
+}
+
+static void MpuNoise_BiquadNotch(MpuNoiseBiquad_t *f, float fs, float f0, float q)
+{
+    float w0 = 6.283185307f * f0 / fs;
+    float c = cosf(w0);
+    float s = sinf(w0);
+    float alpha = s / (2.0f * q);
+    float a0 = 1.0f + alpha;
+
+    f->b0 = 1.0f / a0;
+    f->b1 = (-2.0f * c) / a0;
+    f->b2 = 1.0f / a0;
+    f->a1 = (-2.0f * c) / a0;
+    f->a2 = (1.0f - alpha) / a0;
+    MpuNoise_BiquadClear(f);
+}
+
+static int16_t MpuNoise_SaturateFloat(float x)
+{
+    if (x > 32767.0f) {
+        return 32767;
+    }
+    if (x < -32768.0f) {
+        return -32768;
+    }
+    return (int16_t)((x >= 0.0f) ? (x + 0.5f) : (x - 0.5f));
+}
+
+void MpuNoise_ResetFilters(void)
+{
+    const float fs = 1000.0f;
+
+    MpuNoise_BiquadNotch(&mpu_noise_filters.ax_notch_29, fs, 29.0f, 3.0f);
+    MpuNoise_BiquadNotch(&mpu_noise_filters.ax_notch_34, fs, 34.0f, 3.0f);
+    MpuNoise_BiquadNotch(&mpu_noise_filters.ax_notch_39, fs, 39.0f, 3.0f);
+
+    MpuNoise_BiquadNotch(&mpu_noise_filters.gy_notch_29, fs, 29.0f, 3.0f);
+    MpuNoise_BiquadNotch(&mpu_noise_filters.gy_notch_34, fs, 34.0f, 3.0f);
+    MpuNoise_BiquadNotch(&mpu_noise_filters.gy_notch_39, fs, 39.0f, 3.0f);
+
+    mpu_noise_filters.ready = 0;
+}
+
+void MpuNoise_FilterSample(MpuNoiseSample_t *sample)
+{
+    float ax = (float)sample->ax;
+    float az = (float)sample->az;
+    float gy = (float)sample->gy;
+
+    if (!mpu_noise_filters.ready) {
+        MpuNoise_BiquadPrime(&mpu_noise_filters.ax_notch_29, ax);
+        MpuNoise_BiquadPrime(&mpu_noise_filters.ax_notch_34, ax);
+        MpuNoise_BiquadPrime(&mpu_noise_filters.ax_notch_39, ax);
+        MpuNoise_BiquadPrime(&mpu_noise_filters.gy_notch_29, gy);
+        MpuNoise_BiquadPrime(&mpu_noise_filters.gy_notch_34, gy);
+        MpuNoise_BiquadPrime(&mpu_noise_filters.gy_notch_39, gy);
+        mpu_noise_filters.ready = 1;
+    }
+
+    ax = MpuNoise_BiquadProcess(&mpu_noise_filters.ax_notch_29, ax);
+    ax = MpuNoise_BiquadProcess(&mpu_noise_filters.ax_notch_34, ax);
+    ax = MpuNoise_BiquadProcess(&mpu_noise_filters.ax_notch_39, ax);
+
+    gy = MpuNoise_BiquadProcess(&mpu_noise_filters.gy_notch_29, gy);
+    gy = MpuNoise_BiquadProcess(&mpu_noise_filters.gy_notch_34, gy);
+    gy = MpuNoise_BiquadProcess(&mpu_noise_filters.gy_notch_39, gy);
+
+    sample->ax = MpuNoise_SaturateFloat(ax);
+    sample->az = MpuNoise_SaturateFloat(az);
+    sample->gy = MpuNoise_SaturateFloat(gy);
+}
+
 void MpuNoise_Start(uint8_t motors_on)
 {
     __disable_irq();
@@ -491,6 +624,7 @@ void MpuNoise_Start(uint8_t motors_on)
     mpu_noise_dropped_packets = 0;
     mpu_noise_transfer_index = 0;
     mpu_noise_transfer_packet_id = 0;
+    MpuNoise_ResetFilters();
     ESP.uner_tx_head = 0;
     ESP.uner_tx_tail = 0;
     ESP.uner_tx_count = 0;
@@ -540,6 +674,7 @@ void MpuNoise_Task1ms(void)
     sample->ax = (int16_t)((buffer[0] << 8) | buffer[1]);
     sample->az = (int16_t)((buffer[4] << 8) | buffer[5]);
     sample->gy = (int16_t)((buffer[10] << 8) | buffer[11]);
+    MpuNoise_FilterSample(sample);
 
     mpu_noise_total_samples++;
 }
