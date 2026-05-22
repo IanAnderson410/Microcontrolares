@@ -170,6 +170,7 @@ typedef struct __attribute__((packed)) {
 //#define 	ALPHA_PID 			0.98f    // Suaviza las vibraciones del acelerómetro
 #define 	DT_PID 				0.01f
 #define     MPU_NOISE_CAPTURE_MS         4000U
+#define     MPU_NOISE_MAX_SAMPLES        4000U
 #define     MPU_NOISE_SAMPLES_PER_PACKET 25U
 #define     MPU_NOISE_MOTOR_PWM          3599
 // ================= [ Comunicación ] ================= //
@@ -286,14 +287,14 @@ volatile uint8_t uner_ack_seq = 0;
 volatile uint8_t uner_ack_status = 0;
 volatile uint8_t uner_telemetry_enabled = 0;
 volatile uint8_t mpu_noise_capture_active = 0;
+volatile uint8_t mpu_noise_transfer_active = 0;
 volatile uint8_t mpu_noise_condition = 0;
 volatile uint8_t mpu_noise_done_pending = 0;
 volatile uint16_t mpu_noise_total_samples = 0;
 volatile uint16_t mpu_noise_dropped_packets = 0;
-static MpuNoiseSample_t mpu_noise_samples[MPU_NOISE_SAMPLES_PER_PACKET];
-static uint8_t mpu_noise_sample_index = 0;
-static uint16_t mpu_noise_packet_id = 0;
-static uint16_t mpu_noise_packet_first_sample = 0;
+static MpuNoiseSample_t mpu_noise_samples[MPU_NOISE_MAX_SAMPLES];
+static uint16_t mpu_noise_transfer_index = 0;
+static uint16_t mpu_noise_transfer_packet_id = 0;
 volatile uint8_t uner_tx_busy = 0;
 volatile uint32_t uner_tx_ready_count = 0;
 volatile uint32_t uner_tx_busy_count = 0;
@@ -365,6 +366,7 @@ void KEY_CalibrationTask(void);
 void MpuNoise_Start(uint8_t motors_on);
 void MpuNoise_Task1ms(void);
 void MpuNoise_Finish(void);
+void MpuNoise_TransferTask(void);
 void Robot_Drive(int16_t speed_L, int16_t speed_R);
 /**
  * @details 							Crea una respuesta en forma de impulso con los motores la cual es proporcional
@@ -467,11 +469,11 @@ void MpuNoise_Start(uint8_t motors_on)
     uner_telemetry_enabled = 0;
     mpu_noise_condition = motors_on ? 1U : 0U;
     mpu_noise_done_pending = 0;
+    mpu_noise_transfer_active = 0;
     mpu_noise_total_samples = 0;
     mpu_noise_dropped_packets = 0;
-    mpu_noise_sample_index = 0;
-    mpu_noise_packet_id = 0;
-    mpu_noise_packet_first_sample = 0;
+    mpu_noise_transfer_index = 0;
+    mpu_noise_transfer_packet_id = 0;
     ESP.uner_tx_head = 0;
     ESP.uner_tx_tail = 0;
     ESP.uner_tx_count = 0;
@@ -492,21 +494,11 @@ void MpuNoise_Start(uint8_t motors_on)
 
 void MpuNoise_Finish(void)
 {
-    if (mpu_noise_sample_index > 0) {
-        if (!UNER_SendNoisePacketV1(mpu_noise_condition,
-                                    mpu_noise_packet_id,
-                                    mpu_noise_packet_first_sample,
-                                    mpu_noise_samples,
-                                    mpu_noise_sample_index)) {
-            mpu_noise_dropped_packets++;
-        }
-        mpu_noise_sample_index = 0;
-        mpu_noise_packet_id++;
-    }
-
     Robot_Drive(0, 0);
     flagMotorsAreOn = 0;
-    mpu_noise_done_pending = 1;
+    mpu_noise_transfer_index = 0;
+    mpu_noise_transfer_packet_id = 0;
+    mpu_noise_transfer_active = 1;
 }
 
 void MpuNoise_Task1ms(void)
@@ -517,7 +509,7 @@ void MpuNoise_Task1ms(void)
         return;
     }
 
-    if (mpu_noise_total_samples >= MPU_NOISE_CAPTURE_MS) {
+    if (mpu_noise_total_samples >= MPU_NOISE_MAX_SAMPLES) {
         mpu_noise_capture_active = 0;
         MpuNoise_Finish();
         return;
@@ -527,25 +519,40 @@ void MpuNoise_Task1ms(void)
         return;
     }
 
-    MpuNoiseSample_t *sample = &mpu_noise_samples[mpu_noise_sample_index];
+    MpuNoiseSample_t *sample = &mpu_noise_samples[mpu_noise_total_samples];
     sample->ax = (int16_t)((buffer[0] << 8) | buffer[1]);
     sample->az = (int16_t)((buffer[4] << 8) | buffer[5]);
     sample->gy = (int16_t)((buffer[10] << 8) | buffer[11]);
 
-    mpu_noise_sample_index++;
     mpu_noise_total_samples++;
+}
 
-    if (mpu_noise_sample_index >= MPU_NOISE_SAMPLES_PER_PACKET) {
-        if (!UNER_SendNoisePacketV1(mpu_noise_condition,
-                                    mpu_noise_packet_id,
-                                    mpu_noise_packet_first_sample,
-                                    mpu_noise_samples,
-                                    MPU_NOISE_SAMPLES_PER_PACKET)) {
-            mpu_noise_dropped_packets++;
-        }
-        mpu_noise_packet_id++;
-        mpu_noise_packet_first_sample = mpu_noise_total_samples;
-        mpu_noise_sample_index = 0;
+void MpuNoise_TransferTask(void)
+{
+    if (!mpu_noise_transfer_active || mpu_noise_capture_active || uner_ack_pending ||
+        !ESP.udp_connected || uner_tx_busy || ESP.uner_tx_count != 0) {
+        return;
+    }
+
+    if (mpu_noise_transfer_index >= mpu_noise_total_samples) {
+        mpu_noise_transfer_active = 0;
+        mpu_noise_done_pending = 1;
+        return;
+    }
+
+    uint16_t remaining = (uint16_t)(mpu_noise_total_samples - mpu_noise_transfer_index);
+    uint8_t count = (remaining > MPU_NOISE_SAMPLES_PER_PACKET) ?
+                    MPU_NOISE_SAMPLES_PER_PACKET : (uint8_t)remaining;
+
+    if (UNER_SendNoisePacketV1(mpu_noise_condition,
+                               mpu_noise_transfer_packet_id,
+                               mpu_noise_transfer_index,
+                               &mpu_noise_samples[mpu_noise_transfer_index],
+                               count)) {
+        mpu_noise_transfer_index += count;
+        mpu_noise_transfer_packet_id++;
+    } else {
+        mpu_noise_dropped_packets++;
     }
 }
 
@@ -1271,6 +1278,7 @@ void ESP01_Generic_Functions(uint32_t now){
             mpu_noise_done_pending = 0;
         }
     }
+    MpuNoise_TransferTask();
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
     if (htim->Instance == TIM4) {
