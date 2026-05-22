@@ -79,9 +79,9 @@ typedef enum{
 #endif
 
 #if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
-#define WIFI_SSID                  "InternetPlus"
+#define WIFI_SSID                  "InternetPlus_872f10_EXT"
 #define WIFI_PASSWORD              "wlan78d0ef"
-#define ESP01_QT_REMOTE_IP         "192.168.1.3"
+#define ESP01_QT_REMOTE_IP         "192.168.1.31"
 #elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_LAB
 #define WIFI_SSID                  "LabPrototip"
 #define WIFI_PASSWORD              "labproto"
