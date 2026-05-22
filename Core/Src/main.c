@@ -1,4 +1,21 @@
 /* USER CODE BEGIN Header */
+/*
+ * MPU noise spectral experiment - unfiltered baseline
+ * ---------------------------------------------------
+ * Purpose: measure motor-induced vibration/noise coupled into the MPU6050.
+ * Capture: 4000 samples at 1 kHz for 4 s, stored in RAM first and transmitted
+ * to Qt after acquisition through the ESP01 TCP link.
+ * Signals: raw Acc X, raw Acc Z and raw Gyro Y.
+ * Packets: 160 packets, 25 samples per packet, no packet loss in the validated
+ * experiment files.
+ * Main result: motors introduce strong mechanical vibration into Acc X and
+ * Gyro Y. The first valid run showed a dominant 22-40 Hz band; the more rigid
+ * test bench shifted the dominant band to roughly 32-52 Hz, with important
+ * peaks near 34, 37, 39, 44 and 49 Hz. Acc Z showed stronger higher-frequency
+ * structural components around 76-78 Hz, 105 Hz, 133-149 Hz and 166-184 Hz.
+ * Next step: repeat the same capture with digital filters applied, then compare
+ * raw vs filtered spectra before committing the filtered firmware.
+ */
 /**
   ******************************************************************************
   * @file           : main.c
