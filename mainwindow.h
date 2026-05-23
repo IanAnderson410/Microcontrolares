@@ -179,6 +179,9 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
 private:
+    void organizeStackedInterface();
+    void raiseStackedChrome();
+
     Ui::MainWindow  *ui;
     QSerialPort     *QSerialPort1;
     QPaintBox       *QPaintBox1;

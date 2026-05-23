@@ -37,6 +37,7 @@ QQuickWidget{
 QStackedWidget{
 	background-color: #9BA8AB;
 	border: 1px solid #74858A;
+	border-radius: 8px;
 }
 QPushButton{
 	border-radius: 6px;
@@ -58,6 +59,21 @@ QPushButton:disabled {
 	color: #7B8789;
 	background-color: #B6BFC1;
 	border-color: #9BA8AB;
+}
+QPushButton#Home_pushButton,
+QPushButton#Ejecucion_pushButton,
+QPushButton#ScreenCalibrar_pushbutton,
+QPushButton#SistemasDeControl_pushButton {
+	background-color: #06141B;
+	border: 1px solid #4A5C6A;
+	border-radius: 8px;
+	padding: 8px;
+}
+QPushButton#Home_pushButton:hover,
+QPushButton#Ejecucion_pushButton:hover,
+QPushButton#ScreenCalibrar_pushbutton:hover,
+QPushButton#SistemasDeControl_pushButton:hover {
+	background-color: #4A5C6A;
 }
 QLineEdit, QSpinBox, QDoubleSpinBox{
 	color: #06141B;
@@ -92,6 +108,14 @@ QLabel#TPCCONECTED, QLabel#TPCCONECTED_2{
 	border-radius: 13px;
 	border: 1px solid #CCD0CF;
 	text-align: center;
+}
+QLabel#MODO_LABEL,
+QLabel#label_11,
+QLabel#WifiPortLabel_2 {
+	background-color: #22323A;
+	color: #E8ECEC;
+	border: 1px solid #4A5C6A;
+	border-radius: 6px;
 }
 QComboBox{
 	color: #06141B;
@@ -151,6 +175,11 @@ QQuickWidget{
 	border: none;
 	border-radius: 0px;
 }
+QStackedWidget#stackedWidget{
+	background-color: #9BA8AB;
+	border: 1px solid #74858A;
+	border-radius: 8px;
+}
 QPushButton{
 	border-radius: 6px;
 	color: #FFFFFF;
@@ -166,6 +195,21 @@ QPushButton:pressed {
 	color: #06141B;
 	background-color: #DCE1E1;
 	border: 1px solid #4A5C6A;
+}
+QPushButton#Home_pushButton,
+QPushButton#Ejecucion_pushButton,
+QPushButton#ScreenCalibrar_pushbutton,
+QPushButton#SistemasDeControl_pushButton {
+	background-color: #06141B;
+	border: 1px solid #4A5C6A;
+	border-radius: 8px;
+	padding: 8px;
+}
+QPushButton#Home_pushButton:hover,
+QPushButton#Ejecucion_pushButton:hover,
+QPushButton#ScreenCalibrar_pushbutton:hover,
+QPushButton#SistemasDeControl_pushButton:hover {
+	background-color: #4A5C6A;
 }
 QLineEdit, QSpinBox, QDoubleSpinBox{
 	color: #06141B;
@@ -200,6 +244,14 @@ QLabel#TPCCONECTED, QLabel#TPCCONECTED_2{
 	border-radius: 13px;
 	border: 1px solid #CCD0CF;
 	text-align: center;
+}
+QLabel#MODO_LABEL,
+QLabel#label_11,
+QLabel#WifiPortLabel_2 {
+	background-color: #22323A;
+	color: #E8ECEC;
+	border: 1px solid #4A5C6A;
+	border-radius: 6px;
 }
 QComboBox{
 	color: #06141B;

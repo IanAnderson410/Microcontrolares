@@ -158,15 +158,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->InfoTextEdit->setFocusPolicy(Qt::NoFocus); // agregar al ui directamente y borrar esta linea
 
-    QPushButton *aliveUdpButton = new QPushButton("ALIVE UDP", ui->centralwidget);
-    aliveUdpButton->setGeometry(1160, 20, 120, 45);
+    QPushButton *aliveUdpButton = new QPushButton("ALIVE UDP", ui->stackedWidget);
+    aliveUdpButton->setGeometry(1170, 20, 120, 42);
     aliveUdpButton->setStyleSheet("background-color: rgb(70, 130, 180); color: white; font-weight: bold; border-radius: 6px;");
     aliveUdpButton->setToolTip("Envia ALIVE\\r\\n por UDP al ESP01");
     aliveUdpButton->show();
     connect(aliveUdpButton, &QPushButton::clicked, this, &MainWindow::on_GetAlivePushButton_clicked);
 
-    QPushButton *telemetryUdpButton = new QPushButton("START TEL", ui->centralwidget);
-    telemetryUdpButton->setGeometry(1160, 70, 120, 45);
+    QPushButton *telemetryUdpButton = new QPushButton("START TEL", ui->stackedWidget);
+    telemetryUdpButton->setGeometry(1170, 68, 120, 42);
     telemetryUdpButton->setStyleSheet("background-color: rgb(46, 139, 87); color: white; font-weight: bold; border-radius: 6px;");
     telemetryUdpButton->setToolTip("Inicia o detiene la telemetria UDP");
     telemetryUdpButton->show();
@@ -193,8 +193,8 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
-    QPushButton *httpSoftApButton = new QPushButton("HTTP AP", ui->centralwidget);
-    httpSoftApButton->setGeometry(1160, 120, 120, 45);
+    QPushButton *httpSoftApButton = new QPushButton("HTTP AP", ui->stackedWidget);
+    httpSoftApButton->setGeometry(1170, 116, 120, 42);
     httpSoftApButton->setStyleSheet("background-color: rgb(120, 90, 40); color: white; font-weight: bold; border-radius: 6px;");
     httpSoftApButton->setToolTip("Cambia el ESP01 a SoftAP HTTP para configurar HB desde el celular");
     httpSoftApButton->show();
@@ -204,36 +204,36 @@ MainWindow::MainWindow(QWidget *parent)
         ui->TxTextEdit->append("TX: CMD_HTTP_SOFTAP v1");
         ui->InfoTextEdit->append("El robot pasara a HTTP SoftAP. Conectate a N20_ROBOT y abri http://192.168.4.1");
     });
-    lineSensorBinaryLabel = new QLabel("LINEA: 0000", ui->centralwidget);
-    lineSensorBinaryLabel->setGeometry(1160, 170, 120, 32);
+    lineSensorBinaryLabel = new QLabel("LINEA: 0000", ui->stackedWidget);
+    lineSensorBinaryLabel->setGeometry(1170, 164, 120, 32);
     lineSensorBinaryLabel->setAlignment(Qt::AlignCenter);
     lineSensorBinaryLabel->setStyleSheet("background-color: rgb(30, 30, 30); color: white; font-weight: bold; border-radius: 6px;");
     lineSensorBinaryLabel->setToolTip("Sensores seguidores de linea: 1=linea, 0=mesa");
     lineSensorBinaryLabel->show();
 
-    QLabel *yawKpLabel = new QLabel("KpY", ui->centralwidget);
-    yawKpLabel->setGeometry(1030, 210, 35, 22);
+    QLabel *yawKpLabel = new QLabel("KpY", ui->stackedWidget);
+    yawKpLabel->setGeometry(1040, 210, 35, 22);
     yawKpLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     yawKpLabel->show();
 
-    QLineEdit *yawKpEdit = new QLineEdit(ui->centralwidget);
-    yawKpEdit->setGeometry(1070, 210, 80, 22);
+    QLineEdit *yawKpEdit = new QLineEdit(ui->stackedWidget);
+    yawKpEdit->setGeometry(1080, 210, 80, 22);
     yawKpEdit->setText("100.0");
     yawKpEdit->setToolTip("Kp del PD de Yaw");
     yawKpEdit->show();
-    QLabel *yawKdLabel = new QLabel("KdY", ui->centralwidget);
-    yawKdLabel->setGeometry(1030, 235, 35, 22);
+    QLabel *yawKdLabel = new QLabel("KdY", ui->stackedWidget);
+    yawKdLabel->setGeometry(1040, 235, 35, 22);
     yawKdLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     yawKdLabel->show();
 
-    QLineEdit *yawKdEdit = new QLineEdit(ui->centralwidget);
-    yawKdEdit->setGeometry(1070, 235, 80, 22);
+    QLineEdit *yawKdEdit = new QLineEdit(ui->stackedWidget);
+    yawKdEdit->setGeometry(1080, 235, 80, 22);
     yawKdEdit->setText("0.0");
     yawKdEdit->setToolTip("Kd del PD de Yaw");
     yawKdEdit->show();
 
-    QPushButton *yawPdButton = new QPushButton("SET YAW PD", ui->centralwidget);
-    yawPdButton->setGeometry(1160, 210, 120, 45);
+    QPushButton *yawPdButton = new QPushButton("SET YAW PD", ui->stackedWidget);
+    yawPdButton->setGeometry(1170, 210, 120, 45);
     yawPdButton->setStyleSheet("background-color: rgb(95, 80, 150); color: white; font-weight: bold; border-radius: 6px;");
     yawPdButton->setToolTip("Configura Kp y Kd de YAW con los campos KpY y KdY");
     yawPdButton->show();
@@ -254,8 +254,8 @@ MainWindow::MainWindow(QWidget *parent)
                                " Kd=" + QString::number(kd));
     });
 
-    QGroupBox *yawConfigBox = new QGroupBox("YAW CONTROL", ui->centralwidget);
-    yawConfigBox->setGeometry(1030, 270, 250, 310);
+    QGroupBox *yawConfigBox = new QGroupBox("YAW CONTROL", ui->stackedWidget);
+    yawConfigBox->setGeometry(1040, 270, 250, 295);
     yawConfigBox->setStyleSheet("QGroupBox { font-weight: bold; }");
     QGridLayout *yawConfigLayout = new QGridLayout(yawConfigBox);
 
@@ -324,11 +324,67 @@ MainWindow::MainWindow(QWidget *parent)
         enviarInt16(CMD_CHANGE_OLED_SCREEN, 1);
     });
 
+    organizeStackedInterface();
 }
 MainWindow::~MainWindow()
 {
     delete ui;
 }
+
+void MainWindow::organizeStackedInterface()
+{
+    ui->stackedWidget->setParent(ui->centralwidget);
+    ui->stackedWidget->setGeometry(30, 10, 1320, 690);
+    ui->stackedWidget->show();
+
+    auto moveToStack = [this](QWidget *widget, const QRect &geometry) {
+        widget->setParent(ui->stackedWidget);
+        widget->setGeometry(geometry);
+        widget->show();
+    };
+
+    moveToStack(ui->Home_pushButton, QRect(20, 595, 130, 58));
+    moveToStack(ui->Ejecucion_pushButton, QRect(160, 595, 130, 58));
+    moveToStack(ui->ScreenCalibrar_pushbutton, QRect(300, 595, 130, 58));
+    moveToStack(ui->SistemasDeControl_pushButton, QRect(440, 595, 160, 58));
+
+    moveToStack(ui->TPCCONECTED, QRect(625, 600, 28, 28));
+    moveToStack(ui->label_11, QRect(660, 595, 170, 32));
+    moveToStack(ui->TPCCONECTED_2, QRect(625, 635, 28, 28));
+    moveToStack(ui->MODO_LABEL, QRect(660, 630, 170, 32));
+
+    moveToStack(ui->pushButton, QRect(855, 598, 120, 58));
+    moveToStack(ui->WifiPortLabel_2, QRect(1000, 580, 125, 28));
+    moveToStack(ui->OffPushButton, QRect(1000, 615, 58, 32));
+    moveToStack(ui->Screen1PushButton, QRect(1065, 615, 45, 32));
+    moveToStack(ui->Screen2PushButton, QRect(1115, 615, 45, 32));
+    moveToStack(ui->Screen2PushButton_2, QRect(1165, 615, 45, 32));
+
+    moveToStack(ui->SerialPort_Label_8, QRect(1218, 580, 82, 84));
+    ui->SerialPort_Label_8->setStyleSheet("background-color: #06141B; color: #E8ECEC; border: 1px solid #4A5C6A; border-radius: 8px; padding: 6px;");
+
+    ui->layoutWidget->hide();
+
+    connect(ui->stackedWidget, &QStackedWidget::currentChanged, this, [this]() {
+        QTimer::singleShot(0, this, [this]() {
+            raiseStackedChrome();
+        });
+    });
+
+    raiseStackedChrome();
+}
+
+void MainWindow::raiseStackedChrome()
+{
+    const QObjectList children = ui->stackedWidget->children();
+    for (QObject *object : children) {
+        QWidget *widget = qobject_cast<QWidget *>(object);
+        if (widget != nullptr && ui->stackedWidget->indexOf(widget) == -1) {
+            widget->raise();
+        }
+    }
+}
+
 void MainWindow::Every10ms(){
     processPendingAckRetry();
 
