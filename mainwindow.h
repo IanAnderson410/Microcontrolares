@@ -22,7 +22,6 @@
 #include <QUrl>
 #include <QQuickItem>
 #include <QHostAddress>
-#include <QFile>
 #include <QPushButton>
 #include <QLabel>
 #include <QVector3D>
@@ -131,10 +130,6 @@ private slots:
     void processTcpUnerStream();
     void handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, const QByteArray &payload);
     void processPendingAckRetry();
-    void startNoiseExperiment(bool motorsOn);
-    void openNoiseCsv(bool motorsOn);
-    void closeNoiseCsv(const QString &reason);
-
     void on_PID_Alpha_pushButton_clicked();
 
     void on_Home_pushButton_clicked();
@@ -476,11 +471,7 @@ private:
         CMD_HTTP_SOFTAP             = 62,
         CMD_SET_YAW_PD              = 63,
         CMD_SET_YAW_CONFIG          = 64,
-        CMD_SET_FL_CONFIG           = 65,
-        CMD_MPU_NOISE_START_OFF     = 70,
-        CMD_MPU_NOISE_START_ON      = 71,
-        CMD_MPU_NOISE_DATA          = 72,
-        CMD_MPU_NOISE_DONE          = 73
+        CMD_SET_FL_CONFIG           = 65
         // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
         // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
     };
@@ -507,10 +498,5 @@ private:
     bool keyLeft = false;
     bool keyRight = false;
 
-    QFile noiseCsvFile;
-    QLabel *noiseStatusLabel = nullptr;
-    bool noiseCaptureActive = false;
-    bool noiseCaptureMotorsOn = false;
-    uint32_t noiseRowsWritten = 0;
 };
 #endif // MAINWINDOW_H

@@ -31,8 +31,6 @@
 #include <QGroupBox>
 #include <QGridLayout>
 #include <QtEndian>
-#include <QFileInfo>
-#include <QDir>
 #include <cstring>
 
 
@@ -326,46 +324,6 @@ MainWindow::MainWindow(QWidget *parent)
         enviarInt16(CMD_CHANGE_OLED_SCREEN, 1);
     });
 
-    for (QWidget *widget : ui->centralwidget->findChildren<QWidget*>()) {
-        widget->hide();
-    }
-
-    setWindowTitle("MPU Motor Noise Capture");
-    resize(520, 260);
-
-    QLabel *title = new QLabel("MPU MOTOR NOISE CAPTURE", ui->centralwidget);
-    title->setGeometry(30, 25, 460, 35);
-    title->setAlignment(Qt::AlignCenter);
-    title->setStyleSheet("font-size: 20px; font-weight: bold;");
-    title->show();
-
-    QPushButton *motorsOffButton = new QPushButton("RUN 4s - MOTORS OFF", ui->centralwidget);
-    motorsOffButton->setGeometry(55, 85, 185, 60);
-    motorsOffButton->setStyleSheet("background-color: rgb(40, 110, 170); color: white; font-weight: bold; border-radius: 6px;");
-    motorsOffButton->show();
-    connect(motorsOffButton, &QPushButton::clicked, this, [this]() {
-        startNoiseExperiment(false);
-    });
-
-    QPushButton *motorsOnButton = new QPushButton("RUN 4s - MOTORS MAX", ui->centralwidget);
-    motorsOnButton->setGeometry(280, 85, 185, 60);
-    motorsOnButton->setStyleSheet("background-color: rgb(170, 60, 45); color: white; font-weight: bold; border-radius: 6px;");
-    motorsOnButton->show();
-    connect(motorsOnButton, &QPushButton::clicked, this, [this]() {
-        startNoiseExperiment(true);
-    });
-
-    noiseStatusLabel = new QLabel("Connect TCP, then choose an experiment.", ui->centralwidget);
-    noiseStatusLabel->setGeometry(30, 170, 460, 35);
-    noiseStatusLabel->setAlignment(Qt::AlignCenter);
-    noiseStatusLabel->setStyleSheet("background-color: rgb(35, 35, 35); color: white; border-radius: 6px;");
-    noiseStatusLabel->show();
-
-    if (tcpServer->listen(QHostAddress::AnyIPv4, 8888)) {
-        noiseStatusLabel->setText("TCP server ready on port 8888. Waiting for robot...");
-    } else {
-        noiseStatusLabel->setText("TCP server error: " + tcpServer->errorString());
-    }
 }
 MainWindow::~MainWindow()
 {
@@ -864,71 +822,10 @@ bool MainWindow::isCriticalCommand(uint8_t cmd) const
     case CMD_SET_YAW_PD:
     case CMD_SET_YAW_CONFIG:
     case CMD_SET_FL_CONFIG:
-    case CMD_MPU_NOISE_START_OFF:
-    case CMD_MPU_NOISE_START_ON:
         return true;
     default:
         return false;
     }
-}
-
-void MainWindow::openNoiseCsv(bool motorsOn)
-{
-    if (noiseCsvFile.isOpen()) {
-        noiseCsvFile.close();
-    }
-
-    const QString fileName = motorsOn ? "mpu_noise_motors_on.csv" : "mpu_noise_motors_off.csv";
-    noiseCsvFile.setFileName(QDir::current().absoluteFilePath(fileName));
-    if (!noiseCsvFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-        noiseCaptureActive = false;
-        if (noiseStatusLabel != nullptr) {
-            noiseStatusLabel->setText("CSV open error: " + noiseCsvFile.errorString());
-        }
-        return;
-    }
-
-    noiseCsvFile.write("packet_id,condition,sample_index,t_ms,acc_x_raw,acc_z_raw,gyro_y_raw\n");
-    noiseRowsWritten = 0;
-    noiseCaptureMotorsOn = motorsOn;
-    noiseCaptureActive = true;
-    if (noiseStatusLabel != nullptr) {
-        noiseStatusLabel->setText("Capturing to " + fileName);
-    }
-}
-
-void MainWindow::closeNoiseCsv(const QString &reason)
-{
-    if (noiseCsvFile.isOpen()) {
-        noiseCsvFile.flush();
-        QString path = QFileInfo(noiseCsvFile).absoluteFilePath();
-        noiseCsvFile.close();
-        if (noiseStatusLabel != nullptr) {
-            noiseStatusLabel->setText(reason + " | " + QString::number(noiseRowsWritten) + " rows | " + path);
-        }
-    } else if (noiseStatusLabel != nullptr) {
-        noiseStatusLabel->setText(reason);
-    }
-    noiseCaptureActive = false;
-}
-
-void MainWindow::startNoiseExperiment(bool motorsOn)
-{
-    bool tcpReady = tcpClient != nullptr && tcpClient->state() == QAbstractSocket::ConnectedState;
-    if (!tcpReady) {
-        if (noiseStatusLabel != nullptr) {
-            noiseStatusLabel->setText("TCP is not connected.");
-        }
-        return;
-    }
-
-    openNoiseCsv(motorsOn);
-    if (!noiseCaptureActive) {
-        return;
-    }
-
-    QByteArray payload;
-    enviarComando(motorsOn ? CMD_MPU_NOISE_START_ON : CMD_MPU_NOISE_START_OFF, payload);
 }
 
 void MainWindow::processUnerV1Datagram(const QByteArray &data)
@@ -1199,61 +1096,6 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
             ui->RxTextEdit->append(QString("VEL_IMU: %1 mm/s").arg(velocity_mm_s, 0, 'f', 1));
         }
         ui->OUT_LineEdit_5->setText(QString::number(datos.yaw_cdeg / 100.0f, 'f', 2));
-        break;
-    }
-
-    case CMD_MPU_NOISE_DATA:
-    {
-        if (!noiseCaptureActive || !noiseCsvFile.isOpen() || payload.size() < 6) {
-            break;
-        }
-
-        const uchar *p = reinterpret_cast<const uchar *>(payload.constData());
-        quint16 packetId = qFromLittleEndian<quint16>(p + 0);
-        quint8 condition = static_cast<quint8>(payload.at(2));
-        quint8 count = static_cast<quint8>(payload.at(3));
-        quint16 firstSample = qFromLittleEndian<quint16>(p + 4);
-
-        if (payload.size() < 6 + (count * 6)) {
-            break;
-        }
-
-        QByteArray csv;
-        csv.reserve(count * 48);
-        const char *conditionText = condition ? "motors_on" : "motors_off";
-        for (quint8 i = 0; i < count; i++) {
-            const uchar *s = p + 6 + (i * 6);
-            qint16 ax = qFromLittleEndian<qint16>(s + 0);
-            qint16 az = qFromLittleEndian<qint16>(s + 2);
-            qint16 gy = qFromLittleEndian<qint16>(s + 4);
-            quint16 sampleIndex = firstSample + i;
-            csv += QByteArray::number(packetId) + ",";
-            csv += conditionText;
-            csv += ",";
-            csv += QByteArray::number(sampleIndex) + ",";
-            csv += QByteArray::number(sampleIndex) + ",";
-            csv += QByteArray::number(ax) + ",";
-            csv += QByteArray::number(az) + ",";
-            csv += QByteArray::number(gy) + "\n";
-            noiseRowsWritten++;
-        }
-        noiseCsvFile.write(csv);
-        if (noiseStatusLabel != nullptr) {
-            noiseStatusLabel->setText(QString("Capturing... %1 samples").arg(noiseRowsWritten));
-        }
-        break;
-    }
-
-    case CMD_MPU_NOISE_DONE:
-    {
-        QString reason = "Capture complete";
-        if (payload.size() >= 5) {
-            const uchar *p = reinterpret_cast<const uchar *>(payload.constData());
-            quint16 total = qFromLittleEndian<quint16>(p + 1);
-            quint16 dropped = qFromLittleEndian<quint16>(p + 3);
-            reason = QString("Done. samples=%1 dropped_packets=%2").arg(total).arg(dropped);
-        }
-        closeNoiseCsv(reason);
         break;
     }
 
