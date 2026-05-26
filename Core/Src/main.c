@@ -180,15 +180,17 @@ volatile	uint8_t			flag_RC_active			=	0;
 volatile    uint8_t			flag10ms  				=	0;
 // ================= [ Counters ] ================= //
 volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Timer 4 para manejar el HeartBit*/
+volatile 	uint32_t 		control_missed_slots = 0;
+volatile 	uint32_t 		control_slots_serviced = 0;
 // Nuevas variables para compensar la diferencia entre motores
 			int16_t 		deadband_L = 130;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 75; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
-			float 			Kp = 120.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.1f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 2.5f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			Kp = 170.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 0.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 0.0f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float 			setpoint = 7.1f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
-			float 			setpointDeEquilibrio = 0.0f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
+			float 			setpointDeEquilibrio = 7.1f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
 			float 			last_error = 0;
 			float           ALPHA_PID = 0.994f;
@@ -244,6 +246,10 @@ volatile 	float 			imu_velocity_mps = 0.0f;
 volatile 	uint8_t 		oled_update_requested = 0;
 volatile 	uint8_t 		oled_current_page = 0;
 volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
+volatile 	uint32_t 		oled_pages_sent = 0;
+volatile 	uint32_t 		oled_frames_done = 0;
+volatile 	uint32_t 		oled_i2c_errors = 0;
+volatile 	uint32_t 		oled_busy_skips = 0;
 	float P =  0;
 	float I =  0;
 	float D =  0;
@@ -332,6 +338,8 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 void Telemetry_UpdateMPU(void);
 void screenScheduler(void);
 void KEY_CalibrationTask(void);
+void OLED_RequestUpdate(void);
+void OLED_Service(void);
 /**
  * @details 							Crea una respuesta en forma de impulso con los motores la cual es proporcional
  * 										al error (pitch) del robot.	Implementa un filtro complementario para fusionar
@@ -381,6 +389,11 @@ void screenScheduler(void){
         return;
     }
 
+    if (oled_is_busy) {
+        oled_busy_skips++;
+        return;
+    }
+
     SSD1306_Fill(SSD1306_COLOR_BLACK);
     uint8_t line_s0 = estado_sensores[0] ? 1U : 0U;
     uint8_t line_s1 = estado_sensores[1] ? 1U : 0U;
@@ -402,52 +415,51 @@ void screenScheduler(void){
         SSD1306_GotoXY(0, 54);
         snprintf(msg, sizeof(msg), "R:%u %u", adc_buffer[2], adc_buffer[3]);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_UpdateScreen();
+        OLED_RequestUpdate();
         return;
     }
 
     if (flagOLED == 1) {
         SSD1306_GotoXY(0, 0);
-        SSD1306_Puts("YAW/FL CFG", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_Puts("PITCH PID", &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 10);
-        sprintf(msg, "Kp:%4.0f Kd:%4.0f", Kp_yaw, Kd_yaw);
+        snprintf(msg, sizeof(msg), "Kp:%5.1f", Kp);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 20);
-        sprintf(msg, "SP:%1.2f Mul:%1.3f", FL_setpoint, multiplicadorYaw);
+        snprintf(msg, sizeof(msg), "Ki:%4.2f Kd:%3.1f", Ki, Kd);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 30);
-        sprintf(msg, "A:%1.2f St:%4.0f", yaw_error_filter_alpha, yaw_steering_step_max);
+        snprintf(msg, sizeof(msg), "SP:%4.1f A:%3.1f", setpoint, angle_y);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 40);
-        sprintf(msg, "Lim:%4.0f", yaw_steering_limit);
+        snprintf(msg, sizeof(msg), "Out:%5.0f", showoutput);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 50);
-        sprintf(msg, "Mv:%u Bal:%u", FL_motion_phase_ms, FL_balance_phase_ms);
+        snprintf(msg, sizeof(msg), "Lost:%lu", (unsigned long)control_missed_slots);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_UpdateScreen();
+        OLED_RequestUpdate();
         return;
     }
 
     if (flagOLED == 2) {
            SSD1306_GotoXY(0, 0);
-           sprintf(msg, "IP:%s", ip_address);
-           SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+           SSD1306_Puts("YAW/FL CFG", &Font_7x10, SSD1306_COLOR_WHITE);
            SSD1306_GotoXY(0, 10);
-           sprintf(msg, "Kp:%4.0f Kd:%4.0f", Kp_yaw, Kd_yaw);
+           snprintf(msg, sizeof(msg), "IP:%s", ip_address);
            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
            SSD1306_GotoXY(0, 20);
-           sprintf(msg, "SP:%1.2f Mul:%1.3f", FL_setpoint, multiplicadorYaw);
+           sprintf(msg, "Kp:%4.0f Kd:%4.0f", Kp_yaw, Kd_yaw);
            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
            SSD1306_GotoXY(0, 30);
-           sprintf(msg, "A:%1.2f St:%4.0f", yaw_error_filter_alpha, yaw_steering_step_max);
+           sprintf(msg, "SP:%1.2f Mul:%1.3f", FL_setpoint, multiplicadorYaw);
            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
            SSD1306_GotoXY(0, 40);
-           sprintf(msg, "Lim:%4.0f", yaw_steering_limit);
+           sprintf(msg, "A:%1.2f St:%4.0f", yaw_error_filter_alpha, yaw_steering_step_max);
            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
            SSD1306_GotoXY(0, 50);
-           sprintf(msg, "Mv:%u Bal:%u", FL_motion_phase_ms, FL_balance_phase_ms);
+           snprintf(msg, sizeof(msg), "Lost:%lu", (unsigned long)control_missed_slots);
            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-           SSD1306_UpdateScreen();
+           OLED_RequestUpdate();
            return;
        }
 
@@ -466,7 +478,7 @@ void screenScheduler(void){
         SSD1306_GotoXY(0, 48);
         sprintf(msg, "V:%2.2f A:%2.2f", imu_velocity_mps, imu_accel_forward_mps2);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_UpdateScreen();
+        OLED_RequestUpdate();
         return;
     }
 
@@ -506,7 +518,7 @@ void screenScheduler(void){
              (unsigned long)uner_tx_recover_count,
              esp01_last_debug);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-    SSD1306_UpdateScreen();
+    OLED_RequestUpdate();
     return;
 
 	if (!oled_is_busy) {
@@ -595,6 +607,27 @@ void screenScheduler(void){
 				break;
 			}
 	    }
+}
+
+void OLED_RequestUpdate(void)
+{
+    if (!oled_is_busy) {
+        oled_current_page = 0;
+    }
+    oled_update_requested = 1;
+}
+
+void OLED_Service(void)
+{
+    if (!esp01_oled_ready || !oled_update_requested || oled_is_busy || flag10ms) {
+        return;
+    }
+
+    if (HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY) {
+        return;
+    }
+
+    SSD1306_UpdatePage_DMA(oled_current_page);
 }
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len)
 {
@@ -1041,12 +1074,39 @@ void ESP01_Generic_Functions(uint32_t now){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
     if (htim->Instance == TIM4) {
         ESP01_Timeout10ms();
-        flag10ms=1;
+        if (flag10ms) {
+            control_missed_slots++;
+        } else {
+            flag10ms=1;
+        }
         counterHB++;
         if (counterHB >= delayHB) {
             counterHB = 0;
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
         }
+    }
+}
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    if (hi2c->Instance == I2C1 && oled_is_busy) {
+        oled_is_busy = 0;
+        oled_pages_sent++;
+        oled_current_page++;
+        if (oled_current_page >= 8U) {
+            oled_current_page = 0;
+            oled_update_requested = 0;
+            oled_frames_done++;
+        }
+    }
+}
+
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
+{
+    if (hi2c->Instance == I2C1 && oled_is_busy) {
+        oled_i2c_errors++;
+        oled_is_busy = 0;
+        oled_current_page = 0;
+        oled_update_requested = 0;
     }
 }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
@@ -1158,11 +1218,8 @@ int main(void)
 	  	static uint32_t last_oled_update = 0;
 	  	static uint32_t last_ir_update = 0;
 		uint32_t now = HAL_GetTick();
-	  	ESP01_App_Task();
-	    KEY_CalibrationTask();
-		UNER_Rx_Task();
-		UNER_Tx_Task();
-		if ((now - last_ir_update) >= 1U) {
+
+		if (((now - last_ir_update) >= 1U) || flag10ms) {
 			last_ir_update = now;
 			Filtrar_Sensores_IR();
 			Leer_Linea_Digital();
@@ -1178,7 +1235,14 @@ int main(void)
 				RC_steering = 0;
 			}
 			PID_PITCH();
+			control_slots_serviced++;
+			OLED_Service();
 		}
+
+	  	ESP01_App_Task();
+	    KEY_CalibrationTask();
+		UNER_Rx_Task();
+		UNER_Tx_Task();
 		if((now - last_oled_update)>=500){last_oled_update = now;screenScheduler();	}
 		ESP01_Generic_Functions(now);
 		ESP01_Task();
