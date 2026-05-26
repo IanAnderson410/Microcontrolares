@@ -1,7 +1,7 @@
 ../Core/Src/line_sensors.c:3:6:Filtrar_Sensores_IR	16	static
-../Core/Src/line_sensors.c:10:6:Iniciar_Calibracion_Linea	16	static
-../Core/Src/line_sensors.c:21:6:Procesar_Calibracion_Linea	16	static
-../Core/Src/line_sensors.c:36:6:Leer_Linea_Digital	16	static
-../Core/Src/line_sensors.c:54:6:Finalizar_Calibracion_Linea	16	static
-../Core/Src/line_sensors.c:76:7:calcularErrorYawDiscreto	16	static
-../Core/Src/line_sensors.c:92:7:calcularErrorYawContinuo	48	static
+../Core/Src/line_sensors.c:11:6:Iniciar_Calibracion_Linea	16	static
+../Core/Src/line_sensors.c:22:6:Procesar_Calibracion_Linea	16	static
+../Core/Src/line_sensors.c:37:6:Leer_Linea_Digital	16	static
+../Core/Src/line_sensors.c:55:6:Finalizar_Calibracion_Linea	16	static
+../Core/Src/line_sensors.c:77:7:calcularErrorYawDiscreto	16	static
+../Core/Src/line_sensors.c:93:7:calcularErrorYawContinuo	48	static

@@ -75,21 +75,29 @@ typedef enum{
 #define ESP01_WIFI_PROFILE_HOME        1
 #define ESP01_WIFI_PROFILE_LAB         2
 #ifndef ESP01_WIFI_PROFILE
-#define ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_UNIVERSITY
+#define ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_HOME2
 #endif
 
 #if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
 #define WIFI_SSID                  "InternetPlus_872f10"
 #define WIFI_PASSWORD              "wlan78d0ef"
 #define ESP01_QT_REMOTE_IP         "192.168.1.3"
+
+#elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME2
+#define WIFI_SSID                  "DORITA WIFI"
+#define WIFI_PASSWORD              "catalina1"
+#define ESP01_QT_REMOTE_IP         "192.168.1.31"
+
 #elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_LAB
 #define WIFI_SSID                  "LabPrototip"
 #define WIFI_PASSWORD              "labproto"
 #define ESP01_QT_REMOTE_IP         "172.24.150.89"
+
 #elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_UNIVERSITY
 #define WIFI_SSID                  "FCAL"
 #define WIFI_PASSWORD              "fcalconcordia.06-2019"
 #define ESP01_QT_REMOTE_IP         "172.23.224.234"
+
 #else
 #error "Seleccionar un perfil WiFi valido para ESP01_WIFI_PROFILE"
 #endif

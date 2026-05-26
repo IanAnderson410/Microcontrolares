@@ -1,3 +1,3 @@
-../Core/Src/control_systems.c:7:6:PID_PITCH	23
-../Core/Src/control_systems.c:101:6:FollowLine_Task	21
-../Core/Src/control_systems.c:157:9:Calcular_PID_YAW	1
+../Core/Src/control_systems.c:7:6:PID_PITCH	17
+../Core/Src/control_systems.c:85:6:FollowLine_Task	16
+../Core/Src/control_systems.c:130:9:Calcular_PID_YAW	1

@@ -299,7 +299,6 @@ DMA_HandleTypeDef hdma_i2c1_tx;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
-TIM_HandleTypeDef htim5;
 
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_rx;
@@ -316,7 +315,6 @@ static void MX_TIM3_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
-static void MX_TIM5_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
@@ -429,6 +427,29 @@ void screenScheduler(void){
         SSD1306_UpdateScreen();
         return;
     }
+
+    if (flagOLED == 2) {
+           SSD1306_GotoXY(0, 0);
+           sprintf(msg, "IP:%s", ip_address);
+           SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+           SSD1306_GotoXY(0, 10);
+           sprintf(msg, "Kp:%4.0f Kd:%4.0f", Kp_yaw, Kd_yaw);
+           SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+           SSD1306_GotoXY(0, 20);
+           sprintf(msg, "SP:%1.2f Mul:%1.3f", FL_setpoint, multiplicadorYaw);
+           SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+           SSD1306_GotoXY(0, 30);
+           sprintf(msg, "A:%1.2f St:%4.0f", yaw_error_filter_alpha, yaw_steering_step_max);
+           SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+           SSD1306_GotoXY(0, 40);
+           sprintf(msg, "Lim:%4.0f", yaw_steering_limit);
+           SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+           SSD1306_GotoXY(0, 50);
+           sprintf(msg, "Mv:%u Bal:%u", FL_motion_phase_ms, FL_balance_phase_ms);
+           SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+           SSD1306_UpdateScreen();
+           return;
+       }
 
     if (flagOLED == 3) {
         SSD1306_GotoXY(0, 0);
@@ -1093,7 +1114,6 @@ int main(void)
       MX_TIM2_Init();
       MX_TIM3_Init();
       MX_TIM4_Init();
-      MX_TIM5_Init();
       MX_USART1_UART_Init();
       MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
@@ -1115,7 +1135,6 @@ int main(void)
       ESP.uner_tx_tail = 0;
       ESP.uner_tx_count = 0;
       ESP.udp_started = 0;
-      ESP.udp_connected = 0;
       ESP.Config.DoCHPD = setESP01_CHPD;
       ESP.Config.WriteUSARTByte = ESP01_UART_Transmit;
       ESP.Config.WriteByteToBufRX = ESP01_Data_Received;
@@ -1514,45 +1533,6 @@ static void MX_TIM4_Init(void)
 
 }
 
-/**
-  * @brief TIM5 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM5_Init(void)
-{
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 0;
-  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 17999;
-  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_OC_Init(&htim5) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
-  sConfigOC.Pulse = 8999;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_OC_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-}
 
 /**
   * @brief USART1 Initialization Function
