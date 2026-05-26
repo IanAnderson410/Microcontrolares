@@ -8814,7 +8814,7 @@ LOAD C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.exte
 .rel.dyn        0x08018cb0        0x0
  .rel.iplt      0x08018cb0        0x0 C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+fp/hard/crtbegin.o
 
-.data           0x20000000      0x268 load address 0x08018cb0
+.data           0x20000000      0x270 load address 0x08018cb0
                 0x20000000                        . = ALIGN (0x4)
                 0x20000000                        _sdata = .
  *(.data)
@@ -8843,216 +8843,216 @@ LOAD C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.exte
                 0x20000016                deadband_R
  .data.Kp       0x20000018        0x4 ./Core/Src/main.o
                 0x20000018                Kp
+ .data.Ki       0x2000001c        0x4 ./Core/Src/main.o
+                0x2000001c                Ki
+ .data.Kd       0x20000020        0x4 ./Core/Src/main.o
+                0x20000020                Kd
  .data.setpoint
-                0x2000001c        0x4 ./Core/Src/main.o
-                0x2000001c                setpoint
- .data.setpointDeEquilibrio
-                0x20000020        0x4 ./Core/Src/main.o
-                0x20000020                setpointDeEquilibrio
- .data.ALPHA_PID
                 0x20000024        0x4 ./Core/Src/main.o
-                0x20000024                ALPHA_PID
- .data.correccionRCSP
+                0x20000024                setpoint
+ .data.setpointDeEquilibrio
                 0x20000028        0x4 ./Core/Src/main.o
-                0x20000028                correccionRCSP
- .data.limite_inclinacion
+                0x20000028                setpointDeEquilibrio
+ .data.ALPHA_PID
                 0x2000002c        0x4 ./Core/Src/main.o
-                0x2000002c                limite_inclinacion
- .data.Kp_yaw   0x20000030        0x4 ./Core/Src/main.o
-                0x20000030                Kp_yaw
- .data.FL_setpoint
+                0x2000002c                ALPHA_PID
+ .data.correccionRCSP
+                0x20000030        0x4 ./Core/Src/main.o
+                0x20000030                correccionRCSP
+ .data.limite_inclinacion
                 0x20000034        0x4 ./Core/Src/main.o
-                0x20000034                FL_setpoint
- .data.yaw_error_filter_alpha
-                0x20000038        0x4 ./Core/Src/main.o
-                0x20000038                yaw_error_filter_alpha
- .data.yaw_steering_step_max
+                0x20000034                limite_inclinacion
+ .data.Kp_yaw   0x20000038        0x4 ./Core/Src/main.o
+                0x20000038                Kp_yaw
+ .data.FL_setpoint
                 0x2000003c        0x4 ./Core/Src/main.o
-                0x2000003c                yaw_steering_step_max
- .data.yaw_steering_limit
+                0x2000003c                FL_setpoint
+ .data.yaw_error_filter_alpha
                 0x20000040        0x4 ./Core/Src/main.o
-                0x20000040                yaw_steering_limit
+                0x20000040                yaw_error_filter_alpha
+ .data.yaw_steering_step_max
+                0x20000044        0x4 ./Core/Src/main.o
+                0x20000044                yaw_steering_step_max
+ .data.yaw_steering_limit
+                0x20000048        0x4 ./Core/Src/main.o
+                0x20000048                yaw_steering_limit
  .data.adc_filtrado
-                0x20000044       0x10 ./Core/Src/main.o
-                0x20000044                adc_filtrado
+                0x2000004c       0x10 ./Core/Src/main.o
+                0x2000004c                adc_filtrado
  .data.FL_motion_phase_ms
-                0x20000054        0x2 ./Core/Src/main.o
-                0x20000054                FL_motion_phase_ms
+                0x2000005c        0x2 ./Core/Src/main.o
+                0x2000005c                FL_motion_phase_ms
  .data.FL_balance_phase_ms
-                0x20000056        0x2 ./Core/Src/main.o
-                0x20000056                FL_balance_phase_ms
+                0x2000005e        0x2 ./Core/Src/main.o
+                0x2000005e                FL_balance_phase_ms
  .data.ip_address
-                0x20000058       0x10 ./Core/Src/main.o
-                0x20000058                ip_address
+                0x20000060       0x10 ./Core/Src/main.o
+                0x20000060                ip_address
  .data.esp01_last_debug
-                0x20000068       0x12 ./Core/Src/main.o
-                0x20000068                esp01_last_debug
- *fill*         0x2000007a        0x2 
+                0x20000070       0x12 ./Core/Src/main.o
+                0x20000070                esp01_last_debug
+ *fill*         0x20000082        0x2 
  .data.esp01_last_rx
-                0x2000007c       0x12 ./Core/Src/main.o
-                0x2000007c                esp01_last_rx
- *fill*         0x2000008e        0x2 
+                0x20000084       0x12 ./Core/Src/main.o
+                0x20000084                esp01_last_rx
+ *fill*         0x20000096        0x2 
  .data.multiplicadorYaw
-                0x20000090        0x4 ./Core/Src/main.o
-                0x20000090                multiplicadorYaw
+                0x20000098        0x4 ./Core/Src/main.o
+                0x20000098                multiplicadorYaw
  .data.SystemCoreClock
-                0x20000094        0x4 ./Core/Src/system_stm32f4xx.o
-                0x20000094                SystemCoreClock
+                0x2000009c        0x4 ./Core/Src/system_stm32f4xx.o
+                0x2000009c                SystemCoreClock
  .data.uwTickPrio
-                0x20000098        0x4 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
-                0x20000098                uwTickPrio
+                0x200000a0        0x4 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
+                0x200000a0                uwTickPrio
  .data.uwTickFreq
-                0x2000009c        0x1 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
-                0x2000009c                uwTickFreq
- *fill*         0x2000009d        0x3 
- .data.__sglue  0x200000a0        0xc C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard\libc_nano.a(libc_a-findfp.o)
-                0x200000a0                __sglue
+                0x200000a4        0x1 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
+                0x200000a4                uwTickFreq
+ *fill*         0x200000a5        0x3 
+ .data.__sglue  0x200000a8        0xc C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard\libc_nano.a(libc_a-findfp.o)
+                0x200000a8                __sglue
  .data._impure_ptr
-                0x200000ac        0x4 C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard\libc_nano.a(libc_a-impure.o)
-                0x200000ac                _impure_ptr
+                0x200000b4        0x4 C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard\libc_nano.a(libc_a-impure.o)
+                0x200000b4                _impure_ptr
  .data._impure_data
-                0x200000b0       0x4c C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard\libc_nano.a(libc_a-impure.o)
-                0x200000b0                _impure_data
+                0x200000b8       0x4c C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard\libc_nano.a(libc_a-impure.o)
+                0x200000b8                _impure_data
  .data.__global_locale
-                0x200000fc      0x16c C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard\libc_nano.a(libc_a-locale.o)
-                0x200000fc                __global_locale
+                0x20000104      0x16c C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard\libc_nano.a(libc_a-locale.o)
+                0x20000104                __global_locale
  *(.RamFunc)
  *(.RamFunc*)
-                0x20000268                        . = ALIGN (0x4)
-                0x20000268                        _edata = .
+                0x20000270                        . = ALIGN (0x4)
+                0x20000270                        _edata = .
 
-.igot.plt       0x20000268        0x0 load address 0x08018f18
- .igot.plt      0x20000268        0x0 C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+fp/hard/crtbegin.o
-                0x20000268                        . = ALIGN (0x4)
+.igot.plt       0x20000270        0x0 load address 0x08018f20
+ .igot.plt      0x20000270        0x0 C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+                0x20000270                        . = ALIGN (0x4)
 
-.bss            0x20000268     0x1534 load address 0x08018f18
-                0x20000268                        _sbss = .
-                0x20000268                        __bss_start__ = _sbss
+.bss            0x20000270     0x152c load address 0x08018f20
+                0x20000270                        _sbss = .
+                0x20000270                        __bss_start__ = _sbss
  *(.bss)
- .bss           0x20000268       0x1c C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+ .bss           0x20000270       0x1c C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+fp/hard/crtbegin.o
  *(.bss*)
  .bss.esp01ATSate
-                0x20000284        0x1 ./Core/Src/ESP01.o
- *fill*         0x20000285        0x3 
+                0x2000028c        0x1 ./Core/Src/ESP01.o
+ *fill*         0x2000028d        0x3 
  .bss.esp01Flags
-                0x20000288        0x1 ./Core/Src/ESP01.o
- *fill*         0x20000289        0x3 
+                0x20000290        0x1 ./Core/Src/ESP01.o
+ *fill*         0x20000291        0x3 
  .bss.esp01TimeoutTask
-                0x2000028c        0x4 ./Core/Src/ESP01.o
- .bss.esp01TimeoutDataRx
-                0x20000290        0x4 ./Core/Src/ESP01.o
- .bss.esp01TimeoutTxSymbol
                 0x20000294        0x4 ./Core/Src/ESP01.o
- .bss.ESP01ChangeState
+ .bss.esp01TimeoutDataRx
                 0x20000298        0x4 ./Core/Src/ESP01.o
- .bss.ESP01DbgStr
+ .bss.esp01TimeoutTxSymbol
                 0x2000029c        0x4 ./Core/Src/ESP01.o
+ .bss.ESP01ChangeState
+                0x200002a0        0x4 ./Core/Src/ESP01.o
+ .bss.ESP01DbgStr
+                0x200002a4        0x4 ./Core/Src/ESP01.o
  .bss.esp01SSID
-                0x200002a0       0x40 ./Core/Src/ESP01.o
+                0x200002a8       0x40 ./Core/Src/ESP01.o
  .bss.esp01PASSWORD
-                0x200002e0       0x20 ./Core/Src/ESP01.o
+                0x200002e8       0x20 ./Core/Src/ESP01.o
  .bss.esp01RemoteIP
-                0x20000300       0x10 ./Core/Src/ESP01.o
+                0x20000308       0x10 ./Core/Src/ESP01.o
  .bss.esp01RemotePORT
-                0x20000310        0x6 ./Core/Src/ESP01.o
- *fill*         0x20000316        0x2 
+                0x20000318        0x6 ./Core/Src/ESP01.o
+ *fill*         0x2000031e        0x2 
  .bss.esp01LocalIP
-                0x20000318       0x10 ./Core/Src/ESP01.o
+                0x20000320       0x10 ./Core/Src/ESP01.o
  .bss.esp01LocalPORT
-                0x20000328        0x6 ./Core/Src/ESP01.o
+                0x20000330        0x6 ./Core/Src/ESP01.o
  .bss.esp01ServerMode
-                0x2000032e        0x1 ./Core/Src/ESP01.o
+                0x20000336        0x1 ./Core/Src/ESP01.o
  .bss.esp01CurrentIPDLinkId
-                0x2000032f        0x1 ./Core/Src/ESP01.o
+                0x20000337        0x1 ./Core/Src/ESP01.o
  .bss.esp01LastIPDLinkId
-                0x20000330        0x1 ./Core/Src/ESP01.o
+                0x20000338        0x1 ./Core/Src/ESP01.o
  .bss.esp01HState
-                0x20000331        0x1 ./Core/Src/ESP01.o
+                0x20000339        0x1 ./Core/Src/ESP01.o
  .bss.esp01nBytes
-                0x20000332        0x2 ./Core/Src/ESP01.o
+                0x2000033a        0x2 ./Core/Src/ESP01.o
  .bss.esp01RXATBuf
-                0x20000334       0x80 ./Core/Src/ESP01.o
+                0x2000033c       0x80 ./Core/Src/ESP01.o
  .bss.esp01TXATBuf
-                0x200003b4      0x100 ./Core/Src/ESP01.o
+                0x200003bc      0x100 ./Core/Src/ESP01.o
  .bss.esp01iwRXAT
-                0x200004b4        0x2 ./Core/Src/ESP01.o
+                0x200004bc        0x2 ./Core/Src/ESP01.o
  .bss.esp01irRXAT
-                0x200004b6        0x2 ./Core/Src/ESP01.o
+                0x200004be        0x2 ./Core/Src/ESP01.o
  .bss.esp01irTX
-                0x200004b8        0x2 ./Core/Src/ESP01.o
+                0x200004c0        0x2 ./Core/Src/ESP01.o
  .bss.esp01iwTX
-                0x200004ba        0x2 ./Core/Src/ESP01.o
+                0x200004c2        0x2 ./Core/Src/ESP01.o
  .bss.esp01TriesAT
-                0x200004bc        0x1 ./Core/Src/ESP01.o
- *fill*         0x200004bd        0x3 
+                0x200004c4        0x1 ./Core/Src/ESP01.o
+ *fill*         0x200004c5        0x3 
  .bss.esp01Handle
-                0x200004c0        0xc ./Core/Src/ESP01.o
+                0x200004c8        0xc ./Core/Src/ESP01.o
  .bss.indexResponse
-                0x200004cc        0x1 ./Core/Src/ESP01.o
+                0x200004d4        0x1 ./Core/Src/ESP01.o
  .bss.indexResponseChar
-                0x200004cd        0x1 ./Core/Src/ESP01.o
+                0x200004d5        0x1 ./Core/Src/ESP01.o
  .bss.http_response_pending
-                0x200004ce        0x1 ./Core/Src/ESP01.o
-                0x200004ce                http_response_pending
+                0x200004d6        0x1 ./Core/Src/ESP01.o
+                0x200004d6                http_response_pending
  .bss.http_response_link
-                0x200004cf        0x1 ./Core/Src/ESP01.o
-                0x200004cf                http_response_link
+                0x200004d7        0x1 ./Core/Src/ESP01.o
+                0x200004d7                http_response_link
  .bss.http_requested_hb
-                0x200004d0        0x2 ./Core/Src/ESP01.o
-                0x200004d0                http_requested_hb
+                0x200004d8        0x2 ./Core/Src/ESP01.o
+                0x200004d8                http_requested_hb
  .bss.line_done.3
-                0x200004d2        0x1 ./Core/Src/ESP01.o
- .bss.index.2   0x200004d3        0x1 ./Core/Src/ESP01.o
+                0x200004da        0x1 ./Core/Src/ESP01.o
+ .bss.index.2   0x200004db        0x1 ./Core/Src/ESP01.o
  .bss.request_line.1
-                0x200004d4       0x60 ./Core/Src/ESP01.o
+                0x200004dc       0x60 ./Core/Src/ESP01.o
  .bss.pending_link.0
-                0x20000534        0x1 ./Core/Src/ESP01.o
+                0x2000053c        0x1 ./Core/Src/ESP01.o
  .bss.last_raw_state.2
-                0x20000535        0x1 ./Core/Src/button_key.o
- *fill*         0x20000536        0x2 
+                0x2000053d        0x1 ./Core/Src/button_key.o
+ *fill*         0x2000053e        0x2 
  .bss.last_change_tick.1
-                0x20000538        0x4 ./Core/Src/button_key.o
+                0x20000540        0x4 ./Core/Src/button_key.o
  .bss.stable_state.0
-                0x2000053c        0x1 ./Core/Src/button_key.o
- *fill*         0x2000053d        0x3 
+                0x20000544        0x1 ./Core/Src/button_key.o
+ *fill*         0x20000545        0x3 
  .bss.fl_phase_tick.4
-                0x20000540        0x4 ./Core/Src/control_systems.o
- .bss.fl_steering_slow.2
-                0x20000544        0x4 ./Core/Src/control_systems.o
- .bss.error_linea_filtrado.0
                 0x20000548        0x4 ./Core/Src/control_systems.o
- .bss.ESP       0x2000054c      0x25c ./Core/Src/main.o
-                0x2000054c                ESP
+ .bss.fl_steering_slow.2
+                0x2000054c        0x4 ./Core/Src/control_systems.o
+ .bss.error_linea_filtrado.0
+                0x20000550        0x4 ./Core/Src/control_systems.o
+ .bss.ESP       0x20000554      0x25c ./Core/Src/main.o
+                0x20000554                ESP
  .bss.currentMode
-                0x200007a8        0x1 ./Core/Src/main.o
-                0x200007a8                currentMode
- .bss.flagWIFI  0x200007a9        0x1 ./Core/Src/main.o
-                0x200007a9                flagWIFI
+                0x200007b0        0x1 ./Core/Src/main.o
+                0x200007b0                currentMode
+ .bss.flagWIFI  0x200007b1        0x1 ./Core/Src/main.o
+                0x200007b1                flagWIFI
  .bss.flagMotorsAreOn
-                0x200007aa        0x1 ./Core/Src/main.o
-                0x200007aa                flagMotorsAreOn
+                0x200007b2        0x1 ./Core/Src/main.o
+                0x200007b2                flagMotorsAreOn
  .bss.flagCalibrationIsReady
-                0x200007ab        0x1 ./Core/Src/main.o
-                0x200007ab                flagCalibrationIsReady
+                0x200007b3        0x1 ./Core/Src/main.o
+                0x200007b3                flagCalibrationIsReady
  .bss.flag_RC_active
-                0x200007ac        0x1 ./Core/Src/main.o
-                0x200007ac                flag_RC_active
- .bss.flag10ms  0x200007ad        0x1 ./Core/Src/main.o
-                0x200007ad                flag10ms
- *fill*         0x200007ae        0x2 
+                0x200007b4        0x1 ./Core/Src/main.o
+                0x200007b4                flag_RC_active
+ .bss.flag10ms  0x200007b5        0x1 ./Core/Src/main.o
+                0x200007b5                flag10ms
+ *fill*         0x200007b6        0x2 
  .bss.counterHB
-                0x200007b0        0x4 ./Core/Src/main.o
-                0x200007b0                counterHB
- .bss.control_missed_slots
-                0x200007b4        0x4 ./Core/Src/main.o
-                0x200007b4                control_missed_slots
- .bss.control_slots_serviced
                 0x200007b8        0x4 ./Core/Src/main.o
-                0x200007b8                control_slots_serviced
- .bss.Ki        0x200007bc        0x4 ./Core/Src/main.o
-                0x200007bc                Ki
- .bss.Kd        0x200007c0        0x4 ./Core/Src/main.o
-                0x200007c0                Kd
+                0x200007b8                counterHB
+ .bss.control_missed_slots
+                0x200007bc        0x4 ./Core/Src/main.o
+                0x200007bc                control_missed_slots
+ .bss.control_slots_serviced
+                0x200007c0        0x4 ./Core/Src/main.o
+                0x200007c0                control_slots_serviced
  .bss.integral  0x200007c4        0x4 ./Core/Src/main.o
                 0x200007c4                integral
  .bss.last_error
@@ -9347,7 +9347,7 @@ LOAD C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.exte
                 0x2000179c                        __bss_end__ = _ebss
 
 ._user_heap_stack
-                0x2000179c      0x604 load address 0x08018f18
+                0x2000179c      0x604 load address 0x08018f20
                 0x200017a0                        . = ALIGN (0x8)
  *fill*         0x2000179c        0x4 
                 [!provide]                        PROVIDE (end = .)
@@ -10003,72 +10003,72 @@ LOAD C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.exte
  .debug_line    0x00022393      0xb28 ./Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.o
  .debug_line    0x00022ebb      0xec1 ./USB_DEVICE/Target/usbd_conf.o
 
-.debug_str      0x00000000    0xa568b
- .debug_str     0x00000000    0xa568b ./Core/Src/ESP01.o
-                              0x9a75b (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/button_key.o
+.debug_str      0x00000000    0xa5690
+ .debug_str     0x00000000    0xa5690 ./Core/Src/ESP01.o
+                              0x9a760 (size before relaxing)
+ .debug_str     0x000a5690        0x0 ./Core/Src/button_key.o
                               0x95b4e (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/control_systems.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/control_systems.o
                               0x95d45 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/fonts.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/fonts.o
                               0x989bc (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/line_sensors.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/line_sensors.o
                               0x95b1d (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/main.o
-                              0x9d2fb (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/mpu6050_app.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/main.o
+                              0x9d300 (size before relaxing)
+ .debug_str     0x000a5690        0x0 ./Core/Src/mpu6050_app.o
                               0x95d4a (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/ssd1306.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/ssd1306.o
                               0x99593 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/stm32f4xx_hal_msp.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/stm32f4xx_hal_msp.o
                               0x96964 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/stm32f4xx_it.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/stm32f4xx_it.o
                               0x96853 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/syscalls.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/syscalls.o
                                0x99da (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/sysmem.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/sysmem.o
                                0x7778 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/system_stm32f4xx.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/system_stm32f4xx.o
                               0x957ac (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Src/uner_protocol.o
-                              0x996d6 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Core/Startup/startup_stm32f411ceux.o
+ .debug_str     0x000a5690        0x0 ./Core/Src/uner_protocol.o
+                              0x996db (size before relaxing)
+ .debug_str     0x000a5690        0x0 ./Core/Startup/startup_stm32f411ceux.o
                                  0x7a (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
                               0x961d8 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.o
                               0x95d87 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.o
                               0x95ddb (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
                               0x95f42 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
                               0x95bb4 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
                               0x95927 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.o
                               0x967bd (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd.o
                               0x96278 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd_ex.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd_ex.o
                               0x95b68 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
                               0x95be0 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
                               0x96b24 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
                               0x96330 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
                               0x961af (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_usb.o
+ .debug_str     0x000a5690        0x0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_usb.o
                               0x96153 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.o
+ .debug_str     0x000a5690        0x0 ./Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.o
                               0x9a297 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.o
+ .debug_str     0x000a5690        0x0 ./Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.o
                               0x9a0c2 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.o
+ .debug_str     0x000a5690        0x0 ./Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.o
                               0x99f97 (size before relaxing)
- .debug_str     0x000a568b        0x0 ./USB_DEVICE/Target/usbd_conf.o
+ .debug_str     0x000a5690        0x0 ./USB_DEVICE/Target/usbd_conf.o
                               0x9b046 (size before relaxing)
 
 .comment        0x00000000       0x43

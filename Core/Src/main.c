@@ -187,13 +187,13 @@ volatile 	uint32_t 		control_slots_serviced = 0;
 			int16_t 		deadband_R = 75; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
 			float 			Kp = 170.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 0.0f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float 			setpoint = 7.1f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
-			float 			setpointDeEquilibrio = 7.1f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
+			float 			Ki = 0.1f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 4.5f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			setpoint = 0.1f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
+			float 			setpointDeEquilibrio = 0.1f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
 			float 			last_error = 0;
-			float           ALPHA_PID = 0.994f;
+			float           ALPHA_PID = 0.94f;
 			float			correccionRCSP = 0.98;
 			float 			limite_inclinacion = 3.0f;
 // =================[ Variables de Control PID YAW] ================= //

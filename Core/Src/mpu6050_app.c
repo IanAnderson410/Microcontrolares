@@ -15,7 +15,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c)
         data = 0x00;
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1B, 1, &data, 1, 100);
 
-        data = 0x04;
+        data = 0x02;
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1A, 1, &data, 1, 100);
 
         data = 0x00;
