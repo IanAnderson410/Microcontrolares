@@ -105,7 +105,6 @@ enum {
        CMD_CALIBRATE   			= 5, 		/*!< Calibración de MPU6050										*/
        CMD_START       			= 6, 		/*!< Activar motores / Inicio de balanceo						*/
        CMD_STOP        			= 7, 		/*!< Parada de emergencia / Motores a 0							*/
-       CMD_TCP_CONNECTED			= 8,	/*!< Comando utilizado en la conexión del TCP y el robot		*/
        CMD_CHANGE_OLED_SCREEN  	= 9,		/*!< Cambia o apaga la pantalla OLED							*/
        //RADIO CONTROL
        CMD_RC    					= 10, 		/*!< Movimiento manual (adelante, atrás, giros)					*/
@@ -142,10 +141,10 @@ enum {
        CMD_NETWORK_CHANGE_PASSWORD	= 51,
        CMD_TELEMETRY_START          = 60,
        CMD_TELEMETRY_STOP           = 61,
-       CMD_HTTP_SOFTAP              = 62,
        CMD_SET_YAW_PD               = 63,
        CMD_SET_YAW_CONFIG           = 64,
-       CMD_SET_FL_CONFIG            = 65
+       CMD_SET_FL_CONFIG            = 65,
+       CMD_TURN_MANEUVER            = 66
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -186,14 +185,14 @@ volatile 	uint32_t 		control_slots_serviced = 0;
 			int16_t 		deadband_L = 130;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 75; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
-			float 			Kp = 170.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.1f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 4.5f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			Kp = 130.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 1700.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kd = 2.5f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float 			setpoint = 3.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 			float 			setpointDeEquilibrio = 0.1f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
 			float 			last_error = 0;
-			float           ALPHA_PID = 0.94f;
+			float           ALPHA_PID = 0.96f;
 			float			correccionRCSP = 0.98;
 			float 			limite_inclinacion = 3.0f;
 // =================[ Variables de Control PID YAW] ================= //
@@ -240,6 +239,7 @@ volatile 	uint16_t 		accely=0;
 volatile 	uint16_t		accelz=0;
 volatile 	float 			giro=0;
 volatile 	float			giro_z=0;
+volatile    uint32_t        imu_last_update_tick = 0;
 volatile 	float 			imu_accel_forward_mps2 = 0.0f;
 volatile 	float 			imu_velocity_mps = 0.0f;
 // =================[ I2C Scheduler ] =================//
@@ -283,8 +283,6 @@ volatile uint32_t uner_tx_last_ok_tick = 0;
 volatile uint32_t uner_tx_recover_count = 0;
 volatile uint8_t uner_recovering_udp = 0;
 volatile uint32_t uner_next_telemetry_tick = 0;
-volatile uint8_t esp01_http_softap_requested = 0;
-volatile uint8_t esp01_http_softap_active = 0;
 volatile uint8_t mpu_calibration_requested = 0;
 volatile uint32_t rc_last_packet_tick = 0;
 char esp01_last_debug[18] = "-";
@@ -331,8 +329,6 @@ void onESP01ChangeState(_eESP01STATUS esp01State);
 void onESP01Debug(const char *dbgStr);
 void ESP01_App_Task(void);
 _eESP01STATUS ESP01_StartTransport(void);
-void ESP01_Http_ProcessByte(uint8_t value);
-void ESP01_Http_Task(void);
 
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len);
 void Telemetry_UpdateMPU(void);
@@ -382,6 +378,7 @@ void Telemetry_UpdateMPU(void)
     accelx = axRaw;
     accely = ayRaw;
     accelz = azRaw;
+    imu_last_update_tick = HAL_GetTick();
 }
 
 void screenScheduler(void){
@@ -462,8 +459,29 @@ void screenScheduler(void){
            OLED_RequestUpdate();
            return;
        }
-
     if (flagOLED == 3) {
+		sprintf(msg, "IR and MPU Screen ");
+		SSD1306_GotoXY(2, 0);
+		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+		for (int i = 0; i < 8; i++) {
+				// 1. Calculamos el ancho de la barra (Supongamos 50 píxeles de ancho máximo)
+				// Mapeo: (Valor ADC * Ancho Máximo) / 4095
+				uint8_t barWidth = (uint8_t)((adc_buffer[i] * 50) / 4095);
+				uint8_t yPos = 10 + (i * 7);
+				if(i==0 || i == 7){
+					char label[4];
+					sprintf(label, "IR%d", i);
+					SSD1306_GotoXY(2, yPos);
+					SSD1306_Puts(label, &Font_7x10, SSD1306_COLOR_WHITE);
+				}
+				SSD1306_DrawRectangle(25, yPos, 50, 5, SSD1306_COLOR_WHITE);
+				SSD1306_DrawFilledRectangle(25, yPos, barWidth, 5, SSD1306_COLOR_WHITE);
+			}
+			oled_update_requested = 1; // Le avisamos al scheduler que mande los datos al OLED
+			  return;
+    }
+
+    if (flagOLED == 777) {
         SSD1306_GotoXY(0, 0);
         SSD1306_Puts("IR/MPU", &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 12);
@@ -483,19 +501,7 @@ void screenScheduler(void){
     }
 
     SSD1306_GotoXY(0, 0);
-			#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
-				SSD1306_Puts("ESP01 HTTP", &Font_7x10, SSD1306_COLOR_WHITE);
-			#else
-				if (esp01_http_softap_active) {
-					SSD1306_Puts("ESP01 HTTP", &Font_7x10, SSD1306_COLOR_WHITE);
-				} else {
-			#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
-					SSD1306_Puts("ESP01 TCP", &Font_7x10, SSD1306_COLOR_WHITE);
-			#else
-					SSD1306_Puts("ESP01 UDP", &Font_7x10, SSD1306_COLOR_WHITE);
-			#endif
-				}
-			#endif
+    SSD1306_Puts("ESP01 UDP", &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 10);
     SSD1306_Puts("", &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(24, 10);
@@ -560,7 +566,7 @@ void screenScheduler(void){
 				SSD1306_GotoXY(1, 40);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
-				sprintf(msg, "Mode: %d ", currentMode);
+				sprintf(msg, "M:%d ", currentMode);
 				SSD1306_GotoXY(1, 50);
 				SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
@@ -655,14 +661,6 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_status = 0;
         uner_ack_pending = 1;
         break;
-    case CMD_HTTP_SOFTAP:
-        uner_telemetry_enabled = 0;
-        esp01_http_softap_requested = 1;
-        uner_ack_cmd = CMD_HTTP_SOFTAP;
-        uner_ack_seq = seq;
-        uner_ack_status = 0;
-        uner_ack_pending = 1;
-        break;
     case CMD_SET_YAW_PD:
         if (payload_len >= 8) {
             Kp_yaw = UNER_ReadFloatLE(payload);
@@ -744,6 +742,23 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uner_ack_pending = 1;
         }
         break;
+    case CMD_TURN_MANEUVER:
+        if (payload_len >= 4) {
+            int16_t target_cdeg = UNER_ReadInt16LE(payload);
+            float target_angle_deg = ((float)target_cdeg) / 100.0f;
+            uint8_t wheel_mode = payload[2];
+            uint8_t wheel_select = payload[3];
+
+            uner_ack_status = TurnManeuver_Start(target_angle_deg, wheel_mode, wheel_select);
+        } else {
+            uner_ack_status = TURN_MANEUVER_STATUS_PAYLOAD;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_TURN_MANEUVER;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
 
     case CMD_START:
         flagMotorsAreOn = 1;
@@ -756,6 +771,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
 
     case CMD_STOP:
+        TurnManeuver_Cancel();
         flagMotorsAreOn = 0;
         RC_setpoint = 0.0f;
         RC_steering = 0;
@@ -802,6 +818,9 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         if (payload_len >= 2) {
             int16_t requested_mode = UNER_ReadInt16LE(payload);
             if (requested_mode >= MODO_IDDLE && requested_mode <= MODO_FL_INGRESO_A_90) {
+                if (requested_mode != MODO_RC) {
+                    TurnManeuver_Cancel();
+                }
                 currentMode = (uint8_t)requested_mode;
                 uner_ack_status = 0;
             } else {
@@ -820,6 +839,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         if (payload_len >= 1) {
             flagMotorsAreOn = (payload[0] != 0) ? 1 : 0;
             if (!flagMotorsAreOn) {
+                TurnManeuver_Cancel();
                 RC_setpoint = 0.0f;
                 RC_steering = 0;
                 Robot_Drive(0, 0);
@@ -928,6 +948,9 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_RC:
         if (payload_len >= 4) {
+            if (turn_maneuver_active) {
+                break;
+            }
             uint8_t active = payload[0];
             int8_t setpoint_cmd = (int8_t)payload[1];
             int16_t steering_cmd = UNER_ReadInt16LE(&payload[2]);
@@ -1058,10 +1081,6 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    }
 }
 void ESP01_Generic_Functions(uint32_t now){
-	if (ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP){
-		ESP01_Http_Task();
-		}
-		else if(esp01_http_softap_active) ESP01_Http_Task();
 	if (uner_telemetry_enabled && !uner_ack_pending && ESP.udp_connected && !uner_tx_busy && ESP.uner_tx_count == 0 &&
 		(int32_t)(now - uner_next_telemetry_tick) >= 0) {
 		if (UNER_SendTelemetryV1()) {
@@ -1234,6 +1253,7 @@ int main(void)
 				RC_setpoint = 0.0f;
 				RC_steering = 0;
 			}
+			TurnManeuver_Task();
 			PID_PITCH();
 			control_slots_serviced++;
 			OLED_Service();

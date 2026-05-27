@@ -1,3 +1,7 @@
-../Core/Src/control_systems.c:7:6:PID_PITCH	17
-../Core/Src/control_systems.c:85:6:FollowLine_Task	16
-../Core/Src/control_systems.c:130:9:Calcular_PID_YAW	1
+../Core/Src/control_systems.c:31:14:clamp_float	4
+../Core/Src/control_systems.c:45:6:PID_PITCH	20
+../Core/Src/control_systems.c:136:6:FollowLine_Task	16
+../Core/Src/control_systems.c:181:9:Calcular_PID_YAW	1
+../Core/Src/control_systems.c:195:9:TurnManeuver_Start	9
+../Core/Src/control_systems.c:237:6:TurnManeuver_Cancel	1
+../Core/Src/control_systems.c:248:6:TurnManeuver_Task	13

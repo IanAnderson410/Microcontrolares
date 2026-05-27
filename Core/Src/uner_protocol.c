@@ -187,7 +187,8 @@ uint8_t UNER_SendTelemetryV1(void)
                                       ((estado_sensores[0] & 0x01) << 2) |
                                       ((estado_sensores[1] & 0x01) << 3) |
                                       ((estado_sensores[2] & 0x01) << 4) |
-                                      ((estado_sensores[3] & 0x01) << 5));
+                                      ((estado_sensores[3] & 0x01) << 5) |
+                                      ((turn_maneuver_active & 0x01) << 6));
 
     for (uint8_t i = 0; i < 8; i++) {
         payload.IR[i] = adc_filtrado[i];

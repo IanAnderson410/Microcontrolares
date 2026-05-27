@@ -55,17 +55,8 @@ typedef enum{
 #define ESP01_QT_REMOTE_PORT       8888
 #endif
 #define ESP01_TRANSPORT_UDP        0
-#define ESP01_TRANSPORT_TCP        1
 #ifndef ESP01_TRANSPORT
 #define ESP01_TRANSPORT            ESP01_TRANSPORT_UDP
-#endif
-#define ESP01_APP_MODE_QT          0
-#define ESP01_APP_MODE_HTTP_SOFTAP 1
-#ifndef ESP01_APP_MODE
-#define ESP01_APP_MODE             ESP01_APP_MODE_QT
-#endif
-#ifndef ESP01_HTTP_PORT
-#define ESP01_HTTP_PORT            80
 #endif
 #ifndef RC_TIMEOUT_MS
 #define RC_TIMEOUT_MS              350
@@ -75,7 +66,7 @@ typedef enum{
 #define ESP01_WIFI_PROFILE_HOME        1
 #define ESP01_WIFI_PROFILE_LAB         2
 #ifndef ESP01_WIFI_PROFILE
-#define ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_UNIVERSITY
+#define ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_LAB
 #endif
 
 #if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
@@ -98,6 +89,10 @@ typedef enum{
 #define WIFI_PASSWORD              "fcalconcordia.06-2019"
 #define ESP01_QT_REMOTE_IP         "172.23.224.234"
 
+#elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_UNIVERSITY2
+#define WIFI_SSID                  "FCAL-Personal"
+#define WIFI_PASSWORD              "fcal-uner+2019"
+#define ESP01_QT_REMOTE_IP         "172.22.239.10"
 #else
 #error "Seleccionar un perfil WiFi valido para ESP01_WIFI_PROFILE"
 #endif
@@ -160,26 +155,6 @@ void ESP01_SetWIFI(const char *ssid, const char *password);
  */
 _eESP01STATUS ESP01_StartUDP(const char *RemoteIP, uint16_t RemotePORT, uint16_t LocalPORT);
 
-
-/**
- * @brief ESP01_START_TCP Configura y Conecta UDP
- *
- * Comienza una comunicación TCP, siempre que este conectado a WIFI.
- * Si hay una conexión establecida la cierra y se conecta esta nueva IP:PORT
- * Use ESP01_STUDP para verificar el estado de la conexión UDP
- * Si la read WIFI no esta disponible se conecta a esta IP:PORT automáticamante
- * cuando se reestablezaca la conexión WIFI
- * Esta función se debe ejecutar después de ESP01_Init
- *
- * @param [in] RemoteIP: Especifica la IP remota a transmitir
- * @param [in] RemotePORT: Especifica el puerto remoto a transmitir
- *
- */
-_eESP01STATUS ESP01_StartTCP(const char *RemoteIP, uint16_t RemotePORT, uint16_t LocalPORT);
-
-_eESP01STATUS ESP01_StartHTTPServer(uint16_t LocalPORT);
-_eESP01STATUS ESP01_SendToClient(uint8_t link_id, uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint16_t sizeRingBuf);
-uint8_t ESP01_GetLastIPDLinkId(void);
 
 /**
  * @brief ESP01_CLOSEUDP Cierra una conexión UDP
@@ -320,7 +295,5 @@ void onESP01ChangeState(_eESP01STATUS esp01State);
 void onESP01Debug(const char *dbgStr);
 void ESP01_App_Task(void);
 _eESP01STATUS ESP01_StartTransport(void);
-void ESP01_Http_ProcessByte(uint8_t value);
-void ESP01_Http_Task(void);
 
 #endif /* ESP01_H_ */

@@ -1,8 +1,46 @@
 #include "control_systems.h"
 #include "line_sensors.h"
+#include <math.h>
 
 #define FL_RECOVERY_STEERING         700
 #define FL_BALANCE_ONLY_STEERING     250
+#define TURN_MANEUVER_MIN_ANGLE_DEG  1.0f
+#define TURN_MANEUVER_MAX_ANGLE_DEG  360.0f
+#define TURN_MANEUVER_TOLERANCE_DEG  2.0f
+#define TURN_MANEUVER_SLOW_ZONE_DEG  15.0f
+#define TURN_MANEUVER_TIMEOUT_MS     6000U
+#define TURN_MANEUVER_IMU_STALE_MS   100U
+#define TURN_MANEUVER_SLOW_RATIO     0.35f
+#define TURN_MANEUVER_SIGN_CHECK_MS  300U
+#define TURN_MANEUVER_SIGN_CHECK_DEG 0.7f
+#define TURN_MANEUVER_YAW_BOOST      1000.0f
+
+volatile uint8_t turn_maneuver_active = 0;
+volatile uint8_t turn_maneuver_mode = TURN_MANEUVER_MODE_TWO_WHEELS;
+volatile uint8_t turn_maneuver_wheel = TURN_MANEUVER_WHEEL_LEFT;
+volatile int16_t turn_maneuver_steering = 0;
+
+static float turn_maneuver_start_yaw_deg = 0.0f;
+static float turn_maneuver_target_delta_deg = 0.0f;
+static float turn_maneuver_error_filtered = 0.0f;
+static float turn_maneuver_steering_slow = 0.0f;
+static uint32_t turn_maneuver_start_tick = 0;
+static int8_t turn_maneuver_drive_sign = 1;
+static uint8_t turn_maneuver_sign_checked = 0;
+
+static float clamp_float(float value, float limit)
+{
+    if (limit <= 0.0f) {
+        return value;
+    }
+    if (value > limit) {
+        return limit;
+    }
+    if (value < -limit) {
+        return -limit;
+    }
+    return value;
+}
 
 void PID_PITCH(void)
 {
@@ -64,10 +102,10 @@ void PID_PITCH(void)
     }
     error = angle_y - target_setpoint;
     integral += error * CONTROL_DT_PID;
-    if (integral > 2000.0f) {
-        integral = 2000.0f;
-    } else if (integral < -2000.0f) {
-        integral = -2000.0f;
+    if (integral > 1200.0f) {
+        integral = 1200.0f;
+    } else if (integral < -1200.0f) {
+        integral = -1200.0f;
     }
     P = Kp * error;
     I = Ki * integral;
@@ -76,8 +114,21 @@ void PID_PITCH(void)
     showoutput = output;
     last_error = error;
 
-    if(flagMotorsAreOn){      Robot_Drive((int16_t)output + steering, (int16_t)output - steering);    }
+    if (flagMotorsAreOn) {
+        if (turn_maneuver_active && turn_maneuver_mode == TURN_MANEUVER_MODE_ONE_WHEEL) {
+            int16_t pitch_output = (int16_t)output;
+
+            if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
+                Robot_Drive(pitch_output + steering, pitch_output);
+            } else {
+                Robot_Drive(pitch_output, pitch_output - steering);
+            }
+        } else {
+            Robot_Drive((int16_t)output + steering, (int16_t)output - steering);
+        }
+    }
     if (flagMotorsAreOn == 0 || angle_y > 65.0f || angle_y < -65.0f) {
+        TurnManeuver_Cancel();
         Robot_Drive(0, 0);
     }
 }
@@ -139,4 +190,123 @@ int16_t Calcular_PID_YAW(float error_linea)
     last_error_yaw = error_linea_filtrado;
 
     return (int16_t)(P_yaw + D_yaw);
+}
+
+uint8_t TurnManeuver_Start(float target_angle_deg, uint8_t wheel_mode, uint8_t wheel_select)
+{
+    float abs_angle = fabsf(target_angle_deg);
+    uint32_t now = HAL_GetTick();
+
+    if (abs_angle < TURN_MANEUVER_MIN_ANGLE_DEG || abs_angle > TURN_MANEUVER_MAX_ANGLE_DEG) {
+        return TURN_MANEUVER_STATUS_RANGE;
+    }
+
+    if (wheel_mode > TURN_MANEUVER_MODE_ONE_WHEEL ||
+        wheel_select > TURN_MANEUVER_WHEEL_RIGHT) {
+        return TURN_MANEUVER_STATUS_RANGE;
+    }
+
+    if (currentMode != CONTROL_MODE_RC || !flagMotorsAreOn) {
+        return TURN_MANEUVER_STATUS_MODE;
+    }
+
+    if (imu_last_update_tick == 0U ||
+        (uint32_t)(now - imu_last_update_tick) > TURN_MANEUVER_IMU_STALE_MS) {
+        return TURN_MANEUVER_STATUS_SENSOR;
+    }
+
+    turn_maneuver_start_yaw_deg = angle_yaw;
+    turn_maneuver_target_delta_deg = target_angle_deg;
+    turn_maneuver_error_filtered = 0.0f;
+    turn_maneuver_steering_slow = 0.0f;
+    turn_maneuver_start_tick = now;
+    turn_maneuver_drive_sign = 1;
+    turn_maneuver_sign_checked = 0;
+    turn_maneuver_mode = wheel_mode;
+    turn_maneuver_wheel = wheel_select;
+    turn_maneuver_steering = 0;
+    turn_maneuver_active = 1;
+    currentMode = CONTROL_MODE_RC;
+    flag_RC_active = 0;
+    RC_setpoint = 0.0f;
+    RC_steering = 0;
+
+    return TURN_MANEUVER_STATUS_OK;
+}
+
+void TurnManeuver_Cancel(void)
+{
+    turn_maneuver_active = 0;
+    turn_maneuver_steering = 0;
+    turn_maneuver_steering_slow = 0.0f;
+    turn_maneuver_error_filtered = 0.0f;
+    turn_maneuver_drive_sign = 1;
+    turn_maneuver_sign_checked = 0;
+    RC_steering = 0;
+}
+
+void TurnManeuver_Task(void)
+{
+    if (!turn_maneuver_active) return;
+
+    uint32_t now = HAL_GetTick();
+    if (currentMode != CONTROL_MODE_RC || !flagMotorsAreOn) {
+        TurnManeuver_Cancel();
+        return;
+    }
+    if (imu_last_update_tick == 0U ||
+        (uint32_t)(now - imu_last_update_tick) > TURN_MANEUVER_IMU_STALE_MS) {
+        TurnManeuver_Cancel();
+        flagMotorsAreOn = 0;
+        Robot_Drive(0, 0);
+        return;
+    }
+    if ((uint32_t)(now - turn_maneuver_start_tick) > TURN_MANEUVER_TIMEOUT_MS) {
+        TurnManeuver_Cancel();
+        return;
+    }
+
+    float turned_deg = angle_yaw - turn_maneuver_start_yaw_deg;
+    float remaining_deg = turn_maneuver_target_delta_deg - turned_deg;
+
+    if (!turn_maneuver_sign_checked &&
+        (uint32_t)(now - turn_maneuver_start_tick) >= TURN_MANEUVER_SIGN_CHECK_MS &&
+        fabsf(turned_deg) >= TURN_MANEUVER_SIGN_CHECK_DEG) {
+        if ((turned_deg * turn_maneuver_target_delta_deg) < 0.0f) {
+            turn_maneuver_drive_sign = -turn_maneuver_drive_sign;
+            turn_maneuver_error_filtered = 0.0f;
+            turn_maneuver_steering_slow = 0.0f;
+        }
+        turn_maneuver_sign_checked = 1;
+    }
+
+    if (fabsf(remaining_deg) <= TURN_MANEUVER_TOLERANCE_DEG) {
+        TurnManeuver_Cancel();
+        return;
+    }
+
+    float yaw_limit = yaw_steering_limit;
+    if (fabsf(remaining_deg) <= TURN_MANEUVER_SLOW_ZONE_DEG) {
+        yaw_limit *= TURN_MANEUVER_SLOW_RATIO;
+    }
+
+    float yaw_error = remaining_deg * multiplicadorYaw;
+    turn_maneuver_error_filtered =
+        (yaw_error_filter_alpha * turn_maneuver_error_filtered) +
+        ((1.0f - yaw_error_filter_alpha) * yaw_error);
+
+    float effective_Kp = Kp_yaw + 1500.0f;
+    float target_steering = turn_maneuver_drive_sign *
+                            (((effective_Kp * turn_maneuver_error_filtered) * TURN_MANEUVER_YAW_BOOST) -
+                             (Kd_yaw * giro_z));
+    target_steering = clamp_float(target_steering, yaw_limit);
+
+    float delta_steering = target_steering - turn_maneuver_steering_slow;
+    delta_steering = clamp_float(delta_steering, yaw_steering_step_max);
+    turn_maneuver_steering_slow += delta_steering;
+    turn_maneuver_steering_slow = clamp_float(turn_maneuver_steering_slow, yaw_limit);
+
+    turn_maneuver_steering = (int16_t)turn_maneuver_steering_slow;
+    RC_setpoint = 0.0f;
+    RC_steering = turn_maneuver_steering;
 }

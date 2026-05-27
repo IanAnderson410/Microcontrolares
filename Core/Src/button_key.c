@@ -1,21 +1,52 @@
 #include "button_key.h"
 #include "line_sensors.h"
+#include "control_systems.h"
 
-#define KEY_MODE_FL_INICIO             2U
-#define KEY_MODE_FL_BUSQUEDA_INICIAL   3U
-
-extern volatile uint8_t currentMode;
+#define KEY_INACTIVE_STATE ((KEY_ACTIVE_STATE == GPIO_PIN_SET) ? GPIO_PIN_RESET : GPIO_PIN_SET)
 
 void screenScheduler(void);
 
+static void KEY_HandleSingleClick(void);
+static void KEY_HandleDoubleClick(void);
+static void KEY_HandleLongPress(void);
+
+void KEY_Init(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    GPIO_InitStruct.Pin = KEY_GPIO_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = KEY_GPIO_PULL;
+    HAL_GPIO_Init(KEY_GPIO_PORT, &GPIO_InitStruct);
+}
+
 void KEY_CalibrationTask(void)
 {
-    static GPIO_PinState last_raw_state = GPIO_PIN_RESET;
-    static GPIO_PinState stable_state = GPIO_PIN_RESET;
+    static uint8_t gpio_initialized = 0;
+    static GPIO_PinState last_raw_state = KEY_INACTIVE_STATE;
+    static GPIO_PinState stable_state = KEY_INACTIVE_STATE;
     static uint32_t last_change_tick = 0;
+    static uint32_t press_start_tick = 0;
+    static uint32_t first_click_tick = 0;
+    static uint8_t click_pending = 0;
+    static uint8_t long_press_handled = 0;
+
+    uint32_t now = HAL_GetTick();
+    if (!gpio_initialized) {
+        KEY_Init();
+        last_change_tick = now;
+        gpio_initialized = 1;
+    }
 
     GPIO_PinState raw_state = HAL_GPIO_ReadPin(KEY_GPIO_PORT, KEY_GPIO_PIN);
-    uint32_t now = HAL_GetTick();
+
+    if (click_pending && stable_state != KEY_ACTIVE_STATE &&
+        (uint32_t)(now - first_click_tick) >= KEY_DOUBLE_CLICK_MS) {
+        click_pending = 0;
+        KEY_HandleSingleClick();
+    }
 
     if (raw_state != last_raw_state) {
         last_raw_state = raw_state;
@@ -28,21 +59,74 @@ void KEY_CalibrationTask(void)
     }
 
     if (raw_state == stable_state) {
+        if (stable_state == KEY_ACTIVE_STATE && !long_press_handled &&
+            (uint32_t)(now - press_start_tick) >= KEY_LONG_PRESS_MS) {
+            click_pending = 0;
+            long_press_handled = 1;
+            KEY_HandleLongPress();
+        }
         return;
     }
 
     stable_state = raw_state;
 
-    if (stable_state != KEY_ACTIVE_STATE) {
-        return;
+    if (stable_state == KEY_ACTIVE_STATE) {
+        press_start_tick = now;
+        long_press_handled = 0;
+    } else {
+        uint32_t press_duration = now - press_start_tick;
+
+        if (!long_press_handled && press_duration >= KEY_LONG_PRESS_MS) {
+            click_pending = 0;
+            long_press_handled = 1;
+            KEY_HandleLongPress();
+        } else if (!long_press_handled && press_duration < KEY_LONG_PRESS_MS) {
+            if (click_pending &&
+                (uint32_t)(now - first_click_tick) < KEY_DOUBLE_CLICK_MS) {
+                click_pending = 0;
+                KEY_HandleDoubleClick();
+            } else {
+                click_pending = 1;
+                first_click_tick = now;
+            }
+        } else {
+            click_pending = 0;
+        }
     }
 
+}
+
+static void KEY_HandleSingleClick(void)
+{
     if (flag_calibrando_linea) {
         Finalizar_Calibracion_Linea();
-        currentMode = KEY_MODE_FL_BUSQUEDA_INICIAL;
+        currentMode = CONTROL_MODE_FL_BUSQUEDA_INICIAL;
     } else {
         Iniciar_Calibracion_Linea();
-        currentMode = KEY_MODE_FL_INICIO;
+        currentMode = CONTROL_MODE_FL_INICIO;
+    }
+
+    screenScheduler();
+}
+
+static void KEY_HandleDoubleClick(void)
+{
+    if (currentMode >= CONTROL_MODE_FL_INICIO &&
+        currentMode <= CONTROL_MODE_FL_INGRESO_A_90) {
+        currentMode = CONTROL_MODE_RC;
+    } else {
+        currentMode = CONTROL_MODE_FL_BUSQUEDA_INICIAL;
+    }
+
+    screenScheduler();
+}
+
+static void KEY_HandleLongPress(void)
+{
+    flagMotorsAreOn = flagMotorsAreOn ? 0U : 1U;
+
+    if (!flagMotorsAreOn) {
+        Robot_Drive(0, 0);
     }
 
     screenScheduler();

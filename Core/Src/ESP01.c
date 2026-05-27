@@ -11,7 +11,6 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 
 static enum {
@@ -19,9 +18,7 @@ static enum {
 	ESP01ATAT,
 	ESP01ATRESPONSE,
 	ESP01ATCWMODE,
-	ESP01ATCWSAP,
 	ESP01ATCIPMUX,
-	ESP01ATCIPSERVER,
 	ESP01ATCWJAP,
 	ESP01CWJAPRESPONSE,
 	ESP01ATCIFSR,
@@ -68,9 +65,6 @@ static char esp01PROTO[4] = "UDP";
 static char esp01RemotePORT[6] = {0};
 static char esp01LocalIP[16] = {0};
 static char esp01LocalPORT[6] = {0};
-static uint8_t esp01ServerMode = 0;
-static uint8_t esp01CurrentIPDLinkId = 0;
-static uint8_t esp01LastIPDLinkId = 0;
 
 static uint8_t esp01HState = 0;
 static uint16_t	esp01nBytes = 0;
@@ -89,11 +83,8 @@ static _sESP01Handle esp01Handle = {.DoCHPD = NULL, .WriteUSARTByte = NULL, .Wri
 
 const char ATAT[] = "AT\r\n";
 const char ATCIPMUX[] = "AT+CIPMUX=0\r\n";
-const char ATCIPMUXSERVER[] = "AT+CIPMUX=1\r\n";
-const char ATCIPSERVER[] = "AT+CIPSERVER=1,";
 const char ATCWQAP[] = "AT+CWQAP\r\n";
-const char ATCWMODE[] = "AT+CWMODE=3\r\n";
-const char ATCWSAP[] = "AT+CWSAP=\"N20_ROBOT\",\"n20robot1\",5,3\r\n";
+const char ATCWMODE[] = "AT+CWMODE=1\r\n";
 const char ATCWJAP[] = "AT+CWJAP=";
 const char ATCIFSR[] = "AT+CIFSR\r\n";
 const char ATCIPSTART[] = "AT+CIPSTART=";
@@ -141,7 +132,6 @@ static uint8_t indexResponseChar = 0;
 void ESP01_SetWIFI(const char *ssid, const char *password){
 	esp01ATSate = ESP01ATIDLE;
 	esp01Flags.byte = 0;
-	esp01ServerMode = 0;
 
 	strncpy(esp01SSID, ssid, 64);
 	esp01SSID[63] = '\0';
@@ -181,53 +171,6 @@ _eESP01STATUS ESP01_StartUDP(const char *RemoteIP, uint16_t RemotePORT, uint16_t
 
 	return ESP01_UDPTCP_CONNECTING;
 }
-
-_eESP01STATUS ESP01_StartHTTPServer(uint16_t LocalPORT){
-	if(esp01Handle.WriteUSARTByte == NULL)
-		return ESP01_NOT_INIT;
-
-	if(LocalPORT == 0)
-		LocalPORT = 80;
-
-	esp01ServerMode = 1;
-	esp01RemoteIP[0] = '\0';
-	strcpy(esp01PROTO, "TCP");
-	itoa(LocalPORT, esp01LocalPORT, 10);
-	esp01ATSate = ESP01ATHARDRST0;
-
-	return ESP01_UDPTCP_CONNECTING;
-}
-
-uint8_t ESP01_GetLastIPDLinkId(void){
-	return esp01LastIPDLinkId;
-}
-
-_eESP01STATUS ESP01_StartTCP(const char *RemoteIP, uint16_t RemotePORT, uint16_t LocalPORT){
-	if(esp01Handle.WriteUSARTByte == NULL)
-		return ESP01_NOT_INIT;
-
-	if(LocalPORT == 0)
-		LocalPORT = 30000;
-
-	strcpy(esp01PROTO, "TCP");
-
-	strncpy(esp01RemoteIP, RemoteIP, 15);
-	esp01RemoteIP[15] = '\0';
-
-	itoa(RemotePORT, esp01RemotePORT, 10);
-	itoa(LocalPORT, esp01LocalPORT, 10);
-
-	if(esp01SSID[0] == '\0')
-		return ESP01_WIFI_NOT_SETED;
-
-	if(esp01Flags.bit.WIFICONNECTED == 0)
-		return ESP01_WIFI_DISCONNECTED;
-
-	esp01ATSate = ESP01ATCIPCLOSE;
-
-	return ESP01_UDPTCP_CONNECTING;
-}
-
 
 void ESP01_CloseUDPTCP(){
 	if(esp01Handle.WriteUSARTByte == NULL)
@@ -320,45 +263,6 @@ _eESP01STATUS ESP01_Send(uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint
 	return ESP01_SEND_BUSY;
 }
 
-_eESP01STATUS ESP01_SendToClient(uint8_t link_id, uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint16_t sizeRingBuf){
-	if(esp01Handle.WriteUSARTByte == NULL)
-		return ESP01_NOT_INIT;
-
-	if(esp01Flags.bit.UDPTCPCONNECTED == 0)
-		return ESP01_UDPTCP_DISCONNECTED;
-
-	if(esp01Flags.bit.SENDINGDATA == 0){
-		char strInt[10];
-		uint8_t l = 0;
-
-		itoa(length, strInt, 10);
-		l = strlen(strInt);
-		if(l>4 || l==0)
-			return ESP01_SEND_ERROR;
-
-		ESP01StrToBufTX(ATCIPSEND);
-		ESP01ByteToBufTX((char)('0' + (link_id % 10)));
-		ESP01ByteToBufTX(',');
-		ESP01StrToBufTX(strInt);
-		ESP01StrToBufTX("\r>");
-
-		for(uint16_t i=0; i<length; i++){
-			esp01TXATBuf[esp01iwTX++] = buf[irRingBuf++];
-			if(esp01iwTX == ESP01TXBUFAT)
-				esp01iwTX = 0;
-			if(irRingBuf == sizeRingBuf)
-				irRingBuf = 0;
-		}
-
-		esp01Flags.bit.TXCIPSEND = 1;
-		esp01Flags.bit.SENDINGDATA = 1;
-		return ESP01_SEND_READY;
-	}
-
-	return ESP01_SEND_BUSY;
-}
-
-
 void ESP01_Init(_sESP01Handle *hESP01){
 
 	memcpy(&esp01Handle, hESP01, sizeof(_sESP01Handle));
@@ -424,8 +328,6 @@ extern volatile uint8_t ip_received_flag;
 extern volatile uint32_t esp01_tx_count;
 extern volatile uint32_t esp01_payload_count;
 extern volatile uint32_t esp01_ack_count;
-extern volatile uint8_t esp01_http_softap_requested;
-extern volatile uint8_t esp01_http_softap_active;
 extern volatile uint8_t uner_ack_pending;
 extern volatile uint8_t uner_ack_cmd;
 extern volatile uint8_t uner_ack_seq;
@@ -435,11 +337,6 @@ extern volatile uint8_t flag_RC_active;
 extern volatile uint32_t rc_last_packet_tick;
 extern volatile float RC_setpoint;
 extern volatile int16_t RC_steering;
-extern uint16_t delayHB;
-
-void Telemetry_UpdateMPU(void);
-void screenScheduler(void);
-uint8_t UNER_SendTelemetryV1(void);
 
 void setESP01_CHPD(uint8_t val)
 {
@@ -459,18 +356,6 @@ int ESP01_UART_Transmit(uint8_t val)
 
 void ESP01_Data_Received(uint8_t value)
 {
-#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
-	esp01_payload_count++;
-	ESP01_Http_ProcessByte(value);
-	return;
-#else
-	if (esp01_http_softap_active) {
-		esp01_payload_count++;
-		ESP01_Http_ProcessByte(value);
-		return;
-	}
-#endif
-
 	esp01_payload_count++;
 	uint16_t next = ESP.uner_rx_write + 1;
 
@@ -569,38 +454,11 @@ void onESP01Debug(const char *dbgStr)
 
 _eESP01STATUS ESP01_StartTransport(void)
 {
-#if ESP01_APP_MODE == ESP01_APP_MODE_HTTP_SOFTAP
-	return ESP01_StartHTTPServer(ESP01_HTTP_PORT);
-#else
-	if (esp01_http_softap_active) {
-		return ESP01_StartHTTPServer(ESP01_HTTP_PORT);
-	}
-
-#if ESP01_TRANSPORT == ESP01_TRANSPORT_TCP
-	return ESP01_StartTCP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, 0);
-#else
 	return ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
-#endif
-#endif
 }
 
 void ESP01_App_Task(void)
 {
-
-	if (esp01_http_softap_requested && !uner_ack_pending && !uner_tx_busy) {
-		esp01_http_softap_requested = 0;
-		esp01_http_softap_active = 1;
-		uner_telemetry_enabled = 0;
-		ESP.uner_tx_head = 0;
-		ESP.uner_tx_tail = 0;
-		ESP.uner_tx_count = 0;
-		ESP.udp_connected = 0;
-		ESP.udp_started = 0;
-		ESP01_StartTransport();
-		ESP.udp_started = 1;
-		return;
-	}
-
 	if (uner_ack_pending && ESP.udp_connected && !uner_tx_busy) {
 		if (UNER_SendAckV1(uner_ack_cmd, uner_ack_seq, uner_ack_status)) {
 			uner_ack_pending = 0;
@@ -609,90 +467,6 @@ void ESP01_App_Task(void)
 	}
 
 
-}
-
-volatile uint8_t http_response_pending = 0;
-volatile uint8_t http_response_link = 0;
-volatile uint16_t http_requested_hb = 0;
-
-void ESP01_Http_ProcessByte(uint8_t value)
-{
-	static char request_line[96];
-	static uint8_t index = 0;
-	static uint8_t line_done = 0;
-	static uint8_t pending_link = 0;
-
-	if (!line_done) {
-		if (index < (sizeof(request_line) - 1)) {
-			request_line[index++] = (char)value;
-		}
-
-		if (value == '\n') {
-			request_line[index] = '\0';
-			pending_link = ESP01_GetLastIPDLinkId();
-			line_done = 1;
-
-			if (strncmp(request_line, "GET /hb?ms=", 11) == 0) {
-				uint16_t hb = (uint16_t)atoi(&request_line[11]);
-				if (hb >= 1 && hb <= 200) {
-					delayHB = hb;
-					http_requested_hb = hb;
-				}
-			}
-
-			if (strncmp(request_line, "GET ", 4) == 0) {
-				http_response_link = pending_link;
-				http_response_pending = 1;
-			}
-		}
-	}
-
-	if (line_done && value == '\n' && index == 0) {
-		line_done = 0;
-	}
-
-	if (line_done && value == '\n') {
-		index = 0;
-		line_done = 0;
-	}
-}
-
-void ESP01_Http_Task(void)
-{
-	char body[150];
-	char response[256];
-	int body_len;
-	int response_len;
-
-	if (!http_response_pending || uner_tx_busy) {
-		return;
-	}
-
-	body_len = snprintf(body, sizeof(body),
-						"<html><body><h3>N20 HB</h3><p>HB=%u</p>"
-						"<a href=\"/hb?ms=10\">10</a> "
-						"<a href=\"/hb?ms=50\">50</a> "
-						"<a href=\"/hb?ms=100\">100</a>"
-						"</body></html>",
-						delayHB);
-	if (body_len < 0 || body_len >= (int)sizeof(body)) {
-		return;
-	}
-
-	response_len = snprintf(response, sizeof(response),
-							"HTTP/1.1 200 OK\r\n"
-							"Content-Type: text/html\r\n"
-							"Connection: close\r\n"
-							"Content-Length: %d\r\n\r\n%s",
-							body_len, body);
-	if (response_len <= 0 || response_len >= (int)sizeof(response)) {
-		return;
-	}
-
-	if (ESP01_SendToClient(http_response_link, (uint8_t *)response, 0, (uint16_t)response_len, (uint16_t)response_len) == ESP01_SEND_READY) {
-		http_response_pending = 0;
-		uner_tx_busy = 1;
-	}
 }
 
 
@@ -900,12 +674,7 @@ static void ESP01ATDecode(){
 			}
 			break;
 		case 11:
-			if(esp01ServerMode && value >= '0' && value <= '9'){
-				esp01CurrentIPDLinkId = (uint8_t)(value - '0');
-				esp01HState = 13;
-			}
-			else if(value == ':'){
-				esp01LastIPDLinkId = 0;
+			if(value == ':'){
 				esp01HState = 12;
 			}
 			else{
@@ -927,32 +696,6 @@ static void ESP01ATDecode(){
 				esp01HState = 0;
 				if(ESP01DbgStr != NULL)
 					ESP01DbgStr("+&DBGRESPONSE IPD\n");
-			}
-			break;
-		case 13:
-			if(value == ','){
-				esp01HState = 14;
-				esp01nBytes = 0;
-			}
-			else{
-				esp01HState = 0;
-				esp01irRXAT--;
-			}
-			break;
-		case 14:
-			if(value == ':'){
-				esp01LastIPDLinkId = esp01CurrentIPDLinkId;
-				esp01HState = 12;
-			}
-			else{
-				if(value<'0' || value>'9'){
-					esp01HState = 0;
-					esp01irRXAT--;
-				}
-				else{
-					esp01nBytes *= 10;
-					esp01nBytes += (value - '0');
-				}
 			}
 			break;
 		default:
@@ -1018,37 +761,13 @@ static void ESP01DOConnection(){
 		ESP01StrToBufTX(ATCWMODE);
 		if(ESP01DbgStr != NULL)
 			ESP01DbgStr("+&DBGESP01ATCWMODE\n");
-		esp01ATSate = ESP01ATCWSAP;
-		break;
-	case ESP01ATCWSAP:
-		ESP01StrToBufTX(ATCWSAP);
-		if(ESP01DbgStr != NULL)
-			ESP01DbgStr("+&DBGESP01ATCWSAP\n");
 		esp01ATSate = ESP01ATCIPMUX;
 		break;
 	case ESP01ATCIPMUX:
-		if(esp01ServerMode)
-			ESP01StrToBufTX(ATCIPMUXSERVER);
-		else
-			ESP01StrToBufTX(ATCIPMUX);
+		ESP01StrToBufTX(ATCIPMUX);
 		if(ESP01DbgStr != NULL)
 			ESP01DbgStr("+&DBGESP01ATCIPMUX\n");
-		esp01ATSate = esp01ServerMode ? ESP01ATCIPSERVER : ESP01ATCWJAP;
-		break;
-	case ESP01ATCIPSERVER:
-		ESP01StrToBufTX(ATCIPSERVER);
-		ESP01StrToBufTX(esp01LocalPORT);
-		ESP01ByteToBufTX('\r');
-		ESP01ByteToBufTX('\n');
-		esp01Flags.bit.WIFICONNECTED = 1;
-		esp01Flags.bit.UDPTCPCONNECTED = 1;
-		strcpy(esp01LocalIP, "192.168.4.1");
-		if(ESP01ChangeState != NULL){
-			ESP01ChangeState(ESP01_WIFI_CONNECTED);
-			ESP01ChangeState(ESP01_WIFI_NEW_IP);
-			ESP01ChangeState(ESP01_UDPTCP_CONNECTED);
-		}
-		esp01ATSate = ESP01ATCONNECTED;
+		esp01ATSate = ESP01ATCWJAP;
 		break;
 	case ESP01ATCWJAP:
 		if(esp01Flags.bit.WIFICONNECTED){

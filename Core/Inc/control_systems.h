@@ -16,9 +16,20 @@ extern "C" {
 #define CONTROL_MODE_FL_RESCATE            5U
 #define CONTROL_MODE_FL_PERDIDO_FAILSAFE   6U
 #define CONTROL_MODE_FL_INGRESO_A_90       8U
+#define TURN_MANEUVER_MODE_TWO_WHEELS      0U
+#define TURN_MANEUVER_MODE_ONE_WHEEL       1U
+#define TURN_MANEUVER_WHEEL_LEFT           0U
+#define TURN_MANEUVER_WHEEL_RIGHT          1U
+#define TURN_MANEUVER_STATUS_OK            0U
+#define TURN_MANEUVER_STATUS_RANGE         1U
+#define TURN_MANEUVER_STATUS_PAYLOAD       2U
+#define TURN_MANEUVER_STATUS_MODE          3U
+#define TURN_MANEUVER_STATUS_SENSOR        4U
 
 extern volatile uint8_t currentMode;
 extern volatile uint8_t flagMotorsAreOn;
+extern volatile uint8_t flagCalibrationIsReady;
+extern volatile uint8_t flag_RC_active;
 extern volatile int16_t axRaw;
 extern volatile int16_t ayRaw;
 extern volatile int16_t azRaw;
@@ -27,6 +38,7 @@ extern volatile uint16_t accely;
 extern volatile uint16_t accelz;
 extern volatile float giro;
 extern volatile float giro_z;
+extern volatile uint32_t imu_last_update_tick;
 extern volatile float imu_accel_forward_mps2;
 extern volatile float imu_velocity_mps;
 extern volatile float RC_setpoint;
@@ -37,6 +49,7 @@ extern volatile uint16_t FL_motion_phase_ms;
 extern volatile uint16_t FL_balance_phase_ms;
 
 extern float angle_y;
+extern float angle_yaw;
 extern float Kp;
 extern float Ki;
 extern float Kd;
@@ -62,10 +75,17 @@ extern float multiplicadorYaw;
 extern float yaw_error_filter_alpha;
 extern float yaw_steering_step_max;
 extern float yaw_steering_limit;
+extern volatile uint8_t turn_maneuver_active;
+extern volatile uint8_t turn_maneuver_mode;
+extern volatile uint8_t turn_maneuver_wheel;
+extern volatile int16_t turn_maneuver_steering;
 
 void PID_PITCH(void);
 void FollowLine_Task(void);
 int16_t Calcular_PID_YAW(float error_linea);
+uint8_t TurnManeuver_Start(float target_angle_deg, uint8_t wheel_mode, uint8_t wheel_select);
+void TurnManeuver_Cancel(void);
+void TurnManeuver_Task(void);
 void Robot_Drive(int16_t speed_L, int16_t speed_R);
 
 #ifdef __cplusplus
