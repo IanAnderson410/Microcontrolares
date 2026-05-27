@@ -366,37 +366,18 @@ MainWindow::~MainWindow()
 
 void MainWindow::organizeStackedInterface()
 {
-    ui->stackedWidget->setParent(ui->centralwidget);
-    ui->stackedWidget->setGeometry(30, 10, 1320, 690);
+    ui->layoutWidget->show();
     ui->stackedWidget->show();
+    ui->SerialPort_Label_8->show();
 
-    auto moveToStack = [this](QWidget *widget, const QRect &geometry) {
-        widget->setParent(ui->stackedWidget);
-        widget->setGeometry(geometry);
-        widget->show();
-    };
-
-    moveToStack(ui->Home_pushButton, QRect(20, 595, 130, 58));
-    moveToStack(ui->Ejecucion_pushButton, QRect(160, 595, 130, 58));
-    moveToStack(ui->ScreenCalibrar_pushbutton, QRect(300, 595, 130, 58));
-    moveToStack(ui->SistemasDeControl_pushButton, QRect(440, 595, 160, 58));
-
-    moveToStack(ui->TPCCONECTED, QRect(625, 600, 28, 28));
-    moveToStack(ui->label_11, QRect(660, 595, 170, 32));
-    moveToStack(ui->TPCCONECTED_2, QRect(625, 635, 28, 28));
-    moveToStack(ui->MODO_LABEL, QRect(660, 630, 170, 32));
-
-    moveToStack(ui->pushButton, QRect(855, 598, 120, 58));
-    moveToStack(ui->WifiPortLabel_2, QRect(1000, 580, 125, 28));
-    moveToStack(ui->OffPushButton, QRect(1000, 615, 58, 32));
-    moveToStack(ui->Screen1PushButton, QRect(1065, 615, 45, 32));
-    moveToStack(ui->Screen2PushButton, QRect(1115, 615, 45, 32));
-    moveToStack(ui->Screen2PushButton_2, QRect(1165, 615, 45, 32));
-
-    moveToStack(ui->SerialPort_Label_8, QRect(1218, 580, 82, 84));
-    ui->SerialPort_Label_8->setStyleSheet("background-color: #06141B; color: #E8ECEC; border: 1px solid #4A5C6A; border-radius: 8px; padding: 6px;");
-
-    ui->layoutWidget->hide();
+    QPushButton *obstacleOledButton = new QPushButton("OBS", ui->layoutWidget);
+    obstacleOledButton->setToolTip("Pantalla OLED de sensores IR de obstaculos");
+    obstacleOledButton->show();
+    ui->verticalLayout_9->addWidget(obstacleOledButton);
+    connect(obstacleOledButton, &QPushButton::clicked, this, [this]() {
+        enviarInt16(CMD_CHANGE_OLED_SCREEN, 4);
+        ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN OBS");
+    });
 
     connect(ui->stackedWidget, &QStackedWidget::currentChanged, this, [this]() {
         QTimer::singleShot(0, this, [this]() {
