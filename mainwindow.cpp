@@ -27,6 +27,7 @@
 #include "ui_mainwindow.h"
 #include <QPushButton>
 #include <QLineEdit>
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QGroupBox>
 #include <QGridLayout>
@@ -255,7 +256,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     QGroupBox *yawConfigBox = new QGroupBox("YAW CONTROL", ui->stackedWidget);
-    yawConfigBox->setGeometry(1040, 270, 250, 295);
+    yawConfigBox->setGeometry(1040, 270, 250, 430);
     yawConfigBox->setStyleSheet("QGroupBox { font-weight: bold; }");
     QGridLayout *yawConfigLayout = new QGridLayout(yawConfigBox);
 
@@ -278,9 +279,18 @@ MainWindow::MainWindow(QWidget *parent)
     QDoubleSpinBox *yawCfgLimit = makeYawSpin(500.0, 0.0, 4000.0, 25.0, 0);
     QDoubleSpinBox *flCfgMotionMs = makeYawSpin(200.0, 20.0, 2000.0, 10.0, 0);
     QDoubleSpinBox *flCfgBalanceMs = makeYawSpin(400.0, 20.0, 5000.0, 10.0, 0);
+    QDoubleSpinBox *turnAngleSpin = makeYawSpin(90.0, -360.0, 360.0, 5.0, 1);
+    QComboBox *turnModeCombo = new QComboBox(yawConfigBox);
+    turnModeCombo->addItem("2 wheels", 0);
+    turnModeCombo->addItem("1 wheel", 1);
+    QComboBox *turnWheelCombo = new QComboBox(yawConfigBox);
+    turnWheelCombo->addItem("Left", 0);
+    turnWheelCombo->addItem("Right", 1);
+    turnWheelCombo->setEnabled(false);
     QPushButton *yawCfgSend = new QPushButton("APPLY", yawConfigBox);
     QPushButton *flCfgSend = new QPushButton("APPLY FL", yawConfigBox);
     QPushButton *yawCfgOled = new QPushButton("OLED", yawConfigBox);
+    QPushButton *turnStartButton = new QPushButton("TURN", yawConfigBox);
 
     yawConfigLayout->addWidget(new QLabel("Kp", yawConfigBox), 0, 0);
     yawConfigLayout->addWidget(yawCfgKp, 0, 1);
@@ -303,6 +313,13 @@ MainWindow::MainWindow(QWidget *parent)
     yawConfigLayout->addWidget(yawCfgSend, 9, 0);
     yawConfigLayout->addWidget(flCfgSend, 9, 1);
     yawConfigLayout->addWidget(yawCfgOled, 10, 1);
+    yawConfigLayout->addWidget(new QLabel("Turn deg", yawConfigBox), 11, 0);
+    yawConfigLayout->addWidget(turnAngleSpin, 11, 1);
+    yawConfigLayout->addWidget(new QLabel("Mode", yawConfigBox), 12, 0);
+    yawConfigLayout->addWidget(turnModeCombo, 12, 1);
+    yawConfigLayout->addWidget(new QLabel("Wheel", yawConfigBox), 13, 0);
+    yawConfigLayout->addWidget(turnWheelCombo, 13, 1);
+    yawConfigLayout->addWidget(turnStartButton, 14, 1);
     yawConfigBox->show();
 
     connect(yawCfgSend, &QPushButton::clicked, this, [this, yawCfgKp, yawCfgKd, yawCfgMul, yawCfgAlpha, yawCfgStep, yawCfgLimit]() {
@@ -322,6 +339,22 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(yawCfgOled, &QPushButton::clicked, this, [this]() {
         enviarInt16(CMD_CHANGE_OLED_SCREEN, 1);
+    });
+
+    connect(turnModeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [turnModeCombo, turnWheelCombo](int) {
+        turnWheelCombo->setEnabled(turnModeCombo->currentData().toUInt() == 1U);
+    });
+
+    connect(turnStartButton, &QPushButton::clicked, this, [this, turnAngleSpin, turnModeCombo, turnWheelCombo]() {
+        float targetAngleDeg = static_cast<float>(turnAngleSpin->value());
+        if (qAbs(targetAngleDeg) < 1.0f) {
+            ui->InfoTextEdit->append("TURN: angulo minimo 1 grado.");
+            return;
+        }
+
+        enviarTurnManeuver(targetAngleDeg,
+                           static_cast<quint8>(turnModeCombo->currentData().toUInt()),
+                           static_cast<quint8>(turnWheelCombo->currentData().toUInt()));
     });
 
     organizeStackedInterface();
@@ -878,6 +911,7 @@ bool MainWindow::isCriticalCommand(uint8_t cmd) const
     case CMD_SET_YAW_PD:
     case CMD_SET_YAW_CONFIG:
     case CMD_SET_FL_CONFIG:
+    case CMD_TURN_MANEUVER:
         return true;
     default:
         return false;
@@ -968,6 +1002,31 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
             ui->InfoTextEdit->append("ACK v1 cmd=" + QString::number(ackCmd) +
                                      " seq=" + QString::number(ackSeq) +
                                      " status=" + QString::number(ackStatus));
+
+            if (ackCmd == CMD_TURN_MANEUVER) {
+                QString statusText;
+                switch (ackStatus) {
+                case 0:
+                    statusText = "TURN iniciado";
+                    break;
+                case 1:
+                    statusText = "TURN rechazado: angulo/modo fuera de rango";
+                    break;
+                case 2:
+                    statusText = "TURN rechazado: payload invalido";
+                    break;
+                case 3:
+                    statusText = "TURN rechazado: requiere modo RC y motores activos";
+                    break;
+                case 4:
+                    statusText = "TURN rechazado: datos MPU invalidos o detenidos";
+                    break;
+                default:
+                    statusText = "TURN rechazado: estado " + QString::number(ackStatus);
+                    break;
+                }
+                ui->InfoTextEdit->append(statusText);
+            }
 
             if (unerAckWaiting && ackCmd == unerAckCmd && ackSeq == unerAckSeq) {
                 unerAckWaiting = false;
@@ -1102,6 +1161,11 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
         }
 
         datos.infoAdicional = static_cast<uint8_t>(payload.at(43));
+        bool turnActive = (datos.infoAdicional & 0x40) != 0;
+        if (turnActive != turnManeuverTelemetryActive) {
+            turnManeuverTelemetryActive = turnActive;
+            ui->InfoTextEdit->append(turnActive ? "TURN activo en firmware" : "TURN finalizado en firmware");
+        }
 
         QString lineaBin = QString("%1%2%3%4")
                                .arg((datos.infoAdicional >> 5) & 0x01)
@@ -1152,6 +1216,9 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
             ui->RxTextEdit->append(QString("VEL_IMU: %1 mm/s").arg(velocity_mm_s, 0, 'f', 1));
         }
         ui->OUT_LineEdit_5->setText(QString::number(datos.yaw_cdeg / 100.0f, 'f', 2));
+        if (datos.modo == MODO_RC) {
+            ui->MODO_LABEL->setText(turnActive ? "Modo: RC TURN" : "Modo: RC");
+        }
         break;
     }
 
@@ -1264,6 +1331,29 @@ void MainWindow::enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 bala
                                .arg(motionMs)
                                .arg(balanceMs));
 }
+
+void MainWindow::enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect) {
+    QByteArray payload;
+
+    qint32 angleCdeg32 = qRound(targetAngleDeg * 100.0f);
+    if (angleCdeg32 > 32767) {
+        angleCdeg32 = 32767;
+    } else if (angleCdeg32 < -32768) {
+        angleCdeg32 = -32768;
+    }
+
+    qint16 angleCdeg = qToLittleEndian<qint16>(static_cast<qint16>(angleCdeg32));
+    payload.append(reinterpret_cast<const char*>(&angleCdeg), sizeof(angleCdeg));
+    payload.append(static_cast<char>(wheelMode));
+    payload.append(static_cast<char>(wheelSelect));
+
+    enviarComando(CMD_TURN_MANEUVER, payload);
+    ui->TxTextEdit->append(QString("TX: TURN angle=%1 deg mode=%2 wheel=%3")
+                               .arg(targetAngleDeg, 0, 'f', 1)
+                               .arg(wheelMode == 0 ? "2 wheels" : "1 wheel")
+                               .arg(wheelSelect == 0 ? "Left" : "Right"));
+}
+
 void MainWindow::enviarInt16(uint8_t cmd, int16_t valor) {
     QByteArray buffer;
     qint16 littleEndianValue = qToLittleEndian<qint16>(valor);

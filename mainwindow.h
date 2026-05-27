@@ -123,6 +123,7 @@ private slots:
     void enviarInt16(uint8_t cmd, int16_t valor);
     void enviarYawConfig(float kp, float kd, float curveMultiplier, float filterAlpha, float steeringStep, float steeringLimit);
     void enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 balanceMs);
+    void enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect);
     QByteArray buildUnerV1(uint8_t cmd, uint8_t flags, const QByteArray &payloadData);
     uint16_t unerCrc16Ccitt(const QByteArray &data);
     bool isCriticalCommand(uint8_t cmd) const;
@@ -205,6 +206,7 @@ private:
     quint16         udpLocalPort = 8888;
     bool            udpReady = false;
     bool            telemetryUdpEnabled = false;
+    bool            turnManeuverTelemetryActive = false;
 
     QByteArray      m_buffer;
 
@@ -474,7 +476,8 @@ private:
         CMD_HTTP_SOFTAP             = 62,
         CMD_SET_YAW_PD              = 63,
         CMD_SET_YAW_CONFIG          = 64,
-        CMD_SET_FL_CONFIG           = 65
+        CMD_SET_FL_CONFIG           = 65,
+        CMD_TURN_MANEUVER           = 66
         // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
         // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
     };

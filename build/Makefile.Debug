@@ -406,9 +406,6 @@ debug/moc_mainwindow.cpp: ../mainwindow.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qaccessible.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qaccessible_base.h \
 		C:/Qt/6.10.2/mingw_64/include/QtNetwork/QHostAddress \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/QFile \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/qfile.h \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/qfiledevice.h \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QPushButton \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/qpushbutton.h \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/qabstractbutton.h \
@@ -453,6 +450,8 @@ debug/moc_mainwindow.cpp: ../mainwindow.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qcryptographichash.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qdir.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qdirlisting.h \
+		C:/Qt/6.10.2/mingw_64/include/QtCore/qfiledevice.h \
+		C:/Qt/6.10.2/mingw_64/include/QtCore/qfile.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qfileinfo.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qtimezone.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qdiriterator.h \
@@ -1597,9 +1596,6 @@ debug/main.o: ../main.cpp ../mainwindow.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qaccessible.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qaccessible_base.h \
 		C:/Qt/6.10.2/mingw_64/include/QtNetwork/QHostAddress \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/QFile \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/qfile.h \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/qfiledevice.h \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QPushButton \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/qpushbutton.h \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/qabstractbutton.h \
@@ -1644,6 +1640,8 @@ debug/main.o: ../main.cpp ../mainwindow.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qcryptographichash.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qdir.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qdirlisting.h \
+		C:/Qt/6.10.2/mingw_64/include/QtCore/qfiledevice.h \
+		C:/Qt/6.10.2/mingw_64/include/QtCore/qfile.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qfileinfo.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qtimezone.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qdiriterator.h \
@@ -2326,9 +2324,6 @@ debug/mainwindow.o: ../mainwindow.cpp ../mainwindow.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qaccessible.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/qaccessible_base.h \
 		C:/Qt/6.10.2/mingw_64/include/QtNetwork/QHostAddress \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/QFile \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/qfile.h \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/qfiledevice.h \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QPushButton \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/qpushbutton.h \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/qabstractbutton.h \
@@ -2373,6 +2368,8 @@ debug/mainwindow.o: ../mainwindow.cpp ../mainwindow.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qcryptographichash.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qdir.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qdirlisting.h \
+		C:/Qt/6.10.2/mingw_64/include/QtCore/qfiledevice.h \
+		C:/Qt/6.10.2/mingw_64/include/QtCore/qfile.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qfileinfo.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qtimezone.h \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/qdiriterator.h \
@@ -2773,13 +2770,32 @@ debug/mainwindow.o: ../mainwindow.cpp ../mainwindow.h \
 		../qpaintbox.h \
 		C:/Qt/6.10.2/mingw_64/include/QtGui/QMouseEvent \
 		ui_mainwindow.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQuickWidgets/QQuickWidget \
+		C:/Qt/6.10.2/mingw_64/include/QtQuickWidgets/qquickwidget.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQuick/qquickwindow.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQuick/qsgrendererinterface.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQuick/qsgnode.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQuick/qsggeometry.h \
+		C:/Qt/6.10.2/mingw_64/include/QtCore/QRectF \
+		C:/Qt/6.10.2/mingw_64/include/QtQml/qqmldebug.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQml/qqmlinfo.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQuickWidgets/qtquickwidgetsglobal.h \
+		C:/Qt/6.10.2/mingw_64/include/QtQuickWidgets/qtquickwidgetsexports.h \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QApplication \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QComboBox \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QGridLayout \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QHBoxLayout \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QLineEdit \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QMenuBar \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QProgressBar \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QSpinBox \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QStackedWidget \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QStatusBar \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QToolBar \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QVBoxLayout \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QDoubleSpinBox \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QGroupBox \
-		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QGridLayout \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/QtEndian \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/QFileInfo \
-		C:/Qt/6.10.2/mingw_64/include/QtCore/QDir
+		C:/Qt/6.10.2/mingw_64/include/QtCore/QtEndian
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o debug\mainwindow.o ..\mainwindow.cpp
 
 debug/qpaintbox.o: ../qpaintbox.cpp ../qpaintbox.h \
