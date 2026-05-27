@@ -8,6 +8,71 @@ void Filtrar_Sensores_IR(void)
     }
 }
 
+void ObstacleSensor_Task(void)
+{
+    static uint8_t baseline_ready = 0;
+    static uint8_t obstacle_confirm_count = 0;
+    static uint8_t obstacle_clear_count = 0;
+
+    obstacle_ir_raw = adc_buffer[OBSTACLE_SENSOR_ADC_INDEX];
+
+    if (!baseline_ready) {
+        obstacle_ir_filtered = obstacle_ir_raw;
+        obstacle_ir_baseline = obstacle_ir_raw;
+        baseline_ready = 1U;
+    } else {
+        obstacle_ir_filtered = (uint16_t)(((uint32_t)obstacle_ir_filtered * 7U +
+                                           (uint32_t)obstacle_ir_raw * 3U) / 10U);
+    }
+
+    obstacle_ir_enter_threshold = obstacle_ir_baseline + OBSTACLE_ENTER_DELTA;
+    obstacle_ir_exit_threshold = obstacle_ir_baseline + OBSTACLE_EXIT_DELTA;
+
+    if (!obstacle_detected) {
+        if (obstacle_ir_filtered < obstacle_ir_exit_threshold) {
+            obstacle_ir_baseline = (uint16_t)(((uint32_t)obstacle_ir_baseline * 63U +
+                                               (uint32_t)obstacle_ir_filtered) / 64U);
+        }
+
+        if (obstacle_ir_filtered > obstacle_ir_enter_threshold) {
+            if (obstacle_confirm_count < OBSTACLE_CONFIRM_SAMPLES) {
+                obstacle_confirm_count++;
+            }
+        } else {
+            obstacle_confirm_count = 0;
+        }
+
+        if (obstacle_confirm_count >= OBSTACLE_CONFIRM_SAMPLES) {
+            obstacle_detected = 1U;
+            obstacle_event_pending = 1U;
+            obstacle_clear_count = 0;
+        }
+    } else {
+        if (obstacle_ir_filtered < obstacle_ir_exit_threshold) {
+            if (obstacle_clear_count < OBSTACLE_CLEAR_SAMPLES) {
+                obstacle_clear_count++;
+            }
+        } else {
+            obstacle_clear_count = 0;
+        }
+
+        if (obstacle_clear_count >= OBSTACLE_CLEAR_SAMPLES) {
+            obstacle_detected = 0U;
+            obstacle_confirm_count = 0;
+        }
+    }
+}
+
+uint8_t ObstacleSensor_ConsumeEvent(void)
+{
+    if (!obstacle_event_pending) {
+        return 0U;
+    }
+
+    obstacle_event_pending = 0U;
+    return 1U;
+}
+
 void Iniciar_Calibracion_Linea(void)
 {
     flag_calibrando_linea = 1;

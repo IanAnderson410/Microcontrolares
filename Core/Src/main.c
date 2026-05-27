@@ -211,6 +211,13 @@ volatile 	uint8_t 	ultimo_estado_sensores[4] = {0, 0, 0, 0};
 volatile 	uint16_t 	sensor_min[4]= {0, 0, 0, 0};
 volatile 	uint16_t 	sensor_max[4]= {0, 0, 0, 0};
 volatile 	uint16_t 	sensor_threshold[4]= {0, 0, 0, 0};
+volatile    uint16_t    obstacle_ir_raw = 0;
+volatile    uint16_t    obstacle_ir_filtered = 0;
+volatile    uint16_t    obstacle_ir_baseline = 0;
+volatile    uint16_t    obstacle_ir_enter_threshold = 0;
+volatile    uint16_t    obstacle_ir_exit_threshold = 0;
+volatile    uint8_t     obstacle_detected = 0;
+volatile    uint8_t     obstacle_event_pending = 0;
 volatile 	uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estamos
 // =================[ Variables del Filtro del MPU6050 ] =================//
 			float 			angle_y 	= 0;
@@ -479,6 +486,28 @@ void screenScheduler(void){
 			}
 			oled_update_requested = 1; // Le avisamos al scheduler que mande los datos al OLED
 			  return;
+    }
+
+    if (flagOLED == 4) {
+        SSD1306_GotoXY(0, 0);
+        SSD1306_Puts("OBST IR FRONT", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 10);
+        snprintf(msg, sizeof(msg), "RAW:%4u F:%4u", obstacle_ir_raw, obstacle_ir_filtered);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 22);
+        snprintf(msg, sizeof(msg), "BASE:%4u", obstacle_ir_baseline);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 34);
+        snprintf(msg, sizeof(msg), "ON:%4u OFF:%4u", obstacle_ir_enter_threshold, obstacle_ir_exit_threshold);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 46);
+        snprintf(msg, sizeof(msg), "D:%u E:%u T:%u",
+                 obstacle_detected,
+                 obstacle_event_pending,
+                 turn_maneuver_active);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        OLED_RequestUpdate();
+        return;
     }
 
     if (flagOLED == 777) {
@@ -931,7 +960,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             if (payload_len >= 2) {
                 requested_page = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
             }
-            if (requested_page <= 3) {
+            if (requested_page <= 4) {
                 flagOLED = (uint8_t)requested_page;
                 uner_ack_status = 0;
             } else {
@@ -1241,12 +1270,23 @@ int main(void)
 		if (((now - last_ir_update) >= 1U) || flag10ms) {
 			last_ir_update = now;
 			Filtrar_Sensores_IR();
+			ObstacleSensor_Task();
 			Leer_Linea_Digital();
 			if (flag_calibrando_linea){	Procesar_Calibracion_Linea();}
 		}
 		if(flag10ms){
 			flag10ms = 0;
 			Telemetry_UpdateMPU();
+			if (obstacle_event_pending &&
+			    currentMode == MODO_RC &&
+			    flagMotorsAreOn &&
+			    !turn_maneuver_active) {
+				if (TurnManeuver_Start(90.0f,
+				                       TURN_MANEUVER_MODE_ONE_WHEEL,
+				                       TURN_MANEUVER_WHEEL_RIGHT) == TURN_MANEUVER_STATUS_OK) {
+					(void)ObstacleSensor_ConsumeEvent();
+				}
+			}
 			FollowLine_Task();
 			if (currentMode == MODO_RC && flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
 				flag_RC_active = 0;
