@@ -283,10 +283,14 @@ MainWindow::MainWindow(QWidget *parent)
     QComboBox *turnModeCombo = new QComboBox(yawConfigBox);
     turnModeCombo->addItem("2 wheels", 0);
     turnModeCombo->addItem("1 wheel", 1);
+    turnModeCombo->addItem("Arc", 2);
     QComboBox *turnWheelCombo = new QComboBox(yawConfigBox);
     turnWheelCombo->addItem("Left", 0);
     turnWheelCombo->addItem("Right", 1);
     turnWheelCombo->setEnabled(false);
+    QDoubleSpinBox *turnArcPercentSpin = makeYawSpin(50.0, 0.0, 100.0, 5.0, 0);
+    turnArcPercentSpin->setSuffix("%");
+    turnArcPercentSpin->setEnabled(false);
     QPushButton *yawCfgSend = new QPushButton("APPLY", yawConfigBox);
     QPushButton *flCfgSend = new QPushButton("APPLY FL", yawConfigBox);
     QPushButton *yawCfgOled = new QPushButton("OLED", yawConfigBox);
@@ -319,7 +323,9 @@ MainWindow::MainWindow(QWidget *parent)
     yawConfigLayout->addWidget(turnModeCombo, 12, 1);
     yawConfigLayout->addWidget(new QLabel("Wheel", yawConfigBox), 13, 0);
     yawConfigLayout->addWidget(turnWheelCombo, 13, 1);
-    yawConfigLayout->addWidget(turnStartButton, 14, 1);
+    yawConfigLayout->addWidget(new QLabel("Inner %", yawConfigBox), 14, 0);
+    yawConfigLayout->addWidget(turnArcPercentSpin, 14, 1);
+    yawConfigLayout->addWidget(turnStartButton, 15, 1);
     yawConfigBox->show();
 
     connect(yawCfgSend, &QPushButton::clicked, this, [this, yawCfgKp, yawCfgKd, yawCfgMul, yawCfgAlpha, yawCfgStep, yawCfgLimit]() {
@@ -341,11 +347,13 @@ MainWindow::MainWindow(QWidget *parent)
         enviarInt16(CMD_CHANGE_OLED_SCREEN, 1);
     });
 
-    connect(turnModeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [turnModeCombo, turnWheelCombo](int) {
-        turnWheelCombo->setEnabled(turnModeCombo->currentData().toUInt() == 1U);
+    connect(turnModeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [turnModeCombo, turnWheelCombo, turnArcPercentSpin](int) {
+        const uint mode = turnModeCombo->currentData().toUInt();
+        turnWheelCombo->setEnabled(mode == 1U || mode == 2U);
+        turnArcPercentSpin->setEnabled(mode == 2U);
     });
 
-    connect(turnStartButton, &QPushButton::clicked, this, [this, turnAngleSpin, turnModeCombo, turnWheelCombo]() {
+    connect(turnStartButton, &QPushButton::clicked, this, [this, turnAngleSpin, turnModeCombo, turnWheelCombo, turnArcPercentSpin]() {
         float targetAngleDeg = static_cast<float>(turnAngleSpin->value());
         if (qAbs(targetAngleDeg) < 1.0f) {
             ui->InfoTextEdit->append("TURN: angulo minimo 1 grado.");
@@ -354,7 +362,8 @@ MainWindow::MainWindow(QWidget *parent)
 
         enviarTurnManeuver(targetAngleDeg,
                            static_cast<quint8>(turnModeCombo->currentData().toUInt()),
-                           static_cast<quint8>(turnWheelCombo->currentData().toUInt()));
+                           static_cast<quint8>(turnWheelCombo->currentData().toUInt()),
+                           static_cast<quint8>(turnArcPercentSpin->value()));
     });
 
     organizeStackedInterface();
@@ -1313,7 +1322,7 @@ void MainWindow::enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 bala
                                .arg(balanceMs));
 }
 
-void MainWindow::enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect) {
+void MainWindow::enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect, quint8 innerWheelPercent) {
     QByteArray payload;
 
     qint32 angleCdeg32 = qRound(targetAngleDeg * 100.0f);
@@ -1327,12 +1336,22 @@ void MainWindow::enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quin
     payload.append(reinterpret_cast<const char*>(&angleCdeg), sizeof(angleCdeg));
     payload.append(static_cast<char>(wheelMode));
     payload.append(static_cast<char>(wheelSelect));
+    if (wheelMode == 2U) {
+        payload.append(static_cast<char>(innerWheelPercent));
+    }
 
     enviarComando(CMD_TURN_MANEUVER, payload);
-    ui->TxTextEdit->append(QString("TX: TURN angle=%1 deg mode=%2 wheel=%3")
+    QString modeText = "2 wheels";
+    if (wheelMode == 1U) {
+        modeText = "1 wheel";
+    } else if (wheelMode == 2U) {
+        modeText = "arc";
+    }
+    ui->TxTextEdit->append(QString("TX: TURN angle=%1 deg mode=%2 wheel=%3 inner=%4%")
                                .arg(targetAngleDeg, 0, 'f', 1)
-                               .arg(wheelMode == 0 ? "2 wheels" : "1 wheel")
-                               .arg(wheelSelect == 0 ? "Left" : "Right"));
+                               .arg(modeText)
+                               .arg(wheelSelect == 0 ? "Left" : "Right")
+                               .arg(innerWheelPercent));
 }
 
 void MainWindow::enviarInt16(uint8_t cmd, int16_t valor) {

@@ -123,7 +123,7 @@ private slots:
     void enviarInt16(uint8_t cmd, int16_t valor);
     void enviarYawConfig(float kp, float kd, float curveMultiplier, float filterAlpha, float steeringStep, float steeringLimit);
     void enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 balanceMs);
-    void enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect);
+    void enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect, quint8 innerWheelPercent = 0);
     QByteArray buildUnerV1(uint8_t cmd, uint8_t flags, const QByteArray &payloadData);
     uint16_t unerCrc16Ccitt(const QByteArray &data);
     bool isCriticalCommand(uint8_t cmd) const;
