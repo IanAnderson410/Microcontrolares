@@ -867,7 +867,15 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uint8_t wheel_mode = payload[2];
             uint8_t wheel_select = payload[3];
 
-            uner_ack_status = TurnManeuver_Start(target_angle_deg, wheel_mode, wheel_select);
+            if (wheel_mode == TURN_MANEUVER_MODE_ARC) {
+                if (payload_len >= 5) {
+                    uner_ack_status = TurnManeuver_StartArc(target_angle_deg, wheel_select, payload[4]);
+                } else {
+                    uner_ack_status = TURN_MANEUVER_STATUS_PAYLOAD;
+                }
+            } else {
+                uner_ack_status = TurnManeuver_Start(target_angle_deg, wheel_mode, wheel_select);
+            }
         } else {
             uner_ack_status = TURN_MANEUVER_STATUS_PAYLOAD;
         }
@@ -1354,7 +1362,13 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  	static uint32_t last_oled_update = 0;
 	  	static uint32_t last_ir_update = 0;
+	  	static uint8_t last_motors_are_on = 0;
 		uint32_t now = HAL_GetTick();
+
+		if (flagMotorsAreOn != last_motors_are_on) {
+			PID_PITCH_ResetState();
+			last_motors_are_on = flagMotorsAreOn;
+		}
 
 		if (((now - last_ir_update) >= 1U) || flag10ms) {
 			last_ir_update = now;

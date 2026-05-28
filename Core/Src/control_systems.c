@@ -14,6 +14,7 @@
 #define TURN_MANEUVER_SIGN_CHECK_MS  300U
 #define TURN_MANEUVER_SIGN_CHECK_DEG 0.7f
 #define TURN_MANEUVER_YAW_BOOST      1000.0f
+#define ARC_MANEUVER_FORWARD_RATIO   0.50f
 
 volatile uint8_t turn_maneuver_active = 0;
 volatile uint8_t turn_maneuver_mode = TURN_MANEUVER_MODE_TWO_WHEELS;
@@ -24,6 +25,7 @@ static float turn_maneuver_start_yaw_deg = 0.0f;
 static float turn_maneuver_target_delta_deg = 0.0f;
 static float turn_maneuver_error_filtered = 0.0f;
 static float turn_maneuver_steering_slow = 0.0f;
+static float turn_maneuver_arc_inner_ratio = 0.0f;
 static uint32_t turn_maneuver_start_tick = 0;
 static int8_t turn_maneuver_drive_sign = 1;
 static uint8_t turn_maneuver_sign_checked = 0;
@@ -40,6 +42,18 @@ static float clamp_float(float value, float limit)
         return -limit;
     }
     return value;
+}
+
+void PID_PITCH_ResetState(void)
+{
+    integral = 0.0f;
+    last_error = 0.0f;
+    P = 0.0f;
+    I = 0.0f;
+    D = 0.0f;
+    output = 0.0f;
+    showoutput = 0.0f;
+    error = 0.0f;
 }
 
 void PID_PITCH(void)
@@ -100,6 +114,12 @@ void PID_PITCH(void)
         steering = 0;
         break;
     }
+
+    if (turn_maneuver_active) {
+        target_setpoint = setpoint + RC_setpoint;
+        steering = RC_steering;
+    }
+
     error = angle_y - target_setpoint;
     integral += error * CONTROL_DT_PID;
     if (integral > 1200.0f) {
@@ -122,6 +142,15 @@ void PID_PITCH(void)
                 Robot_Drive(pitch_output + steering, pitch_output);
             } else {
                 Robot_Drive(pitch_output, pitch_output - steering);
+            }
+        } else if (turn_maneuver_active && turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) {
+            int16_t pitch_output = (int16_t)output;
+            int16_t inner_steering = (int16_t)((float)steering * turn_maneuver_arc_inner_ratio);
+
+            if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
+                Robot_Drive(pitch_output + steering, pitch_output - inner_steering);
+            } else {
+                Robot_Drive(pitch_output + inner_steering, pitch_output - steering);
             }
         } else {
             Robot_Drive((int16_t)output + steering, (int16_t)output - steering);
@@ -192,7 +221,10 @@ int16_t Calcular_PID_YAW(float error_linea)
     return (int16_t)(P_yaw + D_yaw);
 }
 
-uint8_t TurnManeuver_Start(float target_angle_deg, uint8_t wheel_mode, uint8_t wheel_select)
+static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
+                                          uint8_t wheel_mode,
+                                          uint8_t wheel_select,
+                                          uint8_t inner_wheel_percent)
 {
     float abs_angle = fabsf(target_angle_deg);
     uint32_t now = HAL_GetTick();
@@ -201,12 +233,18 @@ uint8_t TurnManeuver_Start(float target_angle_deg, uint8_t wheel_mode, uint8_t w
         return TURN_MANEUVER_STATUS_RANGE;
     }
 
-    if (wheel_mode > TURN_MANEUVER_MODE_ONE_WHEEL ||
+    if (wheel_mode > TURN_MANEUVER_MODE_ARC ||
         wheel_select > TURN_MANEUVER_WHEEL_RIGHT) {
         return TURN_MANEUVER_STATUS_RANGE;
     }
 
-    if (currentMode != CONTROL_MODE_RC || !flagMotorsAreOn) {
+    if (wheel_mode == TURN_MANEUVER_MODE_ARC && inner_wheel_percent > 100U) {
+        return TURN_MANEUVER_STATUS_RANGE;
+    }
+
+    if (!flagMotorsAreOn ||
+        (wheel_mode != TURN_MANEUVER_MODE_ARC && currentMode != CONTROL_MODE_RC) ||
+        (wheel_mode == TURN_MANEUVER_MODE_ARC && currentMode == CONTROL_MODE_IDLE)) {
         return TURN_MANEUVER_STATUS_MODE;
     }
 
@@ -224,14 +262,27 @@ uint8_t TurnManeuver_Start(float target_angle_deg, uint8_t wheel_mode, uint8_t w
     turn_maneuver_sign_checked = 0;
     turn_maneuver_mode = wheel_mode;
     turn_maneuver_wheel = wheel_select;
+    turn_maneuver_arc_inner_ratio = ((float)inner_wheel_percent) / 100.0f;
     turn_maneuver_steering = 0;
     turn_maneuver_active = 1;
-    currentMode = CONTROL_MODE_RC;
     flag_RC_active = 0;
-    RC_setpoint = 0.0f;
+    RC_setpoint = (wheel_mode == TURN_MANEUVER_MODE_ARC) ? (FL_setpoint * ARC_MANEUVER_FORWARD_RATIO) : 0.0f;
     RC_steering = 0;
 
     return TURN_MANEUVER_STATUS_OK;
+}
+
+uint8_t TurnManeuver_Start(float target_angle_deg, uint8_t wheel_mode, uint8_t wheel_select)
+{
+    return TurnManeuver_StartInternal(target_angle_deg, wheel_mode, wheel_select, 0U);
+}
+
+uint8_t TurnManeuver_StartArc(float target_angle_deg, uint8_t outer_wheel, uint8_t inner_wheel_percent)
+{
+    return TurnManeuver_StartInternal(target_angle_deg,
+                                      TURN_MANEUVER_MODE_ARC,
+                                      outer_wheel,
+                                      inner_wheel_percent);
 }
 
 void TurnManeuver_Cancel(void)
@@ -240,8 +291,10 @@ void TurnManeuver_Cancel(void)
     turn_maneuver_steering = 0;
     turn_maneuver_steering_slow = 0.0f;
     turn_maneuver_error_filtered = 0.0f;
+    turn_maneuver_arc_inner_ratio = 0.0f;
     turn_maneuver_drive_sign = 1;
     turn_maneuver_sign_checked = 0;
+    RC_setpoint = 0.0f;
     RC_steering = 0;
 }
 
@@ -250,7 +303,9 @@ void TurnManeuver_Task(void)
     if (!turn_maneuver_active) return;
 
     uint32_t now = HAL_GetTick();
-    if (currentMode != CONTROL_MODE_RC || !flagMotorsAreOn) {
+    if (!flagMotorsAreOn ||
+        (turn_maneuver_mode != TURN_MANEUVER_MODE_ARC && currentMode != CONTROL_MODE_RC) ||
+        (turn_maneuver_mode == TURN_MANEUVER_MODE_ARC && currentMode == CONTROL_MODE_IDLE)) {
         TurnManeuver_Cancel();
         return;
     }
@@ -286,8 +341,10 @@ void TurnManeuver_Task(void)
     }
 
     float yaw_limit = yaw_steering_limit;
+    float forward_ratio = 1.0f;
     if (fabsf(remaining_deg) <= TURN_MANEUVER_SLOW_ZONE_DEG) {
         yaw_limit *= TURN_MANEUVER_SLOW_RATIO;
+        forward_ratio = TURN_MANEUVER_SLOW_RATIO;
     }
 
     float yaw_error = remaining_deg * multiplicadorYaw;
@@ -307,6 +364,8 @@ void TurnManeuver_Task(void)
     turn_maneuver_steering_slow = clamp_float(turn_maneuver_steering_slow, yaw_limit);
 
     turn_maneuver_steering = (int16_t)turn_maneuver_steering_slow;
-    RC_setpoint = 0.0f;
+    RC_setpoint = (turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) ?
+                  (FL_setpoint * ARC_MANEUVER_FORWARD_RATIO * forward_ratio) :
+                  0.0f;
     RC_steering = turn_maneuver_steering;
 }

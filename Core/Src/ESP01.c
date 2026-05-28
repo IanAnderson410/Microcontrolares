@@ -109,6 +109,7 @@ const char respIPD[] = "0410+IPD";
 const char respReady[] = "0702ready\r\n";
 const char respBUSYP[] = "0602busy p";
 const char respBUSYS[] = "0602busy s";
+const char respFAIL[] = "0602FAIL\r\n";
 // 	  const char respCIFSRAPIP[] = "1102+CIFSR:APIP";
 //    const char respCIFSRAPMAC[] = "1202+CIFSR:APMAC";
 //    const char respCIFSRSTAIP[] = "1205+CIFSR:STAIP";
@@ -116,7 +117,7 @@ const char respBUSYS[] = "0602busy s";
 
 const char *const responses[] = {respAT, respATp, respOK, respERROR, respWIFIGOTIP, respWIFICONNECTED,
 								 respWIFIDISCONNECT, respWIFIDISCONNECTED, respDISCONNECTED, respSENDOK, respCONNECT, respCLOSED,
-								 respCIFSRAPIP, respBUSY, respIPD, respReady, respBUSYP, respBUSYS, NULL};
+								 respCIFSRAPIP, respBUSY, respIPD, respReady, respBUSYP, respBUSYS, respFAIL, NULL};
 
 static uint8_t indexResponse = 0;
 static uint8_t indexResponseChar = 0;
@@ -434,6 +435,8 @@ void onESP01Debug(const char *dbgStr)
 		failStr = "SOK";
 	} else if (strncmp(dbgStr, "FAIL_PROMPT", 11) == 0) {
 		failStr = "PRM";
+	} else if (strncmp(dbgStr, "FAIL_CWJAP", 10) == 0) {
+		failStr = "JAP";
 	} else if (strncmp(dbgStr, "FAIL_ERROR", 10) == 0) {
 		failStr = "ERR";
 	} else if (strncmp(dbgStr, "FAIL_DISCONN", 12) == 0) {
@@ -621,6 +624,16 @@ static void ESP01ATDecode(){
 					break;
 				case 17://busy s
 					break;
+				case 18://FAIL
+					if(ESP01DbgStr != NULL){
+						if(esp01ATSate == ESP01CWJAPRESPONSE)
+							ESP01DbgStr("FAIL_CWJAP\n");
+						else
+							ESP01DbgStr("FAIL_ERROR\n");
+					}
+					if(esp01ATSate == ESP01CWJAPRESPONSE)
+						esp01TimeoutTask = 0;
+					break;
 				}
 			}
 			break;
@@ -797,8 +810,11 @@ static void ESP01DOConnection(){
 			esp01ATSate = ESP01ATCIFSR;
 			esp01TriesAT = 4;
 		}
-		else
+		else{
+			if(ESP01DbgStr != NULL)
+				ESP01DbgStr("FAIL_CWJAP\n");
 			esp01ATSate = ESP01ATAT;
+		}
 		break;
 	case ESP01ATCIFSR:
 		esp01LocalIP[0] = '\0';
