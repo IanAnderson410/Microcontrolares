@@ -88,8 +88,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->quickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20/qcomunication/3dmodels/main.qml"));
     ui->quickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
 
-    ui->PitchQuickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20/qcomunication/3dmodels/pitchmodel.qml"));
-    ui->PitchQuickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    // ui->PitchQuickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20/qcomunication/3dmodels/pitchmodel.qml"));
+    // ui->PitchQuickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
 // este qquickwidget me crashea la interfaZ
 //ui->VistaSuperiorQuickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20/qcomunication/3dmodels/vistaSuperior.qml"));
 // ui->VistaSuperiorQuickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);

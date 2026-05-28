@@ -14,7 +14,9 @@
 #include <QtQuickWidgets/QQuickWidget>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
+#include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QGridLayout>
+#include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
@@ -267,12 +269,60 @@ public:
     QLineEdit *HB_FRECUENCY_LineEdit;
     QPushButton *SET_FRECUENCY_HB_BUTTON;
     QTextEdit *textEdit;
+    QWidget *PaginaComandosAvanzados;
+    QLabel *advancedTitleLabel;
+    QGroupBox *networkCommandBox;
+    QVBoxLayout *networkCommandLayout;
+    QPushButton *aliveUdpButton;
+    QPushButton *telemetryUdpButton;
+    QPushButton *httpSoftApButton;
+    QPushButton *obstacleOledButton;
+    QGroupBox *yawPdQuickBox;
+    QGridLayout *yawPdQuickLayout;
+    QLabel *yawKpLabel;
+    QLineEdit *yawKpEdit;
+    QLabel *yawKdLabel;
+    QLineEdit *yawKdEdit;
+    QPushButton *yawPdButton;
+    QGroupBox *yawConfigBox;
+    QGridLayout *yawConfigLayout;
+    QLabel *yawCfgKpLabel;
+    QDoubleSpinBox *yawCfgKp;
+    QLabel *yawCfgKdLabel;
+    QDoubleSpinBox *yawCfgKd;
+    QLabel *yawCfgSpLabel;
+    QDoubleSpinBox *yawCfgSp;
+    QLabel *yawCfgMulLabel;
+    QDoubleSpinBox *yawCfgMul;
+    QLabel *yawCfgAlphaLabel;
+    QDoubleSpinBox *yawCfgAlpha;
+    QLabel *yawCfgStepLabel;
+    QDoubleSpinBox *yawCfgStep;
+    QLabel *yawCfgLimitLabel;
+    QDoubleSpinBox *yawCfgLimit;
+    QLabel *flCfgMotionMsLabel;
+    QDoubleSpinBox *flCfgMotionMs;
+    QLabel *flCfgBalanceMsLabel;
+    QDoubleSpinBox *flCfgBalanceMs;
+    QPushButton *yawCfgSend;
+    QPushButton *flCfgSend;
+    QPushButton *yawCfgOled;
+    QLabel *turnAngleLabel;
+    QDoubleSpinBox *turnAngleSpin;
+    QLabel *turnModeLabel;
+    QComboBox *turnModeCombo;
+    QLabel *turnWheelLabel;
+    QComboBox *turnWheelCombo;
+    QLabel *turnArcPercentLabel;
+    QDoubleSpinBox *turnArcPercentSpin;
+    QPushButton *turnStartButton;
     QHBoxLayout *horizontalLayout_30;
     QHBoxLayout *horizontalLayout_29;
     QPushButton *Home_pushButton;
     QPushButton *Ejecucion_pushButton;
     QPushButton *ScreenCalibrar_pushbutton;
     QPushButton *SistemasDeControl_pushButton;
+    QPushButton *Advanced_pushButton;
     QVBoxLayout *verticalLayout_2;
     QHBoxLayout *horizontalLayout_26;
     QLabel *TPCCONECTED;
@@ -296,7 +346,7 @@ public:
     {
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName("MainWindow");
-        MainWindow->resize(1539, 803);
+        MainWindow->resize(1667, 927);
         MainWindow->setMinimumSize(QSize(15, 15));
         MainWindow->setStyleSheet(QString::fromUtf8("\n"
 "*{\n"
@@ -432,7 +482,7 @@ public:
         centralwidget->setObjectName("centralwidget");
         layoutWidget = new QWidget(centralwidget);
         layoutWidget->setObjectName("layoutWidget");
-        layoutWidget->setGeometry(QRect(60, -10, 1151, 681));
+        layoutWidget->setGeometry(QRect(60, -10, 1291, 811));
         verticalLayout_35 = new QVBoxLayout(layoutWidget);
         verticalLayout_35->setObjectName("verticalLayout_35");
         verticalLayout_35->setContentsMargins(0, 0, 0, 0);
@@ -547,7 +597,7 @@ public:
         graphicsView->setGeometry(QRect(660, 160, 451, 391));
         layoutWidget1 = new QWidget(PaginaControl);
         layoutWidget1->setObjectName("layoutWidget1");
-        layoutWidget1->setGeometry(QRect(650, 20, 501, 113));
+        layoutWidget1->setGeometry(QRect(650, 20, 501, 143));
         verticalLayout_26 = new QVBoxLayout(layoutWidget1);
         verticalLayout_26->setObjectName("verticalLayout_26");
         verticalLayout_26->setContentsMargins(0, 0, 0, 0);
@@ -585,17 +635,17 @@ public:
         Kd_yaw_LineEdit = new QLineEdit(layoutWidget1);
         Kd_yaw_LineEdit->setObjectName("Kd_yaw_LineEdit");
         QPalette palette;
-        QBrush brush(QColor(0, 0, 0, 255));
+        QBrush brush(QColor(6, 20, 27, 255));
         brush.setStyle(Qt::BrushStyle::SolidPattern);
         palette.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
-        QBrush brush1(QColor(204, 208, 207, 255));
+        QBrush brush1(QColor(228, 232, 231, 255));
         brush1.setStyle(Qt::BrushStyle::SolidPattern);
         palette.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
         palette.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Text, brush);
         palette.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::ButtonText, brush);
         palette.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Base, brush1);
         palette.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Window, brush1);
-        QBrush brush2(QColor(0, 0, 0, 128));
+        QBrush brush2(QColor(6, 20, 27, 128));
         brush2.setStyle(Qt::BrushStyle::SolidPattern);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::PlaceholderText, brush2);
@@ -682,7 +732,7 @@ public:
 
         layoutWidget2 = new QWidget(PaginaControl);
         layoutWidget2->setObjectName("layoutWidget2");
-        layoutWidget2->setGeometry(QRect(0, 10, 366, 192));
+        layoutWidget2->setGeometry(QRect(0, 10, 366, 212));
         verticalLayout_31 = new QVBoxLayout(layoutWidget2);
         verticalLayout_31->setObjectName("verticalLayout_31");
         verticalLayout_31->setContentsMargins(0, 0, 0, 0);
@@ -707,38 +757,36 @@ public:
         LDL_Label->setObjectName("LDL_Label");
         LDL_Label->setMaximumSize(QSize(16777215, 20));
         QPalette palette2;
-        QBrush brush3(QColor(221, 221, 221, 255));
+        QBrush brush3(QColor(232, 236, 236, 255));
         brush3.setStyle(Qt::BrushStyle::SolidPattern);
         palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush3);
-        QBrush brush4(QColor(6, 20, 27, 255));
-        brush4.setStyle(Qt::BrushStyle::SolidPattern);
-        palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush4);
+        palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush);
         palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Text, brush3);
         palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::ButtonText, brush3);
-        palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Base, brush4);
-        palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Window, brush4);
-        QBrush brush5(QColor(221, 221, 221, 128));
-        brush5.setStyle(Qt::BrushStyle::SolidPattern);
+        palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Base, brush);
+        palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Window, brush);
+        QBrush brush4(QColor(232, 236, 236, 128));
+        brush4.setStyle(Qt::BrushStyle::SolidPattern);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::PlaceholderText, brush5);
+        palette2.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::PlaceholderText, brush4);
 #endif
         palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::WindowText, brush3);
-        palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Button, brush4);
+        palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Button, brush);
         palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Text, brush3);
         palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::ButtonText, brush3);
-        palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Base, brush4);
-        palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Window, brush4);
+        palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Base, brush);
+        palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Window, brush);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::PlaceholderText, brush5);
+        palette2.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::PlaceholderText, brush4);
 #endif
         palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::WindowText, brush3);
-        palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Button, brush4);
+        palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Button, brush);
         palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Text, brush3);
         palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::ButtonText, brush3);
-        palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Base, brush4);
-        palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Window, brush4);
+        palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Base, brush);
+        palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Window, brush);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush5);
+        palette2.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush4);
 #endif
         LDL_Label->setPalette(palette2);
         LDL_Label->setStyleSheet(QString::fromUtf8(""));
@@ -887,7 +935,7 @@ public:
 
         layoutWidget3 = new QWidget(PaginaControl);
         layoutWidget3->setObjectName("layoutWidget3");
-        layoutWidget3->setGeometry(QRect(0, 230, 621, 142));
+        layoutWidget3->setGeometry(QRect(0, 230, 621, 182));
         horizontalLayout_37 = new QHBoxLayout(layoutWidget3);
         horizontalLayout_37->setObjectName("horizontalLayout_37");
         horizontalLayout_37->setContentsMargins(0, 0, 0, 0);
@@ -1464,9 +1512,9 @@ public:
         lineEdit_7->setObjectName("lineEdit_7");
         lineEdit_7->setGeometry(QRect(437, 450, 431, 20));
         stackedWidget->addWidget(page);
-        layoutWidget3->raise();
+        layoutWidget1->raise();
         PitchQuickWidget->raise();
-        layoutWidget3->raise();
+        layoutWidget1->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
         IR5_progressBar->raise();
@@ -1477,7 +1525,7 @@ public:
         PaginaPrincipal->setObjectName("PaginaPrincipal");
         layoutWidget7 = new QWidget(PaginaPrincipal);
         layoutWidget7->setObjectName("layoutWidget7");
-        layoutWidget7->setGeometry(QRect(10, 20, 1131, 531));
+        layoutWidget7->setGeometry(QRect(10, 20, 1131, 586));
         horizontalLayout_28 = new QHBoxLayout(layoutWidget7);
         horizontalLayout_28->setObjectName("horizontalLayout_28");
         horizontalLayout_28->setContentsMargins(0, 0, 0, 0);
@@ -1842,7 +1890,7 @@ public:
         PaginaCalibracin->setObjectName("PaginaCalibracin");
         layoutWidget8 = new QWidget(PaginaCalibracin);
         layoutWidget8->setObjectName("layoutWidget8");
-        layoutWidget8->setGeometry(QRect(10, 30, 541, 415));
+        layoutWidget8->setGeometry(QRect(10, 30, 562, 559));
         verticalLayout_22 = new QVBoxLayout(layoutWidget8);
         verticalLayout_22->setObjectName("verticalLayout_22");
         verticalLayout_22->setContentsMargins(0, 0, 0, 0);
@@ -2715,6 +2763,223 @@ public:
         textEdit->setObjectName("textEdit");
         textEdit->setGeometry(QRect(560, 30, 531, 401));
         stackedWidget->addWidget(PaginaCalibracin);
+        PaginaComandosAvanzados = new QWidget();
+        PaginaComandosAvanzados->setObjectName("PaginaComandosAvanzados");
+        advancedTitleLabel = new QLabel(PaginaComandosAvanzados);
+        advancedTitleLabel->setObjectName("advancedTitleLabel");
+        advancedTitleLabel->setGeometry(QRect(20, 20, 1110, 40));
+        advancedTitleLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+        networkCommandBox = new QGroupBox(PaginaComandosAvanzados);
+        networkCommandBox->setObjectName("networkCommandBox");
+        networkCommandBox->setGeometry(QRect(20, 80, 270, 220));
+        networkCommandLayout = new QVBoxLayout(networkCommandBox);
+        networkCommandLayout->setObjectName("networkCommandLayout");
+        aliveUdpButton = new QPushButton(networkCommandBox);
+        aliveUdpButton->setObjectName("aliveUdpButton");
+
+        networkCommandLayout->addWidget(aliveUdpButton);
+
+        telemetryUdpButton = new QPushButton(networkCommandBox);
+        telemetryUdpButton->setObjectName("telemetryUdpButton");
+
+        networkCommandLayout->addWidget(telemetryUdpButton);
+
+        httpSoftApButton = new QPushButton(networkCommandBox);
+        httpSoftApButton->setObjectName("httpSoftApButton");
+
+        networkCommandLayout->addWidget(httpSoftApButton);
+
+        obstacleOledButton = new QPushButton(networkCommandBox);
+        obstacleOledButton->setObjectName("obstacleOledButton");
+
+        networkCommandLayout->addWidget(obstacleOledButton);
+
+        yawPdQuickBox = new QGroupBox(PaginaComandosAvanzados);
+        yawPdQuickBox->setObjectName("yawPdQuickBox");
+        yawPdQuickBox->setGeometry(QRect(320, 80, 270, 180));
+        yawPdQuickLayout = new QGridLayout(yawPdQuickBox);
+        yawPdQuickLayout->setObjectName("yawPdQuickLayout");
+        yawKpLabel = new QLabel(yawPdQuickBox);
+        yawKpLabel->setObjectName("yawKpLabel");
+
+        yawPdQuickLayout->addWidget(yawKpLabel, 0, 0, 1, 1);
+
+        yawKpEdit = new QLineEdit(yawPdQuickBox);
+        yawKpEdit->setObjectName("yawKpEdit");
+
+        yawPdQuickLayout->addWidget(yawKpEdit, 0, 1, 1, 1);
+
+        yawKdLabel = new QLabel(yawPdQuickBox);
+        yawKdLabel->setObjectName("yawKdLabel");
+
+        yawPdQuickLayout->addWidget(yawKdLabel, 1, 0, 1, 1);
+
+        yawKdEdit = new QLineEdit(yawPdQuickBox);
+        yawKdEdit->setObjectName("yawKdEdit");
+
+        yawPdQuickLayout->addWidget(yawKdEdit, 1, 1, 1, 1);
+
+        yawPdButton = new QPushButton(yawPdQuickBox);
+        yawPdButton->setObjectName("yawPdButton");
+
+        yawPdQuickLayout->addWidget(yawPdButton, 2, 1, 1, 1);
+
+        yawConfigBox = new QGroupBox(PaginaComandosAvanzados);
+        yawConfigBox->setObjectName("yawConfigBox");
+        yawConfigBox->setGeometry(QRect(630, 100, 360, 520));
+        yawConfigLayout = new QGridLayout(yawConfigBox);
+        yawConfigLayout->setObjectName("yawConfigLayout");
+        yawCfgKpLabel = new QLabel(yawConfigBox);
+        yawCfgKpLabel->setObjectName("yawCfgKpLabel");
+
+        yawConfigLayout->addWidget(yawCfgKpLabel, 0, 0, 1, 1);
+
+        yawCfgKp = new QDoubleSpinBox(yawConfigBox);
+        yawCfgKp->setObjectName("yawCfgKp");
+
+        yawConfigLayout->addWidget(yawCfgKp, 0, 1, 1, 1);
+
+        yawCfgKdLabel = new QLabel(yawConfigBox);
+        yawCfgKdLabel->setObjectName("yawCfgKdLabel");
+
+        yawConfigLayout->addWidget(yawCfgKdLabel, 1, 0, 1, 1);
+
+        yawCfgKd = new QDoubleSpinBox(yawConfigBox);
+        yawCfgKd->setObjectName("yawCfgKd");
+
+        yawConfigLayout->addWidget(yawCfgKd, 1, 1, 1, 1);
+
+        yawCfgSpLabel = new QLabel(yawConfigBox);
+        yawCfgSpLabel->setObjectName("yawCfgSpLabel");
+
+        yawConfigLayout->addWidget(yawCfgSpLabel, 2, 0, 1, 1);
+
+        yawCfgSp = new QDoubleSpinBox(yawConfigBox);
+        yawCfgSp->setObjectName("yawCfgSp");
+
+        yawConfigLayout->addWidget(yawCfgSp, 2, 1, 1, 1);
+
+        yawCfgMulLabel = new QLabel(yawConfigBox);
+        yawCfgMulLabel->setObjectName("yawCfgMulLabel");
+
+        yawConfigLayout->addWidget(yawCfgMulLabel, 3, 0, 1, 1);
+
+        yawCfgMul = new QDoubleSpinBox(yawConfigBox);
+        yawCfgMul->setObjectName("yawCfgMul");
+
+        yawConfigLayout->addWidget(yawCfgMul, 3, 1, 1, 1);
+
+        yawCfgAlphaLabel = new QLabel(yawConfigBox);
+        yawCfgAlphaLabel->setObjectName("yawCfgAlphaLabel");
+
+        yawConfigLayout->addWidget(yawCfgAlphaLabel, 4, 0, 1, 1);
+
+        yawCfgAlpha = new QDoubleSpinBox(yawConfigBox);
+        yawCfgAlpha->setObjectName("yawCfgAlpha");
+
+        yawConfigLayout->addWidget(yawCfgAlpha, 4, 1, 1, 1);
+
+        yawCfgStepLabel = new QLabel(yawConfigBox);
+        yawCfgStepLabel->setObjectName("yawCfgStepLabel");
+
+        yawConfigLayout->addWidget(yawCfgStepLabel, 5, 0, 1, 1);
+
+        yawCfgStep = new QDoubleSpinBox(yawConfigBox);
+        yawCfgStep->setObjectName("yawCfgStep");
+
+        yawConfigLayout->addWidget(yawCfgStep, 5, 1, 1, 1);
+
+        yawCfgLimitLabel = new QLabel(yawConfigBox);
+        yawCfgLimitLabel->setObjectName("yawCfgLimitLabel");
+
+        yawConfigLayout->addWidget(yawCfgLimitLabel, 6, 0, 1, 1);
+
+        yawCfgLimit = new QDoubleSpinBox(yawConfigBox);
+        yawCfgLimit->setObjectName("yawCfgLimit");
+
+        yawConfigLayout->addWidget(yawCfgLimit, 6, 1, 1, 1);
+
+        flCfgMotionMsLabel = new QLabel(yawConfigBox);
+        flCfgMotionMsLabel->setObjectName("flCfgMotionMsLabel");
+
+        yawConfigLayout->addWidget(flCfgMotionMsLabel, 7, 0, 1, 1);
+
+        flCfgMotionMs = new QDoubleSpinBox(yawConfigBox);
+        flCfgMotionMs->setObjectName("flCfgMotionMs");
+
+        yawConfigLayout->addWidget(flCfgMotionMs, 7, 1, 1, 1);
+
+        flCfgBalanceMsLabel = new QLabel(yawConfigBox);
+        flCfgBalanceMsLabel->setObjectName("flCfgBalanceMsLabel");
+
+        yawConfigLayout->addWidget(flCfgBalanceMsLabel, 8, 0, 1, 1);
+
+        flCfgBalanceMs = new QDoubleSpinBox(yawConfigBox);
+        flCfgBalanceMs->setObjectName("flCfgBalanceMs");
+
+        yawConfigLayout->addWidget(flCfgBalanceMs, 8, 1, 1, 1);
+
+        yawCfgSend = new QPushButton(yawConfigBox);
+        yawCfgSend->setObjectName("yawCfgSend");
+
+        yawConfigLayout->addWidget(yawCfgSend, 9, 0, 1, 1);
+
+        flCfgSend = new QPushButton(yawConfigBox);
+        flCfgSend->setObjectName("flCfgSend");
+
+        yawConfigLayout->addWidget(flCfgSend, 9, 1, 1, 1);
+
+        yawCfgOled = new QPushButton(yawConfigBox);
+        yawCfgOled->setObjectName("yawCfgOled");
+
+        yawConfigLayout->addWidget(yawCfgOled, 10, 1, 1, 1);
+
+        turnAngleLabel = new QLabel(yawConfigBox);
+        turnAngleLabel->setObjectName("turnAngleLabel");
+
+        yawConfigLayout->addWidget(turnAngleLabel, 11, 0, 1, 1);
+
+        turnAngleSpin = new QDoubleSpinBox(yawConfigBox);
+        turnAngleSpin->setObjectName("turnAngleSpin");
+
+        yawConfigLayout->addWidget(turnAngleSpin, 11, 1, 1, 1);
+
+        turnModeLabel = new QLabel(yawConfigBox);
+        turnModeLabel->setObjectName("turnModeLabel");
+
+        yawConfigLayout->addWidget(turnModeLabel, 12, 0, 1, 1);
+
+        turnModeCombo = new QComboBox(yawConfigBox);
+        turnModeCombo->setObjectName("turnModeCombo");
+
+        yawConfigLayout->addWidget(turnModeCombo, 12, 1, 1, 1);
+
+        turnWheelLabel = new QLabel(yawConfigBox);
+        turnWheelLabel->setObjectName("turnWheelLabel");
+
+        yawConfigLayout->addWidget(turnWheelLabel, 13, 0, 1, 1);
+
+        turnWheelCombo = new QComboBox(yawConfigBox);
+        turnWheelCombo->setObjectName("turnWheelCombo");
+
+        yawConfigLayout->addWidget(turnWheelCombo, 13, 1, 1, 1);
+
+        turnArcPercentLabel = new QLabel(yawConfigBox);
+        turnArcPercentLabel->setObjectName("turnArcPercentLabel");
+
+        yawConfigLayout->addWidget(turnArcPercentLabel, 14, 0, 1, 1);
+
+        turnArcPercentSpin = new QDoubleSpinBox(yawConfigBox);
+        turnArcPercentSpin->setObjectName("turnArcPercentSpin");
+
+        yawConfigLayout->addWidget(turnArcPercentSpin, 14, 1, 1, 1);
+
+        turnStartButton = new QPushButton(yawConfigBox);
+        turnStartButton->setObjectName("turnStartButton");
+
+        yawConfigLayout->addWidget(turnStartButton, 15, 1, 1, 1);
+
+        stackedWidget->addWidget(PaginaComandosAvanzados);
 
         verticalLayout_35->addWidget(stackedWidget);
 
@@ -2745,6 +3010,12 @@ public:
         SistemasDeControl_pushButton->setMinimumSize(QSize(100, 100));
 
         horizontalLayout_29->addWidget(SistemasDeControl_pushButton);
+
+        Advanced_pushButton = new QPushButton(layoutWidget);
+        Advanced_pushButton->setObjectName("Advanced_pushButton");
+        Advanced_pushButton->setMinimumSize(QSize(100, 100));
+
+        horizontalLayout_29->addWidget(Advanced_pushButton);
 
 
         horizontalLayout_30->addLayout(horizontalLayout_29);
@@ -2846,7 +3117,7 @@ public:
 
         SerialPort_Label_8 = new QLabel(centralwidget);
         SerialPort_Label_8->setObjectName("SerialPort_Label_8");
-        SerialPort_Label_8->setGeometry(QRect(1230, 0, 141, 681));
+        SerialPort_Label_8->setGeometry(QRect(1370, 50, 141, 681));
         SerialPort_Label_8->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
         SerialPort_Label_8->setTextFormat(Qt::TextFormat::AutoText);
         SerialPort_Label_8->setScaledContents(true);
@@ -2855,7 +3126,7 @@ public:
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
-        menubar->setGeometry(QRect(0, 0, 1539, 20));
+        menubar->setGeometry(QRect(0, 0, 1667, 20));
         MainWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName("statusbar");
@@ -2866,7 +3137,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        stackedWidget->setCurrentIndex(0);
+        stackedWidget->setCurrentIndex(2);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
@@ -2991,10 +3262,41 @@ public:
         IR_1_label_16->setText(QCoreApplication::translate("MainWindow", "INFORMATION", nullptr));
         HB_LABEL->setText(QCoreApplication::translate("MainWindow", "Heart Bit", nullptr));
         SET_FRECUENCY_HB_BUTTON->setText(QCoreApplication::translate("MainWindow", "Set HeartBit Frecuency", nullptr));
+        advancedTitleLabel->setText(QCoreApplication::translate("MainWindow", "Comandos avanzados de red, yaw y maniobras", nullptr));
+        networkCommandBox->setTitle(QCoreApplication::translate("MainWindow", "Red / UDP", nullptr));
+        aliveUdpButton->setText(QCoreApplication::translate("MainWindow", "ALIVE UDP", nullptr));
+        telemetryUdpButton->setText(QCoreApplication::translate("MainWindow", "START TEL", nullptr));
+        httpSoftApButton->setText(QCoreApplication::translate("MainWindow", "HTTP AP", nullptr));
+        obstacleOledButton->setText(QCoreApplication::translate("MainWindow", "OBS", nullptr));
+        yawPdQuickBox->setTitle(QCoreApplication::translate("MainWindow", "Yaw PD rapido", nullptr));
+        yawKpLabel->setText(QCoreApplication::translate("MainWindow", "KpY", nullptr));
+        yawKpEdit->setText(QCoreApplication::translate("MainWindow", "100.0", nullptr));
+        yawKdLabel->setText(QCoreApplication::translate("MainWindow", "KdY", nullptr));
+        yawKdEdit->setText(QCoreApplication::translate("MainWindow", "0.0", nullptr));
+        yawPdButton->setText(QCoreApplication::translate("MainWindow", "SET YAW PD", nullptr));
+        yawConfigBox->setTitle(QString());
+        yawCfgKpLabel->setText(QCoreApplication::translate("MainWindow", "Kp", nullptr));
+        yawCfgKdLabel->setText(QCoreApplication::translate("MainWindow", "Kd", nullptr));
+        yawCfgSpLabel->setText(QCoreApplication::translate("MainWindow", "FL SP", nullptr));
+        yawCfgMulLabel->setText(QCoreApplication::translate("MainWindow", "SpeedRed", nullptr));
+        yawCfgAlphaLabel->setText(QCoreApplication::translate("MainWindow", "Alpha", nullptr));
+        yawCfgStepLabel->setText(QCoreApplication::translate("MainWindow", "Step", nullptr));
+        yawCfgLimitLabel->setText(QCoreApplication::translate("MainWindow", "Limit", nullptr));
+        flCfgMotionMsLabel->setText(QCoreApplication::translate("MainWindow", "Move ms", nullptr));
+        flCfgBalanceMsLabel->setText(QCoreApplication::translate("MainWindow", "Bal ms", nullptr));
+        yawCfgSend->setText(QCoreApplication::translate("MainWindow", "APPLY", nullptr));
+        flCfgSend->setText(QCoreApplication::translate("MainWindow", "APPLY FL", nullptr));
+        yawCfgOled->setText(QCoreApplication::translate("MainWindow", "OLED", nullptr));
+        turnAngleLabel->setText(QCoreApplication::translate("MainWindow", "Turn deg", nullptr));
+        turnModeLabel->setText(QCoreApplication::translate("MainWindow", "Mode", nullptr));
+        turnWheelLabel->setText(QCoreApplication::translate("MainWindow", "Wheel", nullptr));
+        turnArcPercentLabel->setText(QCoreApplication::translate("MainWindow", "Inner %", nullptr));
+        turnStartButton->setText(QCoreApplication::translate("MainWindow", "TURN", nullptr));
         Home_pushButton->setText(QCoreApplication::translate("MainWindow", "HOME", nullptr));
         Ejecucion_pushButton->setText(QCoreApplication::translate("MainWindow", "EJECUCION", nullptr));
         ScreenCalibrar_pushbutton->setText(QCoreApplication::translate("MainWindow", "Calibraci\303\263n ", nullptr));
         SistemasDeControl_pushButton->setText(QCoreApplication::translate("MainWindow", "Sistemas de Control", nullptr));
+        Advanced_pushButton->setText(QCoreApplication::translate("MainWindow", "AVANZADO", nullptr));
         TPCCONECTED->setText(QString());
         label_11->setText(QCoreApplication::translate("MainWindow", "Comunicaci\303\263n inalambrica", nullptr));
         TPCCONECTED_2->setText(QString());

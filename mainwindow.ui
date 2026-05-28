@@ -264,7 +264,7 @@ QComboBox{
 </string>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>2</number>
        </property>
        <widget class="QWidget" name="PaginaControl">
         <widget class="QChartView" name="graphicsView">

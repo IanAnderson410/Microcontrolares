@@ -148,6 +148,7 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
         "on_Ejecucion_pushButton_clicked",
         "on_ScreenCalibrar_pushbutton_clicked",
         "on_SistemasDeControl_pushButton_clicked",
+        "on_Advanced_pushButton_clicked",
         "on_Setpoint_spinBox_textChanged",
         "arg1",
         "on_StartCalibratePushButton_clicked",
@@ -304,47 +305,49 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
         QtMocHelpers::SlotData<void()>(83, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_SistemasDeControl_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(84, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_Advanced_pushButton_clicked'
+        QtMocHelpers::SlotData<void()>(85, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_Setpoint_spinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(85, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 86 },
+        QtMocHelpers::SlotData<void(const QString &)>(86, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 87 },
         }}),
         // Slot 'on_StartCalibratePushButton_clicked'
-        QtMocHelpers::SlotData<void()>(87, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_StopCalibratePushButton_clicked'
         QtMocHelpers::SlotData<void()>(88, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_SP_yaw_pushButton_clicked'
+        // Slot 'on_StopCalibratePushButton_clicked'
         QtMocHelpers::SlotData<void()>(89, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_Kd_yaw_pushButton_clicked'
+        // Slot 'on_SP_yaw_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(90, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_Kp_yaw_pushButton_clicked'
+        // Slot 'on_Kd_yaw_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(91, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_ChangeModeIddlePushButton_clicked'
+        // Slot 'on_Kp_yaw_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(92, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_ChangeModeRCPushButton_clicked'
+        // Slot 'on_ChangeModeIddlePushButton_clicked'
         QtMocHelpers::SlotData<void()>(93, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_ChangeModeFLPushButton_clicked'
+        // Slot 'on_ChangeModeRCPushButton_clicked'
         QtMocHelpers::SlotData<void()>(94, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_ChangeModeFLPushButton_clicked'
+        QtMocHelpers::SlotData<void()>(95, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_Setpoint_doubleSpinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(95, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 86 },
+        QtMocHelpers::SlotData<void(const QString &)>(96, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 87 },
         }}),
         // Slot 'on_Screen2PushButton_2_clicked'
-        QtMocHelpers::SlotData<void()>(96, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(97, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_Setpoint_FL_doubleSpinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(97, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 86 },
+        QtMocHelpers::SlotData<void(const QString &)>(98, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 87 },
         }}),
         // Slot 'on_Setpoint_FL_spinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(98, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 86 },
+        QtMocHelpers::SlotData<void(const QString &)>(99, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 87 },
         }}),
         // Slot 'on_Ajust_RC_Setpoint_spinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(99, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 86 },
+        QtMocHelpers::SlotData<void(const QString &)>(100, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 87 },
         }}),
         // Slot 'on_Limite_error_spinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(100, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 86 },
+        QtMocHelpers::SlotData<void(const QString &)>(101, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 87 },
         }}),
     };
     QtMocHelpers::UintData qt_properties {
@@ -423,21 +426,22 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 48: _t->on_Ejecucion_pushButton_clicked(); break;
         case 49: _t->on_ScreenCalibrar_pushbutton_clicked(); break;
         case 50: _t->on_SistemasDeControl_pushButton_clicked(); break;
-        case 51: _t->on_Setpoint_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 52: _t->on_StartCalibratePushButton_clicked(); break;
-        case 53: _t->on_StopCalibratePushButton_clicked(); break;
-        case 54: _t->on_SP_yaw_pushButton_clicked(); break;
-        case 55: _t->on_Kd_yaw_pushButton_clicked(); break;
-        case 56: _t->on_Kp_yaw_pushButton_clicked(); break;
-        case 57: _t->on_ChangeModeIddlePushButton_clicked(); break;
-        case 58: _t->on_ChangeModeRCPushButton_clicked(); break;
-        case 59: _t->on_ChangeModeFLPushButton_clicked(); break;
-        case 60: _t->on_Setpoint_doubleSpinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 61: _t->on_Screen2PushButton_2_clicked(); break;
-        case 62: _t->on_Setpoint_FL_doubleSpinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 63: _t->on_Setpoint_FL_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 64: _t->on_Ajust_RC_Setpoint_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 65: _t->on_Limite_error_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 51: _t->on_Advanced_pushButton_clicked(); break;
+        case 52: _t->on_Setpoint_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 53: _t->on_StartCalibratePushButton_clicked(); break;
+        case 54: _t->on_StopCalibratePushButton_clicked(); break;
+        case 55: _t->on_SP_yaw_pushButton_clicked(); break;
+        case 56: _t->on_Kd_yaw_pushButton_clicked(); break;
+        case 57: _t->on_Kp_yaw_pushButton_clicked(); break;
+        case 58: _t->on_ChangeModeIddlePushButton_clicked(); break;
+        case 59: _t->on_ChangeModeRCPushButton_clicked(); break;
+        case 60: _t->on_ChangeModeFLPushButton_clicked(); break;
+        case 61: _t->on_Setpoint_doubleSpinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 62: _t->on_Screen2PushButton_2_clicked(); break;
+        case 63: _t->on_Setpoint_FL_doubleSpinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 64: _t->on_Setpoint_FL_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 65: _t->on_Ajust_RC_Setpoint_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 66: _t->on_Limite_error_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
         default: ;
         }
     }
@@ -462,14 +466,14 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 66)
+        if (_id < 67)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 66;
+        _id -= 67;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 66)
+        if (_id < 67)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 66;
+        _id -= 67;
     }
     return _id;
 }

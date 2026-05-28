@@ -27,7 +27,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 DISTFILES += \
     3dmodels/Escena.qml.txt \
+    3dmodels/Historial.qml \
     3dmodels/RobotModel.qml \
+    3dmodels/main.qml \
     3dmodels/main.qml \
     3dmodels/pitchmodel.qml \
     3dmodels/vistaSuperior.qml \
