@@ -141,6 +141,8 @@ private slots:
 
     void on_SistemasDeControl_pushButton_clicked();
 
+    void on_Advanced_pushButton_clicked();
+
 
     void on_Setpoint_spinBox_textChanged(const QString &arg1);
 
@@ -180,9 +182,6 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
 private:
-    void organizeStackedInterface();
-    void raiseStackedChrome();
-
     Ui::MainWindow  *ui;
     QSerialPort     *QSerialPort1;
     QPaintBox       *QPaintBox1;
@@ -192,7 +191,6 @@ private:
     QTcpServer      *tcpServer;
     QTcpSocket      *tcpClient = nullptr;
     QUdpSocket      *udpSocket;
-    QLabel          *lineSensorBinaryLabel = nullptr;
     uint8_t         unerNextSeq = 0;
     uint8_t         unerLastBuiltSeq = 0;
     bool            unerAckWaiting = false;

@@ -159,19 +159,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->InfoTextEdit->setFocusPolicy(Qt::NoFocus); // agregar al ui directamente y borrar esta linea
 
-    QPushButton *aliveUdpButton = new QPushButton("ALIVE UDP", ui->stackedWidget);
-    aliveUdpButton->setGeometry(1170, 20, 120, 42);
-    aliveUdpButton->setStyleSheet("background-color: rgb(70, 130, 180); color: white; font-weight: bold; border-radius: 6px;");
-    aliveUdpButton->setToolTip("Envia ALIVE\\r\\n por UDP al ESP01");
-    aliveUdpButton->show();
-    connect(aliveUdpButton, &QPushButton::clicked, this, &MainWindow::on_GetAlivePushButton_clicked);
+    ui->aliveUdpButton->setToolTip("Envia ALIVE\\r\\n por UDP al ESP01");
+    connect(ui->aliveUdpButton, &QPushButton::clicked, this, &MainWindow::on_GetAlivePushButton_clicked);
 
-    QPushButton *telemetryUdpButton = new QPushButton("START TEL", ui->stackedWidget);
-    telemetryUdpButton->setGeometry(1170, 68, 120, 42);
-    telemetryUdpButton->setStyleSheet("background-color: rgb(46, 139, 87); color: white; font-weight: bold; border-radius: 6px;");
-    telemetryUdpButton->setToolTip("Inicia o detiene la telemetria UDP");
-    telemetryUdpButton->show();
-    connect(telemetryUdpButton, &QPushButton::clicked, this, [this, telemetryUdpButton]() {
+    ui->telemetryUdpButton->setToolTip("Inicia o detiene la telemetria UDP");
+    connect(ui->telemetryUdpButton, &QPushButton::clicked, this, [this]() {
         if (!udpReady) {
             ui->InfoTextEdit->append("Error: UDP no esta listo.");
             return;
@@ -182,66 +174,36 @@ MainWindow::MainWindow(QWidget *parent)
         if (!telemetryUdpEnabled) {
             enviarComando(CMD_TELEMETRY_START, datos);
             telemetryUdpEnabled = true;
-            telemetryUdpButton->setText("STOP TEL");
-            telemetryUdpButton->setStyleSheet("background-color: rgb(178, 34, 34); color: white; font-weight: bold; border-radius: 6px;");
+            ui->telemetryUdpButton->setText("STOP TEL");
             ui->TxTextEdit->append("UDP TX: CMD_TELEMETRY_START v1");
         } else {
             enviarComando(CMD_TELEMETRY_STOP, datos);
             telemetryUdpEnabled = false;
-            telemetryUdpButton->setText("START TEL");
-            telemetryUdpButton->setStyleSheet("background-color: rgb(46, 139, 87); color: white; font-weight: bold; border-radius: 6px;");
+            ui->telemetryUdpButton->setText("START TEL");
             ui->TxTextEdit->append("UDP TX: CMD_TELEMETRY_STOP v1");
         }
     });
 
-    QPushButton *httpSoftApButton = new QPushButton("HTTP AP", ui->stackedWidget);
-    httpSoftApButton->setGeometry(1170, 116, 120, 42);
-    httpSoftApButton->setStyleSheet("background-color: rgb(120, 90, 40); color: white; font-weight: bold; border-radius: 6px;");
-    httpSoftApButton->setToolTip("Cambia el ESP01 a SoftAP HTTP para configurar HB desde el celular");
-    httpSoftApButton->show();
-    connect(httpSoftApButton, &QPushButton::clicked, this, [this]() {
+    ui->httpSoftApButton->setToolTip("Cambia el ESP01 a SoftAP HTTP para configurar HB desde el celular");
+    connect(ui->httpSoftApButton, &QPushButton::clicked, this, [this]() {
         QByteArray datos;
         enviarComando(CMD_HTTP_SOFTAP, datos);
         ui->TxTextEdit->append("TX: CMD_HTTP_SOFTAP v1");
         ui->InfoTextEdit->append("El robot pasara a HTTP SoftAP. Conectate a N20_ROBOT y abri http://192.168.4.1");
     });
-    lineSensorBinaryLabel = new QLabel("LINEA: 0000", ui->stackedWidget);
-    lineSensorBinaryLabel->setGeometry(1170, 164, 120, 32);
-    lineSensorBinaryLabel->setAlignment(Qt::AlignCenter);
-    lineSensorBinaryLabel->setStyleSheet("background-color: rgb(30, 30, 30); color: white; font-weight: bold; border-radius: 6px;");
-    lineSensorBinaryLabel->setToolTip("Sensores seguidores de linea: 1=linea, 0=mesa");
-    lineSensorBinaryLabel->show();
 
-    QLabel *yawKpLabel = new QLabel("KpY", ui->stackedWidget);
-    yawKpLabel->setGeometry(1040, 210, 35, 22);
-    yawKpLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    yawKpLabel->show();
+    connect(ui->obstacleOledButton, &QPushButton::clicked, this, [this]() {
+        enviarInt16(CMD_CHANGE_OLED_SCREEN, 4);
+        ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN OBS");
+    });
 
-    QLineEdit *yawKpEdit = new QLineEdit(ui->stackedWidget);
-    yawKpEdit->setGeometry(1080, 210, 80, 22);
-    yawKpEdit->setText("100.0");
-    yawKpEdit->setToolTip("Kp del PD de Yaw");
-    yawKpEdit->show();
-    QLabel *yawKdLabel = new QLabel("KdY", ui->stackedWidget);
-    yawKdLabel->setGeometry(1040, 235, 35, 22);
-    yawKdLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    yawKdLabel->show();
-
-    QLineEdit *yawKdEdit = new QLineEdit(ui->stackedWidget);
-    yawKdEdit->setGeometry(1080, 235, 80, 22);
-    yawKdEdit->setText("0.0");
-    yawKdEdit->setToolTip("Kd del PD de Yaw");
-    yawKdEdit->show();
-
-    QPushButton *yawPdButton = new QPushButton("SET YAW PD", ui->stackedWidget);
-    yawPdButton->setGeometry(1170, 210, 120, 45);
-    yawPdButton->setStyleSheet("background-color: rgb(95, 80, 150); color: white; font-weight: bold; border-radius: 6px;");
-    yawPdButton->setToolTip("Configura Kp y Kd de YAW con los campos KpY y KdY");
-    yawPdButton->show();
-    connect(yawPdButton, &QPushButton::clicked, this, [this, yawKpEdit, yawKdEdit]() {
+    ui->yawKpEdit->setToolTip("Kp del PD de Yaw");
+    ui->yawKdEdit->setToolTip("Kd del PD de Yaw");
+    ui->yawPdButton->setToolTip("Configura Kp y Kd de YAW con los campos KpY y KdY");
+    connect(ui->yawPdButton, &QPushButton::clicked, this, [this]() {
         QByteArray payload;
-        float kp = yawKpEdit->text().toFloat();
-        float kd = yawKdEdit->text().toFloat();
+        float kp = ui->yawKpEdit->text().toFloat();
+        float kd = ui->yawKdEdit->text().toFloat();
         quint32 kpRaw;
         quint32 kdRaw;
         memcpy(&kpRaw, &kp, sizeof(kpRaw));
@@ -255,157 +217,78 @@ MainWindow::MainWindow(QWidget *parent)
                                " Kd=" + QString::number(kd));
     });
 
-    QGroupBox *yawConfigBox = new QGroupBox("YAW CONTROL", ui->stackedWidget);
-    yawConfigBox->setGeometry(1040, 270, 250, 430);
-    yawConfigBox->setStyleSheet("QGroupBox { font-weight: bold; }");
-    QGridLayout *yawConfigLayout = new QGridLayout(yawConfigBox);
-
-    auto makeYawSpin = [yawConfigBox](double value, double min, double max, double step, int decimals) {
-        QDoubleSpinBox *spin = new QDoubleSpinBox(yawConfigBox);
+    auto configureSpin = [](QDoubleSpinBox *spin, double value, double min, double max, double step, int decimals) {
         spin->setRange(min, max);
         spin->setSingleStep(step);
         spin->setDecimals(decimals);
         spin->setValue(value);
         spin->setKeyboardTracking(false);
-        return spin;
     };
 
-    QDoubleSpinBox *yawCfgKp = makeYawSpin(100.0, 0.0, 20000.0, 100.0, 1);
-    QDoubleSpinBox *yawCfgKd = makeYawSpin(0.0, 0.0, 5000.0, 10.0, 1);
-    QDoubleSpinBox *yawCfgSp = makeYawSpin(1.5, -10.0, 10.0, 0.05, 2);
-    QDoubleSpinBox *yawCfgMul = makeYawSpin(0.010, 0.0, 1.000, 0.001, 4);
-    QDoubleSpinBox *yawCfgAlpha = makeYawSpin(0.70, 0.0, 0.995, 0.01, 3);
-    QDoubleSpinBox *yawCfgStep = makeYawSpin(90.0, 1.0, 2000.0, 10.0, 0);
-    QDoubleSpinBox *yawCfgLimit = makeYawSpin(500.0, 0.0, 4000.0, 25.0, 0);
-    QDoubleSpinBox *flCfgMotionMs = makeYawSpin(200.0, 20.0, 2000.0, 10.0, 0);
-    QDoubleSpinBox *flCfgBalanceMs = makeYawSpin(400.0, 20.0, 5000.0, 10.0, 0);
-    QDoubleSpinBox *turnAngleSpin = makeYawSpin(90.0, -360.0, 360.0, 5.0, 1);
-    QComboBox *turnModeCombo = new QComboBox(yawConfigBox);
-    turnModeCombo->addItem("2 wheels", 0);
-    turnModeCombo->addItem("1 wheel", 1);
-    turnModeCombo->addItem("Arc", 2);
-    QComboBox *turnWheelCombo = new QComboBox(yawConfigBox);
-    turnWheelCombo->addItem("Left", 0);
-    turnWheelCombo->addItem("Right", 1);
-    turnWheelCombo->setEnabled(false);
-    QDoubleSpinBox *turnArcPercentSpin = makeYawSpin(50.0, 0.0, 100.0, 5.0, 0);
-    turnArcPercentSpin->setSuffix("%");
-    turnArcPercentSpin->setEnabled(false);
-    QPushButton *yawCfgSend = new QPushButton("APPLY", yawConfigBox);
-    QPushButton *flCfgSend = new QPushButton("APPLY FL", yawConfigBox);
-    QPushButton *yawCfgOled = new QPushButton("OLED", yawConfigBox);
-    QPushButton *turnStartButton = new QPushButton("TURN", yawConfigBox);
+    configureSpin(ui->yawCfgKp, 100.0, 0.0, 20000.0, 100.0, 1);
+    configureSpin(ui->yawCfgKd, 0.0, 0.0, 5000.0, 10.0, 1);
+    configureSpin(ui->yawCfgSp, 1.5, -10.0, 10.0, 0.05, 2);
+    configureSpin(ui->yawCfgMul, 0.010, 0.0, 1.000, 0.001, 4);
+    configureSpin(ui->yawCfgAlpha, 0.70, 0.0, 0.995, 0.01, 3);
+    configureSpin(ui->yawCfgStep, 90.0, 1.0, 2000.0, 10.0, 0);
+    configureSpin(ui->yawCfgLimit, 500.0, 0.0, 4000.0, 25.0, 0);
+    configureSpin(ui->flCfgMotionMs, 200.0, 20.0, 2000.0, 10.0, 0);
+    configureSpin(ui->flCfgBalanceMs, 400.0, 20.0, 5000.0, 10.0, 0);
+    configureSpin(ui->turnAngleSpin, 90.0, -360.0, 360.0, 5.0, 1);
+    configureSpin(ui->turnArcPercentSpin, 50.0, 0.0, 100.0, 5.0, 0);
+    ui->turnArcPercentSpin->setSuffix("%");
+    ui->turnArcPercentSpin->setEnabled(false);
 
-    yawConfigLayout->addWidget(new QLabel("Kp", yawConfigBox), 0, 0);
-    yawConfigLayout->addWidget(yawCfgKp, 0, 1);
-    yawConfigLayout->addWidget(new QLabel("Kd", yawConfigBox), 1, 0);
-    yawConfigLayout->addWidget(yawCfgKd, 1, 1);
-    yawConfigLayout->addWidget(new QLabel("FL SP", yawConfigBox), 2, 0);
-    yawConfigLayout->addWidget(yawCfgSp, 2, 1);
-    yawConfigLayout->addWidget(new QLabel("SpeedRed", yawConfigBox), 3, 0);
-    yawConfigLayout->addWidget(yawCfgMul, 3, 1);
-    yawConfigLayout->addWidget(new QLabel("Alpha", yawConfigBox), 4, 0);
-    yawConfigLayout->addWidget(yawCfgAlpha, 4, 1);
-    yawConfigLayout->addWidget(new QLabel("Step", yawConfigBox), 5, 0);
-    yawConfigLayout->addWidget(yawCfgStep, 5, 1);
-    yawConfigLayout->addWidget(new QLabel("Limit", yawConfigBox), 6, 0);
-    yawConfigLayout->addWidget(yawCfgLimit, 6, 1);
-    yawConfigLayout->addWidget(new QLabel("Move ms", yawConfigBox), 7, 0);
-    yawConfigLayout->addWidget(flCfgMotionMs, 7, 1);
-    yawConfigLayout->addWidget(new QLabel("Bal ms", yawConfigBox), 8, 0);
-    yawConfigLayout->addWidget(flCfgBalanceMs, 8, 1);
-    yawConfigLayout->addWidget(yawCfgSend, 9, 0);
-    yawConfigLayout->addWidget(flCfgSend, 9, 1);
-    yawConfigLayout->addWidget(yawCfgOled, 10, 1);
-    yawConfigLayout->addWidget(new QLabel("Turn deg", yawConfigBox), 11, 0);
-    yawConfigLayout->addWidget(turnAngleSpin, 11, 1);
-    yawConfigLayout->addWidget(new QLabel("Mode", yawConfigBox), 12, 0);
-    yawConfigLayout->addWidget(turnModeCombo, 12, 1);
-    yawConfigLayout->addWidget(new QLabel("Wheel", yawConfigBox), 13, 0);
-    yawConfigLayout->addWidget(turnWheelCombo, 13, 1);
-    yawConfigLayout->addWidget(new QLabel("Inner %", yawConfigBox), 14, 0);
-    yawConfigLayout->addWidget(turnArcPercentSpin, 14, 1);
-    yawConfigLayout->addWidget(turnStartButton, 15, 1);
-    yawConfigBox->show();
+    ui->turnModeCombo->clear();
+    ui->turnModeCombo->addItem("2 wheels", 0);
+    ui->turnModeCombo->addItem("1 wheel", 1);
+    ui->turnModeCombo->addItem("Arc", 2);
+    ui->turnWheelCombo->clear();
+    ui->turnWheelCombo->addItem("Left", 0);
+    ui->turnWheelCombo->addItem("Right", 1);
+    ui->turnWheelCombo->setEnabled(false);
 
-    connect(yawCfgSend, &QPushButton::clicked, this, [this, yawCfgKp, yawCfgKd, yawCfgMul, yawCfgAlpha, yawCfgStep, yawCfgLimit]() {
-        enviarYawConfig(static_cast<float>(yawCfgKp->value()),
-                        static_cast<float>(yawCfgKd->value()),
-                        static_cast<float>(yawCfgMul->value()),
-                        static_cast<float>(yawCfgAlpha->value()),
-                        static_cast<float>(yawCfgStep->value()),
-                        static_cast<float>(yawCfgLimit->value()));
+    connect(ui->yawCfgSend, &QPushButton::clicked, this, [this]() {
+        enviarYawConfig(static_cast<float>(ui->yawCfgKp->value()),
+                        static_cast<float>(ui->yawCfgKd->value()),
+                        static_cast<float>(ui->yawCfgMul->value()),
+                        static_cast<float>(ui->yawCfgAlpha->value()),
+                        static_cast<float>(ui->yawCfgStep->value()),
+                        static_cast<float>(ui->yawCfgLimit->value()));
     });
 
-    connect(flCfgSend, &QPushButton::clicked, this, [this, yawCfgSp, flCfgMotionMs, flCfgBalanceMs]() {
-        enviarFlConfig(static_cast<float>(yawCfgSp->value()),
-                       static_cast<quint16>(flCfgMotionMs->value()),
-                       static_cast<quint16>(flCfgBalanceMs->value()));
+    connect(ui->flCfgSend, &QPushButton::clicked, this, [this]() {
+        enviarFlConfig(static_cast<float>(ui->yawCfgSp->value()),
+                       static_cast<quint16>(ui->flCfgMotionMs->value()),
+                       static_cast<quint16>(ui->flCfgBalanceMs->value()));
     });
 
-    connect(yawCfgOled, &QPushButton::clicked, this, [this]() {
+    connect(ui->yawCfgOled, &QPushButton::clicked, this, [this]() {
         enviarInt16(CMD_CHANGE_OLED_SCREEN, 1);
     });
 
-    connect(turnModeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [turnModeCombo, turnWheelCombo, turnArcPercentSpin](int) {
-        const uint mode = turnModeCombo->currentData().toUInt();
-        turnWheelCombo->setEnabled(mode == 1U || mode == 2U);
-        turnArcPercentSpin->setEnabled(mode == 2U);
+    connect(ui->turnModeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) {
+        const uint mode = ui->turnModeCombo->currentData().toUInt();
+        ui->turnWheelCombo->setEnabled(mode == 1U || mode == 2U);
+        ui->turnArcPercentSpin->setEnabled(mode == 2U);
     });
 
-    connect(turnStartButton, &QPushButton::clicked, this, [this, turnAngleSpin, turnModeCombo, turnWheelCombo, turnArcPercentSpin]() {
-        float targetAngleDeg = static_cast<float>(turnAngleSpin->value());
+    connect(ui->turnStartButton, &QPushButton::clicked, this, [this]() {
+        float targetAngleDeg = static_cast<float>(ui->turnAngleSpin->value());
         if (qAbs(targetAngleDeg) < 1.0f) {
             ui->InfoTextEdit->append("TURN: angulo minimo 1 grado.");
             return;
         }
 
         enviarTurnManeuver(targetAngleDeg,
-                           static_cast<quint8>(turnModeCombo->currentData().toUInt()),
-                           static_cast<quint8>(turnWheelCombo->currentData().toUInt()),
-                           static_cast<quint8>(turnArcPercentSpin->value()));
+                           static_cast<quint8>(ui->turnModeCombo->currentData().toUInt()),
+                           static_cast<quint8>(ui->turnWheelCombo->currentData().toUInt()),
+                           static_cast<quint8>(ui->turnArcPercentSpin->value()));
     });
-
-    organizeStackedInterface();
 }
 MainWindow::~MainWindow()
 {
     delete ui;
-}
-
-void MainWindow::organizeStackedInterface()
-{
-    ui->layoutWidget->show();
-    ui->stackedWidget->show();
-    ui->SerialPort_Label_8->show();
-
-    QPushButton *obstacleOledButton = new QPushButton("OBS", ui->layoutWidget);
-    obstacleOledButton->setToolTip("Pantalla OLED de sensores IR de obstaculos");
-    obstacleOledButton->show();
-    ui->verticalLayout_9->addWidget(obstacleOledButton);
-    connect(obstacleOledButton, &QPushButton::clicked, this, [this]() {
-        enviarInt16(CMD_CHANGE_OLED_SCREEN, 4);
-        ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN OBS");
-    });
-
-    connect(ui->stackedWidget, &QStackedWidget::currentChanged, this, [this]() {
-        QTimer::singleShot(0, this, [this]() {
-            raiseStackedChrome();
-        });
-    });
-
-    raiseStackedChrome();
-}
-
-void MainWindow::raiseStackedChrome()
-{
-    const QObjectList children = ui->stackedWidget->children();
-    for (QObject *object : children) {
-        QWidget *widget = qobject_cast<QWidget *>(object);
-        if (widget != nullptr && ui->stackedWidget->indexOf(widget) == -1) {
-            widget->raise();
-        }
-    }
 }
 
 void MainWindow::Every10ms(){
@@ -1157,18 +1040,6 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
             ui->InfoTextEdit->append(turnActive ? "TURN activo en firmware" : "TURN finalizado en firmware");
         }
 
-        QString lineaBin = QString("%1%2%3%4")
-                               .arg((datos.infoAdicional >> 5) & 0x01)
-                               .arg((datos.infoAdicional >> 4) & 0x01)
-                               .arg((datos.infoAdicional >> 3) & 0x01)
-                               .arg((datos.infoAdicional >> 2) & 0x01);
-        if (lineSensorBinaryLabel != nullptr) {
-            lineSensorBinaryLabel->setText("LINEA: " + lineaBin);
-            lineSensorBinaryLabel->setStyleSheet(lineaBin == "000"
-                                                     ? "background-color: rgb(60, 30, 30); color: white; font-weight: bold; border-radius: 6px;"
-                                                     : "background-color: rgb(20, 90, 45); color: white; font-weight: bold; border-radius: 6px;");
-        }
-
         ui->MPU_Ax->setText(QString::number(datos.acc_x));
         ui->MPU_Ay->setText(QString::number(datos.acc_y));
         ui->MPU_Az->setText(QString::number(datos.acc_z));
@@ -1347,6 +1218,7 @@ void MainWindow::enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quin
     } else if (wheelMode == 2U) {
         modeText = "arc";
     }
+
     ui->TxTextEdit->append(QString("TX: TURN angle=%1 deg mode=%2 wheel=%3 inner=%4%")
                                .arg(targetAngleDeg, 0, 'f', 1)
                                .arg(modeText)
@@ -1576,6 +1448,7 @@ void MainWindow::on_Home_pushButton_clicked(){                  ui->stackedWidge
 void MainWindow::on_Ejecucion_pushButton_clicked(){             ui->stackedWidget->setCurrentIndex(1);}
 void MainWindow::on_ScreenCalibrar_pushbutton_clicked(){        ui->stackedWidget->setCurrentIndex(3);}
 void MainWindow::on_SistemasDeControl_pushButton_clicked(){     ui->stackedWidget->setCurrentIndex(0);}
+void MainWindow::on_Advanced_pushButton_clicked(){              ui->stackedWidget->setCurrentWidget(ui->PaginaComandosAvanzados);}
 /*
 void MainWindow::on_MODO_IDDLE_pushButton_clicked()
 {
