@@ -100,7 +100,7 @@ private slots:
     void on_udp_readyRead();
     void on_connect_pushButton_clicked();
     void on_SET_FRECUENCY_HB_BUTTON_clicked();
-    void enviarComando(uint8_t cmd, const QByteArray &payloadData);
+    bool enviarComando(uint8_t cmd, const QByteArray &payloadData);
     void on_pushButton_clicked();
     void on_GetAlivePushButton_clicked();
     void on_Kp_pushButton_clicked();
@@ -475,7 +475,8 @@ private:
         CMD_SET_YAW_PD              = 63,
         CMD_SET_YAW_CONFIG          = 64,
         CMD_SET_FL_CONFIG           = 65,
-        CMD_TURN_MANEUVER           = 66
+        CMD_TURN_MANEUVER           = 66,
+        CMD_OBSTACLE_FOLLOW         = 67
         // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
         // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
     };

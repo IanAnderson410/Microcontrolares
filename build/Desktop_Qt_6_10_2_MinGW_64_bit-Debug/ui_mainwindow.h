@@ -316,6 +316,7 @@ public:
     QLabel *turnArcPercentLabel;
     QDoubleSpinBox *turnArcPercentSpin;
     QPushButton *turnStartButton;
+    QPushButton *obstacleFollowStartButton;
     QHBoxLayout *horizontalLayout_30;
     QHBoxLayout *horizontalLayout_29;
     QPushButton *Home_pushButton;
@@ -1512,9 +1513,7 @@ public:
         lineEdit_7->setObjectName("lineEdit_7");
         lineEdit_7->setGeometry(QRect(437, 450, 431, 20));
         stackedWidget->addWidget(page);
-        layoutWidget1->raise();
         PitchQuickWidget->raise();
-        layoutWidget1->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
         IR5_progressBar->raise();
@@ -2979,6 +2978,11 @@ public:
 
         yawConfigLayout->addWidget(turnStartButton, 15, 1, 1, 1);
 
+        obstacleFollowStartButton = new QPushButton(yawConfigBox);
+        obstacleFollowStartButton->setObjectName("obstacleFollowStartButton");
+
+        yawConfigLayout->addWidget(obstacleFollowStartButton, 16, 0, 1, 2);
+
         stackedWidget->addWidget(PaginaComandosAvanzados);
 
         verticalLayout_35->addWidget(stackedWidget);
@@ -3292,6 +3296,7 @@ public:
         turnWheelLabel->setText(QCoreApplication::translate("MainWindow", "Wheel", nullptr));
         turnArcPercentLabel->setText(QCoreApplication::translate("MainWindow", "Inner %", nullptr));
         turnStartButton->setText(QCoreApplication::translate("MainWindow", "TURN", nullptr));
+        obstacleFollowStartButton->setText(QCoreApplication::translate("MainWindow", "START FACE_FOLLOW", nullptr));
         Home_pushButton->setText(QCoreApplication::translate("MainWindow", "HOME", nullptr));
         Ejecucion_pushButton->setText(QCoreApplication::translate("MainWindow", "EJECUCION", nullptr));
         ScreenCalibrar_pushbutton->setText(QCoreApplication::translate("MainWindow", "Calibraci\303\263n ", nullptr));

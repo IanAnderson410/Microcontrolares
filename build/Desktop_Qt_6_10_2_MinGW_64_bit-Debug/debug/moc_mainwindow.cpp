@@ -209,7 +209,7 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
         // Slot 'on_SET_FRECUENCY_HB_BUTTON_clicked'
         QtMocHelpers::SlotData<void()>(24, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'enviarComando'
-        QtMocHelpers::SlotData<void(uint8_t, const QByteArray &)>(25, 2, QMC::AccessPrivate, QMetaType::Void, {{
+        QtMocHelpers::SlotData<bool(uint8_t, const QByteArray &)>(25, 2, QMC::AccessPrivate, QMetaType::Bool, {{
             { 0x80000000 | 26, 27 }, { QMetaType::QByteArray, 28 },
         }}),
         // Slot 'on_pushButton_clicked'
@@ -390,7 +390,8 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 15: _t->on_udp_readyRead(); break;
         case 16: _t->on_connect_pushButton_clicked(); break;
         case 17: _t->on_SET_FRECUENCY_HB_BUTTON_clicked(); break;
-        case 18: _t->enviarComando((*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[2]))); break;
+        case 18: { bool _r = _t->enviarComando((*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[2])));
+            if (_a[0]) *reinterpret_cast<bool*>(_a[0]) = std::move(_r); }  break;
         case 19: _t->on_pushButton_clicked(); break;
         case 20: _t->on_GetAlivePushButton_clicked(); break;
         case 21: _t->on_Kp_pushButton_clicked(); break;

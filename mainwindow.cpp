@@ -285,6 +285,15 @@ MainWindow::MainWindow(QWidget *parent)
                            static_cast<quint8>(ui->turnWheelCombo->currentData().toUInt()),
                            static_cast<quint8>(ui->turnArcPercentSpin->value()));
     });
+
+    connect(ui->obstacleFollowStartButton, &QPushButton::clicked, this, [this]() {
+        QByteArray payload;
+        payload.append(static_cast<char>(1U));
+        payload.append(static_cast<char>(1U));
+        if (enviarComando(CMD_OBSTACLE_FOLLOW, payload)) {
+            ui->TxTextEdit->append("TX: CMD_OBSTACLE_FOLLOW START RIGHT");
+        }
+    });
 }
 MainWindow::~MainWindow()
 {
@@ -785,6 +794,7 @@ bool MainWindow::isCriticalCommand(uint8_t cmd) const
     case CMD_SET_YAW_CONFIG:
     case CMD_SET_FL_CONFIG:
     case CMD_TURN_MANEUVER:
+    case CMD_OBSTACLE_FOLLOW:
         return true;
     default:
         return false;
@@ -896,6 +906,25 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
                     break;
                 default:
                     statusText = "TURN rechazado: estado " + QString::number(ackStatus);
+                    break;
+                }
+                ui->InfoTextEdit->append(statusText);
+            }
+
+            if (ackCmd == CMD_OBSTACLE_FOLLOW) {
+                QString statusText;
+                switch (ackStatus) {
+                case 0:
+                    statusText = "FACE_FOLLOW iniciado";
+                    break;
+                case 1:
+                    statusText = "FACE_FOLLOW rechazado: lado/accion invalida";
+                    break;
+                case 3:
+                    statusText = "FACE_FOLLOW rechazado: requiere modo RC y sin maniobra activa";
+                    break;
+                default:
+                    statusText = "FACE_FOLLOW rechazado: estado " + QString::number(ackStatus);
                     break;
                 }
                 ui->InfoTextEdit->append(statusText);
@@ -1091,12 +1120,12 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
     }
 }
 
-void MainWindow::enviarComando(uint8_t cmd, const QByteArray &payloadData) {
+bool MainWindow::enviarComando(uint8_t cmd, const QByteArray &payloadData) {
     bool tcpReady = tcpClient != nullptr && tcpClient->state() == QAbstractSocket::ConnectedState;
 
     if (!tcpReady && !udpReady) {
         ui->InfoTextEdit->append("Error: enlace UDP/TCP no listo.");
-        return;
+        return false;
     }
 
     uint8_t flags = isCriticalCommand(cmd) ? UNER_V1_FLAG_ACK_REQUIRED : 0;
@@ -1108,14 +1137,14 @@ void MainWindow::enviarComando(uint8_t cmd, const QByteArray &payloadData) {
     if ((flags & UNER_V1_FLAG_ACK_REQUIRED) && unerAckWaiting) {
         ui->InfoTextEdit->append("Comando pendiente de ACK cmd=" + QString::number(unerAckCmd) +
                                  " seq=" + QString::number(unerAckSeq));
-        return;
+        return false;
     }
 
     QByteArray paquete = buildUnerV1(cmd, flags, payloadData);
 
     if (paquete.isEmpty()) {
         ui->InfoTextEdit->append("No pude armar UNER v1 para cmd " + QString::number(cmd));
-        return;
+        return false;
     }
 
     qint64 written = -1;
@@ -1127,6 +1156,7 @@ void MainWindow::enviarComando(uint8_t cmd, const QByteArray &payloadData) {
 
     if (written != paquete.size()) {
         ui->InfoTextEdit->append("Error enviando UNER v1");
+        return false;
     } else if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
         unerAckWaiting = true;
         unerAckCmd = cmd;
@@ -1135,6 +1165,7 @@ void MainWindow::enviarComando(uint8_t cmd, const QByteArray &payloadData) {
         unerAckWaitTicks = 0;
         unerAckFrame = paquete;
     }
+    return true;
 }
 void MainWindow::enviarFloat(uint8_t cmd, float valor) {
     QByteArray buffer;

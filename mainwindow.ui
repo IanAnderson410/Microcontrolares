@@ -3856,9 +3856,7 @@ QComboBox{
           <string>Brújula</string>
          </property>
         </widget>
-        <zorder>layoutWidget</zorder>
         <zorder>PitchQuickWidget</zorder>
-        <zorder>layoutWidget</zorder>
         <zorder>VistaSuperiorQuickWidget</zorder>
         <zorder>IR6_progressBar</zorder>
         <zorder>IR5_progressBar</zorder>
@@ -8807,6 +8805,13 @@ QComboBox{
            <widget class="QPushButton" name="turnStartButton">
             <property name="text">
              <string>TURN</string>
+            </property>
+           </widget>
+          </item>
+          <item row="16" column="0" colspan="2">
+           <widget class="QPushButton" name="obstacleFollowStartButton">
+            <property name="text">
+             <string>START FACE_FOLLOW</string>
             </property>
            </widget>
           </item>
