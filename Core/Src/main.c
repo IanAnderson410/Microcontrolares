@@ -20,6 +20,22 @@
  ├── Telemetría cada 50 ms
  └── UART DMA/IDLE hacia ESP01
 
+  *   ============= [ KEY button operation ] =============
+  *   The KEY input is configured as Pull-Up and active-low, so the released
+  *   state is logic HIGH and the pressed state is logic LOW. The button task
+  *   applies software debounce before accepting any press or release edge.
+  *
+  *   Current KEY gestures:
+  *   - Short press: starts IR threshold calibration when idle, or finishes it
+  *     when calibration is already active.
+  *   - Double click: switches between RC mode and follow-line search mode.
+  *   - Long press: toggles flagMotorsAreOn and immediately stops the motors
+  *     when the flag is turned OFF.
+  *
+  *   OLED page flagOLED == 5 is dedicated to KEY validation and shows the
+  *   current mode, motor state, calibration state, raw/stable button state,
+  *   pending click state, hold time, last gesture, and last resulting action.
+  *
   *   Este firmware implementa un sistema de control de lazo cerrado para un robot
   *   balancín mediante el uso de un microcontrolador STM32. La lógica principal
   *   reside en una interrupción periódica de 10ms donde se procesan los datos
@@ -510,6 +526,79 @@ void screenScheduler(void){
         return;
     }
 
+    if (flagOLED == 5) {
+        const char *event_label = "--";
+        const char *action_label = "--";
+        uint32_t now = HAL_GetTick();
+        uint32_t event_age_s = (key_last_event == KEY_EVENT_NONE) ? 0U :
+                               (uint32_t)((now - key_last_event_tick) / 1000U);
+
+        switch (key_last_event) {
+        case KEY_EVENT_SHORT_PRESS:
+            event_label = "S";
+            break;
+        case KEY_EVENT_DOUBLE_CLICK:
+            event_label = "D";
+            break;
+        case KEY_EVENT_LONG_PRESS:
+            event_label = "L";
+            break;
+        default:
+            break;
+        }
+
+        switch (key_last_action) {
+        case KEY_ACTION_CAL_START:
+            action_label = "CAL+";
+            break;
+        case KEY_ACTION_CAL_DONE:
+            action_label = "CAL-";
+            break;
+        case KEY_ACTION_MODE_RC:
+            action_label = "RC";
+            break;
+        case KEY_ACTION_MODE_FL:
+            action_label = "FL";
+            break;
+        case KEY_ACTION_MOTORS_ON:
+            action_label = "ON";
+            break;
+        case KEY_ACTION_MOTORS_OFF:
+            action_label = "OFF";
+            break;
+        default:
+            break;
+        }
+
+        SSD1306_GotoXY(0, 0);
+        SSD1306_Puts("KEY DEBUG", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 10);
+        snprintf(msg, sizeof(msg), "M:%u Mot:%s", currentMode, flagMotorsAreOn ? "ON" : "OFF");
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 20);
+        snprintf(msg, sizeof(msg), "Cal:%u Pend:%u", flag_calibrando_linea, key_click_pending);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 30);
+        snprintf(msg, sizeof(msg), "Btn:%c Raw:%c L:%u",
+                 key_stable_pressed ? 'P' : 'R',
+                 key_raw_pressed ? 'P' : 'R',
+                 key_long_press_done);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 40);
+        snprintf(msg, sizeof(msg), "Hold:%lu/%ums",
+                 (unsigned long)key_press_duration_ms,
+                 KEY_LONG_PRESS_MS);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 52);
+        snprintf(msg, sizeof(msg), "E:%s A:%s %lus",
+                 event_label,
+                 action_label,
+                 (unsigned long)event_age_s);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        OLED_RequestUpdate();
+        return;
+    }
+
     if (flagOLED == 777) {
         SSD1306_GotoXY(0, 0);
         SSD1306_Puts("IR/MPU", &Font_7x10, SSD1306_COLOR_WHITE);
@@ -960,7 +1049,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             if (payload_len >= 2) {
                 requested_page = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
             }
-            if (requested_page <= 4) {
+            if (requested_page <= 5) {
                 flagOLED = (uint8_t)requested_page;
                 uner_ack_status = 0;
             } else {
