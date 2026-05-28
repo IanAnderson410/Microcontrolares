@@ -1,6 +1,7 @@
 #include "uner_protocol.h"
 #include "control_systems.h"
 #include "line_sensors.h"
+#include "obstacle_follow.h"
 #include <string.h>
 
 #define UNER_CMD_ACK 1
@@ -188,7 +189,8 @@ uint8_t UNER_SendTelemetryV1(void)
                                       ((estado_sensores[1] & 0x01) << 3) |
                                       ((estado_sensores[2] & 0x01) << 4) |
                                       ((estado_sensores[3] & 0x01) << 5) |
-                                      ((turn_maneuver_active & 0x01) << 6));
+                                      ((turn_maneuver_active & 0x01) << 6) |
+                                      ((obstacle_follow_active & 0x01) << 7));
 
     for (uint8_t i = 0; i < 8; i++) {
         payload.IR[i] = adc_filtrado[i];

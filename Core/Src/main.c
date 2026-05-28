@@ -89,6 +89,7 @@
 #include "fonts.h"
 #include "line_sensors.h"
 #include "control_systems.h"
+#include "obstacle_follow.h"
 #include "buzzer_app.h"
 #include "mpu6050_app.h"
 #include "uner_protocol.h"
@@ -160,7 +161,8 @@ enum {
        CMD_SET_YAW_PD               = 63,
        CMD_SET_YAW_CONFIG           = 64,
        CMD_SET_FL_CONFIG            = 65,
-       CMD_TURN_MANEUVER            = 66
+       CMD_TURN_MANEUVER            = 66,
+       CMD_OBSTACLE_FOLLOW          = 67
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -463,22 +465,42 @@ void screenScheduler(void){
 
     if (flagOLED == 2) {
            SSD1306_GotoXY(0, 0);
-           SSD1306_Puts("YAW/FL CFG", &Font_7x10, SSD1306_COLOR_WHITE);
+           SSD1306_Puts("OBST FOLLOW DBG", &Font_7x10, SSD1306_COLOR_WHITE);
            SSD1306_GotoXY(0, 10);
-           snprintf(msg, sizeof(msg), "IP:%s", ip_address);
+           snprintf(msg, sizeof(msg), "A:%u S:%u F:%u",
+                    obstacle_follow_active,
+                    obstacle_follow_state,
+                    obstacle_right_face_state);
            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
            SSD1306_GotoXY(0, 20);
-           sprintf(msg, "Kp:%4.0f Kd:%4.0f", Kp_yaw, Kd_yaw);
+           snprintf(msg, sizeof(msg), "R:%4u F:%4u",
+                    obstacle_right_ir_raw,
+                    obstacle_right_ir_filtered);
            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
            SSD1306_GotoXY(0, 30);
-           sprintf(msg, "SP:%1.2f Mul:%1.3f", FL_setpoint, multiplicadorYaw);
+           snprintf(msg, sizeof(msg), "T:%4u E:%5d",
+                    obstacle_follow_target_adc,
+                    obstacle_follow_adc_error);
            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
            SSD1306_GotoXY(0, 40);
-           sprintf(msg, "A:%1.2f St:%4.0f", yaw_error_filter_alpha, yaw_steering_step_max);
+           snprintf(msg, sizeof(msg), "Sd:%d O:%d",
+                    obstacle_follow_side_steering,
+                    obstacle_follow_steering);
            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-           SSD1306_GotoXY(0, 50);
-           snprintf(msg, sizeof(msg), "Lost:%lu", (unsigned long)control_missed_slots);
+           SSD1306_GotoXY(0, 52);
+           int16_t yaw_dbg = (int16_t)angle_yaw;
+           int16_t yaw_err_dbg = obstacle_follow_yaw_error_cdeg / 100;
+           if (yaw_dbg > 999) yaw_dbg = 999;
+           if (yaw_dbg < -999) yaw_dbg = -999;
+           if (yaw_err_dbg > 99) yaw_err_dbg = 99;
+           if (yaw_err_dbg < -99) yaw_err_dbg = -99;
+           snprintf(msg, sizeof(msg), "Y:%d Ey:%d C:%u",
+                    yaw_dbg,
+                    yaw_err_dbg,
+                    obstacle_follow_steering_saturated);
            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+
            OLED_RequestUpdate();
            return;
        }
@@ -881,6 +903,29 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         }
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_TURN_MANEUVER;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+
+    case CMD_OBSTACLE_FOLLOW:
+        if (payload_len >= 1) {
+            uint8_t action = payload[0];
+            uint8_t side = (payload_len >= 2) ? payload[1] : OBSTACLE_FOLLOW_SIDE_RIGHT;
+
+            if (action == 0U) {
+                ObstacleFollow_Stop();
+                uner_ack_status = OBSTACLE_FOLLOW_STATUS_OK;
+            } else if (action == 1U) {
+                uner_ack_status = ObstacleFollow_Start(side);
+            } else {
+                uner_ack_status = OBSTACLE_FOLLOW_STATUS_RANGE;
+            }
+        } else {
+            uner_ack_status = OBSTACLE_FOLLOW_STATUS_RANGE;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_OBSTACLE_FOLLOW;
             uner_ack_seq = seq;
             uner_ack_pending = 1;
         }
@@ -1370,16 +1415,7 @@ int main(void)
 		if(flag10ms){
 			flag10ms = 0;
 			Telemetry_UpdateMPU();
-			if (obstacle_event_pending &&
-			    currentMode == MODO_RC &&
-			    flagMotorsAreOn &&
-			    !turn_maneuver_active) {
-				if (TurnManeuver_Start(90.0f,
-				                       TURN_MANEUVER_MODE_ONE_WHEEL,
-				                       TURN_MANEUVER_WHEEL_RIGHT) == TURN_MANEUVER_STATUS_OK) {
-					(void)ObstacleSensor_ConsumeEvent();
-				}
-			}
+			ObstacleFollow_Task();
 			FollowLine_Task();
 			if (currentMode == MODO_RC && flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
 				flag_RC_active = 0;

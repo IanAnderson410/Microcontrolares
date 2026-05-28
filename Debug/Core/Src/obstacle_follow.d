@@ -1,5 +1,5 @@
-Core/Src/uner_protocol.o: ../Core/Src/uner_protocol.c \
- ../Core/Inc/uner_protocol.h ../Core/Inc/main.h \
+Core/Src/obstacle_follow.o: ../Core/Src/obstacle_follow.c \
+ ../Core/Inc/obstacle_follow.h ../Core/Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
  ../Core/Inc/stm32f4xx_hal_conf.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
@@ -36,9 +36,8 @@ Core/Src/uner_protocol.o: ../Core/Src/uner_protocol.c \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h \
- ../Core/Inc/ESP01.h ../Core/Inc/control_systems.h \
- ../Core/Inc/line_sensors.h ../Core/Inc/obstacle_follow.h
-../Core/Inc/uner_protocol.h:
+ ../Core/Inc/control_systems.h ../Core/Inc/line_sensors.h
+../Core/Inc/obstacle_follow.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -76,7 +75,5 @@ Core/Src/uner_protocol.o: ../Core/Src/uner_protocol.c \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h:
-../Core/Inc/ESP01.h:
 ../Core/Inc/control_systems.h:
 ../Core/Inc/line_sensors.h:
-../Core/Inc/obstacle_follow.h:

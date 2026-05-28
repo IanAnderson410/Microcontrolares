@@ -40,9 +40,9 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../USB_DEVICE/Target/usbd_conf.h ../Core/Inc/ssd1306.h \
  ../Core/Inc/main.h ../Core/Inc/fonts.h ../Core/Inc/fonts.h \
  ../Core/Inc/line_sensors.h ../Core/Inc/control_systems.h \
- ../Core/Inc/buzzer_app.h ../Core/Inc/mpu6050_app.h \
- ../Core/Inc/uner_protocol.h ../Core/Inc/ESP01.h ../Core/Inc/button_key.h \
- ../Core/Inc/ESP01.h
+ ../Core/Inc/obstacle_follow.h ../Core/Inc/buzzer_app.h \
+ ../Core/Inc/mpu6050_app.h ../Core/Inc/uner_protocol.h \
+ ../Core/Inc/ESP01.h ../Core/Inc/button_key.h ../Core/Inc/ESP01.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -89,6 +89,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/fonts.h:
 ../Core/Inc/line_sensors.h:
 ../Core/Inc/control_systems.h:
+../Core/Inc/obstacle_follow.h:
 ../Core/Inc/buzzer_app.h:
 ../Core/Inc/mpu6050_app.h:
 ../Core/Inc/uner_protocol.h:

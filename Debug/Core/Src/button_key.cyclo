@@ -1,5 +1,5 @@
-../Core/Src/button_key.c:13:6:KEY_Init	1
-../Core/Src/button_key.c:25:6:KEY_CalibrationTask	18
-../Core/Src/button_key.c:99:13:KEY_HandleSingleClick	2
-../Core/Src/button_key.c:112:13:KEY_HandleDoubleClick	3
-../Core/Src/button_key.c:124:13:KEY_HandleLongPress	2
+../Core/Src/button_key.c:22:6:KEY_Init	1
+../Core/Src/button_key.c:34:6:KEY_CalibrationTask	24
+../Core/Src/button_key.c:127:13:KEY_HandleSingleClick	2
+../Core/Src/button_key.c:145:13:KEY_HandleDoubleClick	3
+../Core/Src/button_key.c:162:13:KEY_HandleLongPress	2
