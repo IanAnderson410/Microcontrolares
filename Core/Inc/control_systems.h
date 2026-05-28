@@ -83,6 +83,7 @@ extern volatile int16_t turn_maneuver_steering;
 
 void PID_PITCH(void);
 void PID_PITCH_ResetState(void);
+void Control_SetMotorsEnabled(uint8_t enabled);
 void FollowLine_Task(void);
 int16_t Calcular_PID_YAW(float error_linea);
 uint8_t TurnManeuver_Start(float target_angle_deg, uint8_t wheel_mode, uint8_t wheel_select);

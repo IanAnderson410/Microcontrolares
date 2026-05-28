@@ -164,12 +164,8 @@ static void KEY_HandleLongPress(void)
     key_last_event = KEY_EVENT_LONG_PRESS;
     key_last_event_tick = HAL_GetTick();
 
-    flagMotorsAreOn = flagMotorsAreOn ? 0U : 1U;
+    Control_SetMotorsEnabled(flagMotorsAreOn ? 0U : 1U);
     key_last_action = flagMotorsAreOn ? KEY_ACTION_MOTORS_ON : KEY_ACTION_MOTORS_OFF;
-
-    if (!flagMotorsAreOn) {
-        Robot_Drive(0, 0);
-    }
 
     screenScheduler();
 }

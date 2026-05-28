@@ -887,7 +887,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
 
     case CMD_START:
-        flagMotorsAreOn = 1;
+        Control_SetMotorsEnabled(1U);
         uner_ack_status = 0;
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_START;
@@ -897,11 +897,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
 
     case CMD_STOP:
-        TurnManeuver_Cancel();
-        flagMotorsAreOn = 0;
-        RC_setpoint = 0.0f;
-        RC_steering = 0;
-        Robot_Drive(0, 0);
+        Control_SetMotorsEnabled(0U);
         uner_ack_status = 0;
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_STOP;
@@ -963,13 +959,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_ONOFFMOTORS:
         if (payload_len >= 1) {
-            flagMotorsAreOn = (payload[0] != 0) ? 1 : 0;
-            if (!flagMotorsAreOn) {
-                TurnManeuver_Cancel();
-                RC_setpoint = 0.0f;
-                RC_steering = 0;
-                Robot_Drive(0, 0);
-            }
+            Control_SetMotorsEnabled((payload[0] != 0) ? 1U : 0U);
             uner_ack_status = 0;
         } else {
             uner_ack_status = 2;

@@ -56,6 +56,24 @@ void PID_PITCH_ResetState(void)
     error = 0.0f;
 }
 
+void Control_SetMotorsEnabled(uint8_t enabled)
+{
+    enabled = enabled ? 1U : 0U;
+
+    if (flagMotorsAreOn != enabled) {
+        PID_PITCH_ResetState();
+    }
+
+    flagMotorsAreOn = enabled;
+
+    if (!enabled) {
+        TurnManeuver_Cancel();
+        RC_setpoint = 0.0f;
+        RC_steering = 0;
+        Robot_Drive(0, 0);
+    }
+}
+
 void PID_PITCH(void)
 {
     float gyro_rate = giro;
@@ -68,6 +86,17 @@ void PID_PITCH(void)
     accelx = axRaw;
     accely = ayRaw;
     accelz = azRaw;
+
+    if (!flagMotorsAreOn) {
+        PID_PITCH_ResetState();
+        Robot_Drive(0, 0);
+        return;
+    }
+
+    if (angle_y > 65.0f || angle_y < -65.0f) {
+        Control_SetMotorsEnabled(0U);
+        return;
+    }
 
     switch (currentMode) {
     case CONTROL_MODE_RC:
@@ -134,31 +163,25 @@ void PID_PITCH(void)
     showoutput = output;
     last_error = error;
 
-    if (flagMotorsAreOn) {
-        if (turn_maneuver_active && turn_maneuver_mode == TURN_MANEUVER_MODE_ONE_WHEEL) {
-            int16_t pitch_output = (int16_t)output;
+    if (turn_maneuver_active && turn_maneuver_mode == TURN_MANEUVER_MODE_ONE_WHEEL) {
+        int16_t pitch_output = (int16_t)output;
 
-            if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
-                Robot_Drive(pitch_output + steering, pitch_output);
-            } else {
-                Robot_Drive(pitch_output, pitch_output - steering);
-            }
-        } else if (turn_maneuver_active && turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) {
-            int16_t pitch_output = (int16_t)output;
-            int16_t inner_steering = (int16_t)((float)steering * turn_maneuver_arc_inner_ratio);
-
-            if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
-                Robot_Drive(pitch_output + steering, pitch_output - inner_steering);
-            } else {
-                Robot_Drive(pitch_output + inner_steering, pitch_output - steering);
-            }
+        if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
+            Robot_Drive(pitch_output + steering, pitch_output);
         } else {
-            Robot_Drive((int16_t)output + steering, (int16_t)output - steering);
+            Robot_Drive(pitch_output, pitch_output - steering);
         }
-    }
-    if (flagMotorsAreOn == 0 || angle_y > 65.0f || angle_y < -65.0f) {
-        TurnManeuver_Cancel();
-        Robot_Drive(0, 0);
+    } else if (turn_maneuver_active && turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) {
+        int16_t pitch_output = (int16_t)output;
+        int16_t inner_steering = (int16_t)((float)steering * turn_maneuver_arc_inner_ratio);
+
+        if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
+            Robot_Drive(pitch_output + steering, pitch_output - inner_steering);
+        } else {
+            Robot_Drive(pitch_output + inner_steering, pitch_output - steering);
+        }
+    } else {
+        Robot_Drive((int16_t)output + steering, (int16_t)output - steering);
     }
 }
 
@@ -311,9 +334,7 @@ void TurnManeuver_Task(void)
     }
     if (imu_last_update_tick == 0U ||
         (uint32_t)(now - imu_last_update_tick) > TURN_MANEUVER_IMU_STALE_MS) {
-        TurnManeuver_Cancel();
-        flagMotorsAreOn = 0;
-        Robot_Drive(0, 0);
+        Control_SetMotorsEnabled(0U);
         return;
     }
     if ((uint32_t)(now - turn_maneuver_start_tick) > TURN_MANEUVER_TIMEOUT_MS) {
