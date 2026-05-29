@@ -155,7 +155,7 @@ QProgressBar::chunk:vertical {
       <x>60</x>
       <y>-10</y>
       <width>1191</width>
-      <height>831</height>
+      <height>761</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout_35">
@@ -264,7 +264,7 @@ QComboBox{
 </string>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>2</number>
        </property>
        <widget class="QWidget" name="PaginaControl">
         <widget class="QChartView" name="graphicsView">
@@ -8583,16 +8583,43 @@ QComboBox{
         <widget class="QGroupBox" name="yawConfigBox">
          <property name="geometry">
           <rect>
-           <x>630</x>
-           <y>100</y>
-           <width>360</width>
-           <height>520</height>
+           <x>640</x>
+           <y>60</y>
+           <width>371</width>
+           <height>491</height>
           </rect>
          </property>
          <property name="title">
           <string/>
          </property>
          <layout class="QGridLayout" name="yawConfigLayout">
+          <item row="3" column="0">
+           <widget class="QLabel" name="yawCfgMulLabel">
+            <property name="text">
+             <string>SpeedRed</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
+           <widget class="QDoubleSpinBox" name="flCfgBalanceSteering"/>
+          </item>
+          <item row="16" column="1">
+           <widget class="QPushButton" name="turnStartButton">
+            <property name="text">
+             <string>TURN</string>
+            </property>
+           </widget>
+          </item>
+          <item row="15" column="1">
+           <widget class="QDoubleSpinBox" name="turnArcPercentSpin"/>
+          </item>
+          <item row="12" column="0">
+           <widget class="QLabel" name="turnAngleLabel">
+            <property name="text">
+             <string>Turn deg</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="yawCfgKpLabel">
             <property name="text">
@@ -8600,25 +8627,27 @@ QComboBox{
             </property>
            </widget>
           </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="flCfgBalanceMsLabel">
+            <property name="text">
+             <string>Bal ms</string>
+            </property>
+           </widget>
+          </item>
+          <item row="14" column="1">
+           <widget class="QComboBox" name="turnWheelCombo"/>
+          </item>
+          <item row="3" column="1">
+           <widget class="QDoubleSpinBox" name="yawCfgMul"/>
+          </item>
           <item row="0" column="1">
            <widget class="QDoubleSpinBox" name="yawCfgKp"/>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="yawCfgKdLabel">
-            <property name="text">
-             <string>Kd</string>
-            </property>
-           </widget>
+          <item row="13" column="1">
+           <widget class="QComboBox" name="turnModeCombo"/>
           </item>
-          <item row="1" column="1">
-           <widget class="QDoubleSpinBox" name="yawCfgKd"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="yawCfgSpLabel">
-            <property name="text">
-             <string>FL SP</string>
-            </property>
-           </widget>
+          <item row="12" column="1">
+           <widget class="QDoubleSpinBox" name="turnAngleSpin"/>
           </item>
           <item row="2" column="1">
            <widget class="QDoubleSpinBox" name="yawCfgSp">
@@ -8627,25 +8656,36 @@ QComboBox{
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="yawCfgMulLabel">
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="yawCfgKd"/>
+          </item>
+          <item row="10" column="1">
+           <widget class="QPushButton" name="flCfgSend">
             <property name="text">
-             <string>SpeedRed</string>
+             <string>APPLY FL</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
-           <widget class="QDoubleSpinBox" name="yawCfgMul"/>
-          </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="yawCfgAlphaLabel">
+          <item row="6" column="0">
+           <widget class="QLabel" name="yawCfgLimitLabel">
             <property name="text">
-             <string>Alpha</string>
+             <string>Limit</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
-           <widget class="QDoubleSpinBox" name="yawCfgAlpha"/>
+          <item row="7" column="0">
+           <widget class="QLabel" name="flCfgMotionMsLabel">
+            <property name="text">
+             <string>Move ms</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="yawCfgSpLabel">
+            <property name="text">
+             <string>FL SP</string>
+            </property>
+           </widget>
           </item>
           <item row="5" column="0">
            <widget class="QLabel" name="yawCfgStepLabel">
@@ -8654,15 +8694,11 @@ QComboBox{
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
-           <widget class="QDoubleSpinBox" name="yawCfgStep"/>
+          <item row="4" column="1">
+           <widget class="QDoubleSpinBox" name="yawCfgAlpha"/>
           </item>
-          <item row="6" column="0">
-           <widget class="QLabel" name="yawCfgLimitLabel">
-            <property name="text">
-             <string>Limit</string>
-            </property>
-           </widget>
+          <item row="7" column="1">
+           <widget class="QDoubleSpinBox" name="flCfgMotionMs"/>
           </item>
           <item row="6" column="1">
            <widget class="QDoubleSpinBox" name="yawCfgLimit">
@@ -8674,25 +8710,12 @@ QComboBox{
             </property>
            </widget>
           </item>
-          <item row="7" column="0">
-           <widget class="QLabel" name="flCfgMotionMsLabel">
+          <item row="10" column="0">
+           <widget class="QPushButton" name="yawCfgSend">
             <property name="text">
-             <string>Move ms</string>
+             <string>APPLY</string>
             </property>
            </widget>
-          </item>
-          <item row="7" column="1">
-           <widget class="QDoubleSpinBox" name="flCfgMotionMs"/>
-          </item>
-          <item row="8" column="0">
-           <widget class="QLabel" name="flCfgBalanceMsLabel">
-            <property name="text">
-             <string>Bal ms</string>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="1">
-           <widget class="QDoubleSpinBox" name="flCfgBalanceMs"/>
           </item>
           <item row="9" column="0">
            <widget class="QLabel" name="flCfgBalanceSteeringLabel">
@@ -8701,39 +8724,19 @@ QComboBox{
             </property>
            </widget>
           </item>
-          <item row="9" column="1">
-           <widget class="QDoubleSpinBox" name="flCfgBalanceSteering"/>
-          </item>
-          <item row="10" column="0">
-           <widget class="QPushButton" name="yawCfgSend">
+          <item row="4" column="0">
+           <widget class="QLabel" name="yawCfgAlphaLabel">
             <property name="text">
-             <string>APPLY</string>
+             <string>Alpha</string>
             </property>
            </widget>
           </item>
-          <item row="10" column="1">
-           <widget class="QPushButton" name="flCfgSend">
+          <item row="1" column="0">
+           <widget class="QLabel" name="yawCfgKdLabel">
             <property name="text">
-             <string>APPLY FL</string>
+             <string>Kd</string>
             </property>
            </widget>
-          </item>
-          <item row="11" column="1">
-           <widget class="QPushButton" name="yawCfgOled">
-            <property name="text">
-             <string>OLED</string>
-            </property>
-           </widget>
-          </item>
-          <item row="12" column="0">
-           <widget class="QLabel" name="turnAngleLabel">
-            <property name="text">
-             <string>Turn deg</string>
-            </property>
-           </widget>
-          </item>
-          <item row="12" column="1">
-           <widget class="QDoubleSpinBox" name="turnAngleSpin"/>
           </item>
           <item row="13" column="0">
            <widget class="QLabel" name="turnModeLabel">
@@ -8742,8 +8745,8 @@ QComboBox{
             </property>
            </widget>
           </item>
-          <item row="13" column="1">
-           <widget class="QComboBox" name="turnModeCombo"/>
+          <item row="5" column="1">
+           <widget class="QDoubleSpinBox" name="yawCfgStep"/>
           </item>
           <item row="14" column="0">
            <widget class="QLabel" name="turnWheelLabel">
@@ -8752,9 +8755,6 @@ QComboBox{
             </property>
            </widget>
           </item>
-          <item row="14" column="1">
-           <widget class="QComboBox" name="turnWheelCombo"/>
-          </item>
           <item row="15" column="0">
            <widget class="QLabel" name="turnArcPercentLabel">
             <property name="text">
@@ -8762,24 +8762,30 @@ QComboBox{
             </property>
            </widget>
           </item>
-          <item row="15" column="1">
-           <widget class="QDoubleSpinBox" name="turnArcPercentSpin"/>
+          <item row="8" column="1">
+           <widget class="QDoubleSpinBox" name="flCfgBalanceMs"/>
           </item>
-          <item row="16" column="1">
-           <widget class="QPushButton" name="turnStartButton">
+          <item row="11" column="1">
+           <widget class="QPushButton" name="yawCfgOled">
             <property name="text">
-             <string>TURN</string>
-            </property>
-           </widget>
-          </item>
-          <item row="17" column="0" colspan="2">
-           <widget class="QPushButton" name="obstacleFollowStartButton">
-            <property name="text">
-             <string>START FACE_FOLLOW</string>
+             <string>OLED</string>
             </property>
            </widget>
           </item>
          </layout>
+        </widget>
+        <widget class="QPushButton" name="obstacleFollowStartButton">
+         <property name="geometry">
+          <rect>
+           <x>120</x>
+           <y>390</y>
+           <width>353</width>
+           <height>121</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>START FACE_FOLLOW</string>
+         </property>
         </widget>
        </widget>
       </widget>
@@ -9011,42 +9017,16 @@ QComboBox{
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="Screen1PushButton">
+          <widget class="QPushButton" name="OledPrevScreenButton">
            <property name="text">
-            <string>1</string>
+            <string>Previous Screen</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="Screen2PushButton">
+          <widget class="QPushButton" name="OledNextScreenButton">
            <property name="text">
-            <string>2</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="Screen2PushButton_2">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>10</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>3</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="obstacleOledButton">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>10</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>4</string>
+            <string>Next Screen</string>
            </property>
           </widget>
          </item>
@@ -9095,6 +9075,70 @@ QComboBox{
     </property>
     <property name="text">
      <string>OLED Screen</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="obstacleOledButton">
+    <property name="geometry">
+     <rect>
+      <x>1260</x>
+      <y>790</y>
+      <width>127</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="minimumSize">
+     <size>
+      <width>0</width>
+      <height>10</height>
+     </size>
+    </property>
+    <property name="text">
+     <string>8</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="Screen2PushButton_2">
+    <property name="geometry">
+     <rect>
+      <x>1280</x>
+      <y>760</y>
+      <width>127</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="minimumSize">
+     <size>
+      <width>0</width>
+      <height>10</height>
+     </size>
+    </property>
+    <property name="text">
+     <string>3</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="Screen2PushButton">
+    <property name="geometry">
+     <rect>
+      <x>1270</x>
+      <y>850</y>
+      <width>127</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>2</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="Screen1PushButton">
+    <property name="geometry">
+     <rect>
+      <x>1060</x>
+      <y>840</y>
+      <width>127</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>1</string>
     </property>
    </widget>
   </widget>

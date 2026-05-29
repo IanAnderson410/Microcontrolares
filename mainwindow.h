@@ -109,6 +109,8 @@ private slots:
     void on_OffPushButton_clicked();
     void on_Screen1PushButton_clicked();
     void on_Screen2PushButton_clicked();
+    void on_OledPrevScreenButton_clicked();
+    void on_OledNextScreenButton_clicked();
     void on_LDL_pushButton_clicked();
     void on_RDL_pushButton_clicked();
     void sendWifiConfig(QString ssid, QString pass);
@@ -205,6 +207,7 @@ private:
     bool            udpReady = false;
     bool            telemetryUdpEnabled = false;
     bool            turnManeuverTelemetryActive = false;
+    uint8_t         currentOledScreen = 1;
 
     QByteArray      m_buffer;
 

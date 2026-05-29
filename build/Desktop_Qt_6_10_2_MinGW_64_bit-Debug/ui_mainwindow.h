@@ -280,38 +280,38 @@ public:
     QPushButton *yawPdButton;
     QGroupBox *yawConfigBox;
     QGridLayout *yawConfigLayout;
-    QLabel *yawCfgKpLabel;
-    QDoubleSpinBox *yawCfgKp;
-    QLabel *yawCfgKdLabel;
-    QDoubleSpinBox *yawCfgKd;
-    QLabel *yawCfgSpLabel;
-    QDoubleSpinBox *yawCfgSp;
     QLabel *yawCfgMulLabel;
-    QDoubleSpinBox *yawCfgMul;
-    QLabel *yawCfgAlphaLabel;
-    QDoubleSpinBox *yawCfgAlpha;
-    QLabel *yawCfgStepLabel;
-    QDoubleSpinBox *yawCfgStep;
-    QLabel *yawCfgLimitLabel;
-    QDoubleSpinBox *yawCfgLimit;
-    QLabel *flCfgMotionMsLabel;
-    QDoubleSpinBox *flCfgMotionMs;
-    QLabel *flCfgBalanceMsLabel;
-    QDoubleSpinBox *flCfgBalanceMs;
-    QLabel *flCfgBalanceSteeringLabel;
     QDoubleSpinBox *flCfgBalanceSteering;
-    QPushButton *yawCfgSend;
-    QPushButton *flCfgSend;
-    QPushButton *yawCfgOled;
-    QLabel *turnAngleLabel;
-    QDoubleSpinBox *turnAngleSpin;
-    QLabel *turnModeLabel;
-    QComboBox *turnModeCombo;
-    QLabel *turnWheelLabel;
-    QComboBox *turnWheelCombo;
-    QLabel *turnArcPercentLabel;
-    QDoubleSpinBox *turnArcPercentSpin;
     QPushButton *turnStartButton;
+    QDoubleSpinBox *turnArcPercentSpin;
+    QLabel *turnAngleLabel;
+    QLabel *yawCfgKpLabel;
+    QLabel *flCfgBalanceMsLabel;
+    QComboBox *turnWheelCombo;
+    QDoubleSpinBox *yawCfgMul;
+    QDoubleSpinBox *yawCfgKp;
+    QComboBox *turnModeCombo;
+    QDoubleSpinBox *turnAngleSpin;
+    QDoubleSpinBox *yawCfgSp;
+    QDoubleSpinBox *yawCfgKd;
+    QPushButton *flCfgSend;
+    QLabel *yawCfgLimitLabel;
+    QLabel *flCfgMotionMsLabel;
+    QLabel *yawCfgSpLabel;
+    QLabel *yawCfgStepLabel;
+    QDoubleSpinBox *yawCfgAlpha;
+    QDoubleSpinBox *flCfgMotionMs;
+    QDoubleSpinBox *yawCfgLimit;
+    QPushButton *yawCfgSend;
+    QLabel *flCfgBalanceSteeringLabel;
+    QLabel *yawCfgAlphaLabel;
+    QLabel *yawCfgKdLabel;
+    QLabel *turnModeLabel;
+    QDoubleSpinBox *yawCfgStep;
+    QLabel *turnWheelLabel;
+    QLabel *turnArcPercentLabel;
+    QDoubleSpinBox *flCfgBalanceMs;
+    QPushButton *yawCfgOled;
     QPushButton *obstacleFollowStartButton;
     QHBoxLayout *horizontalLayout_30;
     QHBoxLayout *horizontalLayout_29;
@@ -334,12 +334,14 @@ public:
     QPushButton *pushButton;
     QVBoxLayout *verticalLayout_9;
     QPushButton *OffPushButton;
-    QPushButton *Screen1PushButton;
-    QPushButton *Screen2PushButton;
-    QPushButton *Screen2PushButton_2;
-    QPushButton *obstacleOledButton;
+    QPushButton *OledPrevScreenButton;
+    QPushButton *OledNextScreenButton;
     QLabel *SerialPort_Label_8;
     QLabel *WifiPortLabel_2;
+    QPushButton *obstacleOledButton;
+    QPushButton *Screen2PushButton_2;
+    QPushButton *Screen2PushButton;
+    QPushButton *Screen1PushButton;
     QMenuBar *menubar;
     QStatusBar *statusbar;
     QToolBar *toolBar;
@@ -484,7 +486,7 @@ public:
         centralwidget->setObjectName("centralwidget");
         layoutWidget = new QWidget(centralwidget);
         layoutWidget->setObjectName("layoutWidget");
-        layoutWidget->setGeometry(QRect(60, -10, 1191, 831));
+        layoutWidget->setGeometry(QRect(60, -10, 1191, 761));
         verticalLayout_35 = new QVBoxLayout(layoutWidget);
         verticalLayout_35->setObjectName("verticalLayout_35");
         verticalLayout_35->setContentsMargins(0, 0, 0, 0);
@@ -1490,7 +1492,7 @@ public:
         lineEdit_7->setObjectName("lineEdit_7");
         lineEdit_7->setGeometry(QRect(437, 450, 431, 20));
         stackedWidget->addWidget(page);
-        layoutWidget3->raise();
+        layoutWidget5->raise();
         PitchQuickWidget->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
@@ -2798,33 +2800,68 @@ public:
 
         yawConfigBox = new QGroupBox(PaginaComandosAvanzados);
         yawConfigBox->setObjectName("yawConfigBox");
-        yawConfigBox->setGeometry(QRect(630, 100, 360, 520));
+        yawConfigBox->setGeometry(QRect(640, 60, 371, 491));
         yawConfigLayout = new QGridLayout(yawConfigBox);
         yawConfigLayout->setObjectName("yawConfigLayout");
+        yawCfgMulLabel = new QLabel(yawConfigBox);
+        yawCfgMulLabel->setObjectName("yawCfgMulLabel");
+
+        yawConfigLayout->addWidget(yawCfgMulLabel, 3, 0, 1, 1);
+
+        flCfgBalanceSteering = new QDoubleSpinBox(yawConfigBox);
+        flCfgBalanceSteering->setObjectName("flCfgBalanceSteering");
+
+        yawConfigLayout->addWidget(flCfgBalanceSteering, 9, 1, 1, 1);
+
+        turnStartButton = new QPushButton(yawConfigBox);
+        turnStartButton->setObjectName("turnStartButton");
+
+        yawConfigLayout->addWidget(turnStartButton, 16, 1, 1, 1);
+
+        turnArcPercentSpin = new QDoubleSpinBox(yawConfigBox);
+        turnArcPercentSpin->setObjectName("turnArcPercentSpin");
+
+        yawConfigLayout->addWidget(turnArcPercentSpin, 15, 1, 1, 1);
+
+        turnAngleLabel = new QLabel(yawConfigBox);
+        turnAngleLabel->setObjectName("turnAngleLabel");
+
+        yawConfigLayout->addWidget(turnAngleLabel, 12, 0, 1, 1);
+
         yawCfgKpLabel = new QLabel(yawConfigBox);
         yawCfgKpLabel->setObjectName("yawCfgKpLabel");
 
         yawConfigLayout->addWidget(yawCfgKpLabel, 0, 0, 1, 1);
+
+        flCfgBalanceMsLabel = new QLabel(yawConfigBox);
+        flCfgBalanceMsLabel->setObjectName("flCfgBalanceMsLabel");
+
+        yawConfigLayout->addWidget(flCfgBalanceMsLabel, 8, 0, 1, 1);
+
+        turnWheelCombo = new QComboBox(yawConfigBox);
+        turnWheelCombo->setObjectName("turnWheelCombo");
+
+        yawConfigLayout->addWidget(turnWheelCombo, 14, 1, 1, 1);
+
+        yawCfgMul = new QDoubleSpinBox(yawConfigBox);
+        yawCfgMul->setObjectName("yawCfgMul");
+
+        yawConfigLayout->addWidget(yawCfgMul, 3, 1, 1, 1);
 
         yawCfgKp = new QDoubleSpinBox(yawConfigBox);
         yawCfgKp->setObjectName("yawCfgKp");
 
         yawConfigLayout->addWidget(yawCfgKp, 0, 1, 1, 1);
 
-        yawCfgKdLabel = new QLabel(yawConfigBox);
-        yawCfgKdLabel->setObjectName("yawCfgKdLabel");
+        turnModeCombo = new QComboBox(yawConfigBox);
+        turnModeCombo->setObjectName("turnModeCombo");
 
-        yawConfigLayout->addWidget(yawCfgKdLabel, 1, 0, 1, 1);
+        yawConfigLayout->addWidget(turnModeCombo, 13, 1, 1, 1);
 
-        yawCfgKd = new QDoubleSpinBox(yawConfigBox);
-        yawCfgKd->setObjectName("yawCfgKd");
+        turnAngleSpin = new QDoubleSpinBox(yawConfigBox);
+        turnAngleSpin->setObjectName("turnAngleSpin");
 
-        yawConfigLayout->addWidget(yawCfgKd, 1, 1, 1, 1);
-
-        yawCfgSpLabel = new QLabel(yawConfigBox);
-        yawCfgSpLabel->setObjectName("yawCfgSpLabel");
-
-        yawConfigLayout->addWidget(yawCfgSpLabel, 2, 0, 1, 1);
+        yawConfigLayout->addWidget(turnAngleSpin, 12, 1, 1, 1);
 
         yawCfgSp = new QDoubleSpinBox(yawConfigBox);
         yawCfgSp->setObjectName("yawCfgSp");
@@ -2832,40 +2869,45 @@ public:
 
         yawConfigLayout->addWidget(yawCfgSp, 2, 1, 1, 1);
 
-        yawCfgMulLabel = new QLabel(yawConfigBox);
-        yawCfgMulLabel->setObjectName("yawCfgMulLabel");
+        yawCfgKd = new QDoubleSpinBox(yawConfigBox);
+        yawCfgKd->setObjectName("yawCfgKd");
 
-        yawConfigLayout->addWidget(yawCfgMulLabel, 3, 0, 1, 1);
+        yawConfigLayout->addWidget(yawCfgKd, 1, 1, 1, 1);
 
-        yawCfgMul = new QDoubleSpinBox(yawConfigBox);
-        yawCfgMul->setObjectName("yawCfgMul");
+        flCfgSend = new QPushButton(yawConfigBox);
+        flCfgSend->setObjectName("flCfgSend");
 
-        yawConfigLayout->addWidget(yawCfgMul, 3, 1, 1, 1);
+        yawConfigLayout->addWidget(flCfgSend, 10, 1, 1, 1);
 
-        yawCfgAlphaLabel = new QLabel(yawConfigBox);
-        yawCfgAlphaLabel->setObjectName("yawCfgAlphaLabel");
+        yawCfgLimitLabel = new QLabel(yawConfigBox);
+        yawCfgLimitLabel->setObjectName("yawCfgLimitLabel");
 
-        yawConfigLayout->addWidget(yawCfgAlphaLabel, 4, 0, 1, 1);
+        yawConfigLayout->addWidget(yawCfgLimitLabel, 6, 0, 1, 1);
 
-        yawCfgAlpha = new QDoubleSpinBox(yawConfigBox);
-        yawCfgAlpha->setObjectName("yawCfgAlpha");
+        flCfgMotionMsLabel = new QLabel(yawConfigBox);
+        flCfgMotionMsLabel->setObjectName("flCfgMotionMsLabel");
 
-        yawConfigLayout->addWidget(yawCfgAlpha, 4, 1, 1, 1);
+        yawConfigLayout->addWidget(flCfgMotionMsLabel, 7, 0, 1, 1);
+
+        yawCfgSpLabel = new QLabel(yawConfigBox);
+        yawCfgSpLabel->setObjectName("yawCfgSpLabel");
+
+        yawConfigLayout->addWidget(yawCfgSpLabel, 2, 0, 1, 1);
 
         yawCfgStepLabel = new QLabel(yawConfigBox);
         yawCfgStepLabel->setObjectName("yawCfgStepLabel");
 
         yawConfigLayout->addWidget(yawCfgStepLabel, 5, 0, 1, 1);
 
-        yawCfgStep = new QDoubleSpinBox(yawConfigBox);
-        yawCfgStep->setObjectName("yawCfgStep");
+        yawCfgAlpha = new QDoubleSpinBox(yawConfigBox);
+        yawCfgAlpha->setObjectName("yawCfgAlpha");
 
-        yawConfigLayout->addWidget(yawCfgStep, 5, 1, 1, 1);
+        yawConfigLayout->addWidget(yawCfgAlpha, 4, 1, 1, 1);
 
-        yawCfgLimitLabel = new QLabel(yawConfigBox);
-        yawCfgLimitLabel->setObjectName("yawCfgLimitLabel");
+        flCfgMotionMs = new QDoubleSpinBox(yawConfigBox);
+        flCfgMotionMs->setObjectName("flCfgMotionMs");
 
-        yawConfigLayout->addWidget(yawCfgLimitLabel, 6, 0, 1, 1);
+        yawConfigLayout->addWidget(flCfgMotionMs, 7, 1, 1, 1);
 
         yawCfgLimit = new QDoubleSpinBox(yawConfigBox);
         yawCfgLimit->setObjectName("yawCfgLimit");
@@ -2874,101 +2916,59 @@ public:
 
         yawConfigLayout->addWidget(yawCfgLimit, 6, 1, 1, 1);
 
-        flCfgMotionMsLabel = new QLabel(yawConfigBox);
-        flCfgMotionMsLabel->setObjectName("flCfgMotionMsLabel");
+        yawCfgSend = new QPushButton(yawConfigBox);
+        yawCfgSend->setObjectName("yawCfgSend");
 
-        yawConfigLayout->addWidget(flCfgMotionMsLabel, 7, 0, 1, 1);
-
-        flCfgMotionMs = new QDoubleSpinBox(yawConfigBox);
-        flCfgMotionMs->setObjectName("flCfgMotionMs");
-
-        yawConfigLayout->addWidget(flCfgMotionMs, 7, 1, 1, 1);
-
-        flCfgBalanceMsLabel = new QLabel(yawConfigBox);
-        flCfgBalanceMsLabel->setObjectName("flCfgBalanceMsLabel");
-
-        yawConfigLayout->addWidget(flCfgBalanceMsLabel, 8, 0, 1, 1);
-
-        flCfgBalanceMs = new QDoubleSpinBox(yawConfigBox);
-        flCfgBalanceMs->setObjectName("flCfgBalanceMs");
-
-        yawConfigLayout->addWidget(flCfgBalanceMs, 8, 1, 1, 1);
+        yawConfigLayout->addWidget(yawCfgSend, 10, 0, 1, 1);
 
         flCfgBalanceSteeringLabel = new QLabel(yawConfigBox);
         flCfgBalanceSteeringLabel->setObjectName("flCfgBalanceSteeringLabel");
 
         yawConfigLayout->addWidget(flCfgBalanceSteeringLabel, 9, 0, 1, 1);
 
-        flCfgBalanceSteering = new QDoubleSpinBox(yawConfigBox);
-        flCfgBalanceSteering->setObjectName("flCfgBalanceSteering");
+        yawCfgAlphaLabel = new QLabel(yawConfigBox);
+        yawCfgAlphaLabel->setObjectName("yawCfgAlphaLabel");
 
-        yawConfigLayout->addWidget(flCfgBalanceSteering, 9, 1, 1, 1);
+        yawConfigLayout->addWidget(yawCfgAlphaLabel, 4, 0, 1, 1);
 
-        yawCfgSend = new QPushButton(yawConfigBox);
-        yawCfgSend->setObjectName("yawCfgSend");
+        yawCfgKdLabel = new QLabel(yawConfigBox);
+        yawCfgKdLabel->setObjectName("yawCfgKdLabel");
 
-        yawConfigLayout->addWidget(yawCfgSend, 10, 0, 1, 1);
-
-        flCfgSend = new QPushButton(yawConfigBox);
-        flCfgSend->setObjectName("flCfgSend");
-
-        yawConfigLayout->addWidget(flCfgSend, 10, 1, 1, 1);
-
-        yawCfgOled = new QPushButton(yawConfigBox);
-        yawCfgOled->setObjectName("yawCfgOled");
-
-        yawConfigLayout->addWidget(yawCfgOled, 11, 1, 1, 1);
-
-        turnAngleLabel = new QLabel(yawConfigBox);
-        turnAngleLabel->setObjectName("turnAngleLabel");
-
-        yawConfigLayout->addWidget(turnAngleLabel, 12, 0, 1, 1);
-
-        turnAngleSpin = new QDoubleSpinBox(yawConfigBox);
-        turnAngleSpin->setObjectName("turnAngleSpin");
-
-        yawConfigLayout->addWidget(turnAngleSpin, 12, 1, 1, 1);
+        yawConfigLayout->addWidget(yawCfgKdLabel, 1, 0, 1, 1);
 
         turnModeLabel = new QLabel(yawConfigBox);
         turnModeLabel->setObjectName("turnModeLabel");
 
         yawConfigLayout->addWidget(turnModeLabel, 13, 0, 1, 1);
 
-        turnModeCombo = new QComboBox(yawConfigBox);
-        turnModeCombo->setObjectName("turnModeCombo");
+        yawCfgStep = new QDoubleSpinBox(yawConfigBox);
+        yawCfgStep->setObjectName("yawCfgStep");
 
-        yawConfigLayout->addWidget(turnModeCombo, 13, 1, 1, 1);
+        yawConfigLayout->addWidget(yawCfgStep, 5, 1, 1, 1);
 
         turnWheelLabel = new QLabel(yawConfigBox);
         turnWheelLabel->setObjectName("turnWheelLabel");
 
         yawConfigLayout->addWidget(turnWheelLabel, 14, 0, 1, 1);
 
-        turnWheelCombo = new QComboBox(yawConfigBox);
-        turnWheelCombo->setObjectName("turnWheelCombo");
-
-        yawConfigLayout->addWidget(turnWheelCombo, 14, 1, 1, 1);
-
         turnArcPercentLabel = new QLabel(yawConfigBox);
         turnArcPercentLabel->setObjectName("turnArcPercentLabel");
 
         yawConfigLayout->addWidget(turnArcPercentLabel, 15, 0, 1, 1);
 
-        turnArcPercentSpin = new QDoubleSpinBox(yawConfigBox);
-        turnArcPercentSpin->setObjectName("turnArcPercentSpin");
+        flCfgBalanceMs = new QDoubleSpinBox(yawConfigBox);
+        flCfgBalanceMs->setObjectName("flCfgBalanceMs");
 
-        yawConfigLayout->addWidget(turnArcPercentSpin, 15, 1, 1, 1);
+        yawConfigLayout->addWidget(flCfgBalanceMs, 8, 1, 1, 1);
 
-        turnStartButton = new QPushButton(yawConfigBox);
-        turnStartButton->setObjectName("turnStartButton");
+        yawCfgOled = new QPushButton(yawConfigBox);
+        yawCfgOled->setObjectName("yawCfgOled");
 
-        yawConfigLayout->addWidget(turnStartButton, 16, 1, 1, 1);
+        yawConfigLayout->addWidget(yawCfgOled, 11, 1, 1, 1);
 
-        obstacleFollowStartButton = new QPushButton(yawConfigBox);
+        obstacleFollowStartButton = new QPushButton(PaginaComandosAvanzados);
         obstacleFollowStartButton->setObjectName("obstacleFollowStartButton");
-
-        yawConfigLayout->addWidget(obstacleFollowStartButton, 17, 0, 1, 2);
-
+        obstacleFollowStartButton->setGeometry(QRect(120, 390, 353, 121));
         stackedWidget->addWidget(PaginaComandosAvanzados);
 
         verticalLayout_35->addWidget(stackedWidget);
@@ -3102,27 +3102,15 @@ public:
 
         verticalLayout_9->addWidget(OffPushButton);
 
-        Screen1PushButton = new QPushButton(layoutWidget);
-        Screen1PushButton->setObjectName("Screen1PushButton");
+        OledPrevScreenButton = new QPushButton(layoutWidget);
+        OledPrevScreenButton->setObjectName("OledPrevScreenButton");
 
-        verticalLayout_9->addWidget(Screen1PushButton);
+        verticalLayout_9->addWidget(OledPrevScreenButton);
 
-        Screen2PushButton = new QPushButton(layoutWidget);
-        Screen2PushButton->setObjectName("Screen2PushButton");
+        OledNextScreenButton = new QPushButton(layoutWidget);
+        OledNextScreenButton->setObjectName("OledNextScreenButton");
 
-        verticalLayout_9->addWidget(Screen2PushButton);
-
-        Screen2PushButton_2 = new QPushButton(layoutWidget);
-        Screen2PushButton_2->setObjectName("Screen2PushButton_2");
-        Screen2PushButton_2->setMinimumSize(QSize(0, 10));
-
-        verticalLayout_9->addWidget(Screen2PushButton_2);
-
-        obstacleOledButton = new QPushButton(layoutWidget);
-        obstacleOledButton->setObjectName("obstacleOledButton");
-        obstacleOledButton->setMinimumSize(QSize(0, 10));
-
-        verticalLayout_9->addWidget(obstacleOledButton);
+        verticalLayout_9->addWidget(OledNextScreenButton);
 
 
         horizontalLayout_30->addLayout(verticalLayout_9);
@@ -3141,6 +3129,20 @@ public:
         WifiPortLabel_2 = new QLabel(centralwidget);
         WifiPortLabel_2->setObjectName("WifiPortLabel_2");
         WifiPortLabel_2->setGeometry(QRect(1160, 820, 98, 23));
+        obstacleOledButton = new QPushButton(centralwidget);
+        obstacleOledButton->setObjectName("obstacleOledButton");
+        obstacleOledButton->setGeometry(QRect(1260, 790, 127, 29));
+        obstacleOledButton->setMinimumSize(QSize(0, 10));
+        Screen2PushButton_2 = new QPushButton(centralwidget);
+        Screen2PushButton_2->setObjectName("Screen2PushButton_2");
+        Screen2PushButton_2->setGeometry(QRect(1280, 760, 127, 29));
+        Screen2PushButton_2->setMinimumSize(QSize(0, 10));
+        Screen2PushButton = new QPushButton(centralwidget);
+        Screen2PushButton->setObjectName("Screen2PushButton");
+        Screen2PushButton->setGeometry(QRect(1270, 850, 127, 29));
+        Screen1PushButton = new QPushButton(centralwidget);
+        Screen1PushButton->setObjectName("Screen1PushButton");
+        Screen1PushButton->setGeometry(QRect(1060, 840, 127, 29));
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
@@ -3155,7 +3157,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        stackedWidget->setCurrentIndex(4);
+        stackedWidget->setCurrentIndex(2);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
@@ -3289,24 +3291,24 @@ public:
         yawKdEdit->setText(QCoreApplication::translate("MainWindow", "0.0", nullptr));
         yawPdButton->setText(QCoreApplication::translate("MainWindow", "SET YAW PD", nullptr));
         yawConfigBox->setTitle(QString());
-        yawCfgKpLabel->setText(QCoreApplication::translate("MainWindow", "Kp", nullptr));
-        yawCfgKdLabel->setText(QCoreApplication::translate("MainWindow", "Kd", nullptr));
-        yawCfgSpLabel->setText(QCoreApplication::translate("MainWindow", "FL SP", nullptr));
         yawCfgMulLabel->setText(QCoreApplication::translate("MainWindow", "SpeedRed", nullptr));
-        yawCfgAlphaLabel->setText(QCoreApplication::translate("MainWindow", "Alpha", nullptr));
-        yawCfgStepLabel->setText(QCoreApplication::translate("MainWindow", "Step", nullptr));
+        turnStartButton->setText(QCoreApplication::translate("MainWindow", "TURN", nullptr));
+        turnAngleLabel->setText(QCoreApplication::translate("MainWindow", "Turn deg", nullptr));
+        yawCfgKpLabel->setText(QCoreApplication::translate("MainWindow", "Kp", nullptr));
+        flCfgBalanceMsLabel->setText(QCoreApplication::translate("MainWindow", "Bal ms", nullptr));
+        flCfgSend->setText(QCoreApplication::translate("MainWindow", "APPLY FL", nullptr));
         yawCfgLimitLabel->setText(QCoreApplication::translate("MainWindow", "Limit", nullptr));
         flCfgMotionMsLabel->setText(QCoreApplication::translate("MainWindow", "Move ms", nullptr));
-        flCfgBalanceMsLabel->setText(QCoreApplication::translate("MainWindow", "Bal ms", nullptr));
-        flCfgBalanceSteeringLabel->setText(QCoreApplication::translate("MainWindow", "Bal steer", nullptr));
+        yawCfgSpLabel->setText(QCoreApplication::translate("MainWindow", "FL SP", nullptr));
+        yawCfgStepLabel->setText(QCoreApplication::translate("MainWindow", "Step", nullptr));
         yawCfgSend->setText(QCoreApplication::translate("MainWindow", "APPLY", nullptr));
-        flCfgSend->setText(QCoreApplication::translate("MainWindow", "APPLY FL", nullptr));
-        yawCfgOled->setText(QCoreApplication::translate("MainWindow", "OLED", nullptr));
-        turnAngleLabel->setText(QCoreApplication::translate("MainWindow", "Turn deg", nullptr));
+        flCfgBalanceSteeringLabel->setText(QCoreApplication::translate("MainWindow", "Bal steer", nullptr));
+        yawCfgAlphaLabel->setText(QCoreApplication::translate("MainWindow", "Alpha", nullptr));
+        yawCfgKdLabel->setText(QCoreApplication::translate("MainWindow", "Kd", nullptr));
         turnModeLabel->setText(QCoreApplication::translate("MainWindow", "Mode", nullptr));
         turnWheelLabel->setText(QCoreApplication::translate("MainWindow", "Wheel", nullptr));
         turnArcPercentLabel->setText(QCoreApplication::translate("MainWindow", "Inner %", nullptr));
-        turnStartButton->setText(QCoreApplication::translate("MainWindow", "TURN", nullptr));
+        yawCfgOled->setText(QCoreApplication::translate("MainWindow", "OLED", nullptr));
         obstacleFollowStartButton->setText(QCoreApplication::translate("MainWindow", "START FACE_FOLLOW", nullptr));
         Home_pushButton->setText(QCoreApplication::translate("MainWindow", "HOME", nullptr));
         Ejecucion_pushButton->setText(QCoreApplication::translate("MainWindow", "EJECUCION", nullptr));
@@ -3322,12 +3324,14 @@ public:
         MODO_LABEL->setText(QCoreApplication::translate("MainWindow", "Modo: IDDLE", nullptr));
         pushButton->setText(QCoreApplication::translate("MainWindow", "MotorIsOn", nullptr));
         OffPushButton->setText(QCoreApplication::translate("MainWindow", "OFF", nullptr));
-        Screen1PushButton->setText(QCoreApplication::translate("MainWindow", "1", nullptr));
-        Screen2PushButton->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
-        Screen2PushButton_2->setText(QCoreApplication::translate("MainWindow", "3", nullptr));
-        obstacleOledButton->setText(QCoreApplication::translate("MainWindow", "4", nullptr));
+        OledPrevScreenButton->setText(QCoreApplication::translate("MainWindow", "Previous Screen", nullptr));
+        OledNextScreenButton->setText(QCoreApplication::translate("MainWindow", "Next Screen", nullptr));
         SerialPort_Label_8->setText(QCoreApplication::translate("MainWindow", "CLICK AC\303\201 PARA USAR EL MODO RC", nullptr));
         WifiPortLabel_2->setText(QCoreApplication::translate("MainWindow", "OLED Screen", nullptr));
+        obstacleOledButton->setText(QCoreApplication::translate("MainWindow", "8", nullptr));
+        Screen2PushButton_2->setText(QCoreApplication::translate("MainWindow", "3", nullptr));
+        Screen2PushButton->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
+        Screen1PushButton->setText(QCoreApplication::translate("MainWindow", "1", nullptr));
         toolBar->setWindowTitle(QCoreApplication::translate("MainWindow", "toolBar", nullptr));
     } // retranslateUi
 

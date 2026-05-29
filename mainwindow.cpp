@@ -193,7 +193,8 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->obstacleOledButton, &QPushButton::clicked, this, [this]() {
-        enviarInt16(CMD_CHANGE_OLED_SCREEN, 4);
+        currentOledScreen = 8;
+        enviarInt16(CMD_CHANGE_OLED_SCREEN, currentOledScreen);
         ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN OBS");
     });
 
@@ -231,7 +232,7 @@ MainWindow::MainWindow(QWidget *parent)
     configureSpin(ui->yawCfgMul, 0.010, 0.0, 1.000, 0.001, 4);
     configureSpin(ui->yawCfgAlpha, 0.70, 0.0, 0.995, 0.01, 3);
     configureSpin(ui->yawCfgStep, 90.0, 1.0, 2000.0, 10.0, 0);
-    configureSpin(ui->yawCfgLimit, 90.0, 0.0, 90.0, 0.1, 2);
+    configureSpin(ui->yawCfgLimit, 500.0, 0.0, 5000.0, 1.0, 0);
     configureSpin(ui->flCfgMotionMs, 200.0, 20.0, 2000.0, 10.0, 0);
     configureSpin(ui->flCfgBalanceMs, 400.0, 20.0, 5000.0, 10.0, 0);
     configureSpin(ui->flCfgBalanceSteering, 250.0, 0.0, 4000.0, 25.0, 0);
@@ -1365,14 +1366,30 @@ void MainWindow::on_OffPushButton_clicked(){
     ui->InfoTextEdit->append("PC: Screen 2");
 }
 void MainWindow::on_Screen1PushButton_clicked(){
-    enviarInt16(CMD_CHANGE_OLED_SCREEN, 1);
+    currentOledScreen = 1;
+    enviarInt16(CMD_CHANGE_OLED_SCREEN, currentOledScreen);
+    ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
+    ui->InfoTextEdit->append("PC: Screen 1");
+}
+void MainWindow::on_Screen2PushButton_clicked(){
+    currentOledScreen = 2;
+    enviarInt16(CMD_CHANGE_OLED_SCREEN, currentOledScreen);
     ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
     ui->InfoTextEdit->append("PC: Screen 2");
 }
-void MainWindow::on_Screen2PushButton_clicked(){
-    enviarInt16(CMD_CHANGE_OLED_SCREEN, 2);
-    ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
-    ui->InfoTextEdit->append("PC: Screen 2");
+
+void MainWindow::on_OledPrevScreenButton_clicked(){
+    currentOledScreen = (currentOledScreen <= 1) ? 9 : currentOledScreen - 1;
+    enviarInt16(CMD_CHANGE_OLED_SCREEN, currentOledScreen);
+    ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN PREV");
+    ui->InfoTextEdit->append("PC: Screen " + QString::number(currentOledScreen));
+}
+
+void MainWindow::on_OledNextScreenButton_clicked(){
+    currentOledScreen = (currentOledScreen >= 9) ? 1 : currentOledScreen + 1;
+    enviarInt16(CMD_CHANGE_OLED_SCREEN, currentOledScreen);
+    ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN NEXT");
+    ui->InfoTextEdit->append("PC: Screen " + QString::number(currentOledScreen));
 }
 
 void MainWindow::on_LDL_pushButton_clicked(){
@@ -1583,7 +1600,8 @@ void MainWindow::on_Setpoint_doubleSpinBox_textChanged(const QString &arg1)
 
 void MainWindow::on_Screen2PushButton_2_clicked()
 {
-    enviarInt16(CMD_CHANGE_OLED_SCREEN, 3);
+    currentOledScreen = 3;
+    enviarInt16(CMD_CHANGE_OLED_SCREEN, currentOledScreen);
     ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
     ui->InfoTextEdit->append("PC: Screen 3");
 }
