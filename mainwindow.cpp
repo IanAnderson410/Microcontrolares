@@ -227,13 +227,14 @@ MainWindow::MainWindow(QWidget *parent)
 
     configureSpin(ui->yawCfgKp, 100.0, 0.0, 20000.0, 100.0, 1);
     configureSpin(ui->yawCfgKd, 0.0, 0.0, 5000.0, 10.0, 1);
-    configureSpin(ui->yawCfgSp, 1.5, -10.0, 10.0, 0.05, 2);
+    configureSpin(ui->yawCfgSp, 1.5, -10.0, 90.0, 0.05, 2);
     configureSpin(ui->yawCfgMul, 0.010, 0.0, 1.000, 0.001, 4);
     configureSpin(ui->yawCfgAlpha, 0.70, 0.0, 0.995, 0.01, 3);
     configureSpin(ui->yawCfgStep, 90.0, 1.0, 2000.0, 10.0, 0);
-    configureSpin(ui->yawCfgLimit, 500.0, 0.0, 4000.0, 25.0, 0);
+    configureSpin(ui->yawCfgLimit, 90.0, 0.0, 90.0, 0.1, 2);
     configureSpin(ui->flCfgMotionMs, 200.0, 20.0, 2000.0, 10.0, 0);
     configureSpin(ui->flCfgBalanceMs, 400.0, 20.0, 5000.0, 10.0, 0);
+    configureSpin(ui->flCfgBalanceSteering, 250.0, 0.0, 4000.0, 25.0, 0);
     configureSpin(ui->turnAngleSpin, 90.0, -360.0, 360.0, 5.0, 1);
     configureSpin(ui->turnArcPercentSpin, 50.0, 0.0, 100.0, 5.0, 0);
     ui->turnArcPercentSpin->setSuffix("%");
@@ -260,7 +261,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->flCfgSend, &QPushButton::clicked, this, [this]() {
         enviarFlConfig(static_cast<float>(ui->yawCfgSp->value()),
                        static_cast<quint16>(ui->flCfgMotionMs->value()),
-                       static_cast<quint16>(ui->flCfgBalanceMs->value()));
+                       static_cast<quint16>(ui->flCfgBalanceMs->value()),
+                       static_cast<quint16>(ui->flCfgBalanceSteering->value()));
     });
 
     connect(ui->yawCfgOled, &QPushButton::clicked, this, [this]() {
@@ -332,10 +334,10 @@ void MainWindow::Every10ms(){
         uint8_t active = 0;
 
         // LÃ³gica de flechas
-        if (keyUp)    setpoint_send = 125;
-        else if (keyDown)  setpoint_send = -125;
-        if (keyLeft)  steering_send = -450;
-        else if (keyRight) steering_send = 450;
+        if (keyUp)    setpoint_send = 42;
+        else if (keyDown)  setpoint_send = -42;
+        if (keyLeft)  steering_send = 450;
+        else if (keyRight) steering_send = -450;
         if (keyUp || keyDown || keyLeft || keyRight) active = 1;
         if (active || setpoint_send != last_sp_sent||steering_send != last_st_sent ||active != last_act_sent){
             QByteArray payload;
@@ -1203,7 +1205,7 @@ void MainWindow::enviarYawConfig(float kp, float kd, float curveMultiplier, floa
                                .arg(steeringLimit, 0, 'f', 0));
 }
 
-void MainWindow::enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 balanceMs) {
+void MainWindow::enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 balanceMs, quint16 balanceOnlySteering) {
     QByteArray payload;
 
     quint32 spRaw;
@@ -1217,11 +1219,15 @@ void MainWindow::enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 bala
     quint16 balanceRaw = qToLittleEndian<quint16>(balanceMs);
     payload.append(reinterpret_cast<const char*>(&balanceRaw), sizeof(balanceRaw));
 
+    quint16 steeringRaw = qToLittleEndian<quint16>(balanceOnlySteering);
+    payload.append(reinterpret_cast<const char*>(&steeringRaw), sizeof(steeringRaw));
+
     enviarComando(CMD_SET_FL_CONFIG, payload);
-    ui->TxTextEdit->append(QString("TX: FL CONFIG SP=%1 MOVE=%2ms BAL=%3ms")
+    ui->TxTextEdit->append(QString("TX: FL CONFIG SP=%1 MOVE=%2ms BAL=%3ms STEER=%4")
                                .arg(flSetpoint, 0, 'f', 2)
                                .arg(motionMs)
-                               .arg(balanceMs));
+                               .arg(balanceMs)
+                               .arg(balanceOnlySteering));
 }
 
 void MainWindow::enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect, quint8 innerWheelPercent) {

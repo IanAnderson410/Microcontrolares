@@ -130,14 +130,9 @@ public:
     QQuickWidget *VistaSuperiorQuickWidget;
     QProgressBar *IR6_progressBar;
     QProgressBar *IR5_progressBar;
-    QWidget *layoutWidget6;
-    QVBoxLayout *verticalLayout_28;
-    QPushButton *ChangeModeIddlePushButton;
-    QPushButton *ChangeModeRCPushButton;
-    QPushButton *ChangeModeFLPushButton;
     QLineEdit *lineEdit_7;
     QWidget *PaginaPrincipal;
-    QWidget *layoutWidget7;
+    QWidget *layoutWidget6;
     QHBoxLayout *horizontalLayout_28;
     QVBoxLayout *verticalLayout_34;
     QQuickWidget *quickWidget;
@@ -189,7 +184,7 @@ public:
     QTextEdit *TxTextEdit;
     QPushButton *cleanTxPushButton;
     QWidget *PaginaCalibracin;
-    QWidget *layoutWidget8;
+    QWidget *layoutWidget7;
     QVBoxLayout *verticalLayout_22;
     QVBoxLayout *verticalLayout_13;
     QVBoxLayout *verticalLayout_14;
@@ -276,7 +271,6 @@ public:
     QPushButton *aliveUdpButton;
     QPushButton *telemetryUdpButton;
     QPushButton *httpSoftApButton;
-    QPushButton *obstacleOledButton;
     QGroupBox *yawPdQuickBox;
     QGridLayout *yawPdQuickLayout;
     QLabel *yawKpLabel;
@@ -304,6 +298,8 @@ public:
     QDoubleSpinBox *flCfgMotionMs;
     QLabel *flCfgBalanceMsLabel;
     QDoubleSpinBox *flCfgBalanceMs;
+    QLabel *flCfgBalanceSteeringLabel;
+    QDoubleSpinBox *flCfgBalanceSteering;
     QPushButton *yawCfgSend;
     QPushButton *flCfgSend;
     QPushButton *yawCfgOled;
@@ -324,6 +320,10 @@ public:
     QPushButton *ScreenCalibrar_pushbutton;
     QPushButton *SistemasDeControl_pushButton;
     QPushButton *Advanced_pushButton;
+    QVBoxLayout *verticalLayout_28;
+    QPushButton *ChangeModeIddlePushButton;
+    QPushButton *ChangeModeRCPushButton;
+    QPushButton *ChangeModeFLPushButton;
     QVBoxLayout *verticalLayout_2;
     QHBoxLayout *horizontalLayout_26;
     QLabel *TPCCONECTED;
@@ -333,12 +333,13 @@ public:
     QLabel *MODO_LABEL;
     QPushButton *pushButton;
     QVBoxLayout *verticalLayout_9;
-    QLabel *WifiPortLabel_2;
     QPushButton *OffPushButton;
     QPushButton *Screen1PushButton;
     QPushButton *Screen2PushButton;
     QPushButton *Screen2PushButton_2;
+    QPushButton *obstacleOledButton;
     QLabel *SerialPort_Label_8;
+    QLabel *WifiPortLabel_2;
     QMenuBar *menubar;
     QStatusBar *statusbar;
     QToolBar *toolBar;
@@ -483,7 +484,7 @@ public:
         centralwidget->setObjectName("centralwidget");
         layoutWidget = new QWidget(centralwidget);
         layoutWidget->setObjectName("layoutWidget");
-        layoutWidget->setGeometry(QRect(60, -10, 1171, 781));
+        layoutWidget->setGeometry(QRect(60, -10, 1191, 831));
         verticalLayout_35 = new QVBoxLayout(layoutWidget);
         verticalLayout_35->setObjectName("verticalLayout_35");
         verticalLayout_35->setContentsMargins(0, 0, 0, 0);
@@ -1485,35 +1486,10 @@ public:
         IR5_progressBar->setValue(24);
         IR5_progressBar->setTextVisible(false);
         IR5_progressBar->setOrientation(Qt::Orientation::Vertical);
-        layoutWidget6 = new QWidget(page);
-        layoutWidget6->setObjectName("layoutWidget6");
-        layoutWidget6->setGeometry(QRect(850, 20, 311, 541));
-        verticalLayout_28 = new QVBoxLayout(layoutWidget6);
-        verticalLayout_28->setObjectName("verticalLayout_28");
-        verticalLayout_28->setContentsMargins(0, 0, 0, 0);
-        ChangeModeIddlePushButton = new QPushButton(layoutWidget6);
-        ChangeModeIddlePushButton->setObjectName("ChangeModeIddlePushButton");
-        ChangeModeIddlePushButton->setMinimumSize(QSize(0, 100));
-
-        verticalLayout_28->addWidget(ChangeModeIddlePushButton);
-
-        ChangeModeRCPushButton = new QPushButton(layoutWidget6);
-        ChangeModeRCPushButton->setObjectName("ChangeModeRCPushButton");
-        ChangeModeRCPushButton->setMinimumSize(QSize(0, 100));
-
-        verticalLayout_28->addWidget(ChangeModeRCPushButton);
-
-        ChangeModeFLPushButton = new QPushButton(layoutWidget6);
-        ChangeModeFLPushButton->setObjectName("ChangeModeFLPushButton");
-        ChangeModeFLPushButton->setMinimumSize(QSize(0, 100));
-
-        verticalLayout_28->addWidget(ChangeModeFLPushButton);
-
         lineEdit_7 = new QLineEdit(page);
         lineEdit_7->setObjectName("lineEdit_7");
         lineEdit_7->setGeometry(QRect(437, 450, 431, 20));
         stackedWidget->addWidget(page);
-        layoutWidget3->raise();
         layoutWidget3->raise();
         PitchQuickWidget->raise();
         VistaSuperiorQuickWidget->raise();
@@ -1524,15 +1500,15 @@ public:
         lineEdit_7->raise();
         PaginaPrincipal = new QWidget();
         PaginaPrincipal->setObjectName("PaginaPrincipal");
-        layoutWidget7 = new QWidget(PaginaPrincipal);
-        layoutWidget7->setObjectName("layoutWidget7");
-        layoutWidget7->setGeometry(QRect(10, 20, 1131, 586));
-        horizontalLayout_28 = new QHBoxLayout(layoutWidget7);
+        layoutWidget6 = new QWidget(PaginaPrincipal);
+        layoutWidget6->setObjectName("layoutWidget6");
+        layoutWidget6->setGeometry(QRect(10, 20, 1131, 586));
+        horizontalLayout_28 = new QHBoxLayout(layoutWidget6);
         horizontalLayout_28->setObjectName("horizontalLayout_28");
         horizontalLayout_28->setContentsMargins(0, 0, 0, 0);
         verticalLayout_34 = new QVBoxLayout();
         verticalLayout_34->setObjectName("verticalLayout_34");
-        quickWidget = new QQuickWidget(layoutWidget7);
+        quickWidget = new QQuickWidget(layoutWidget6);
         quickWidget->setObjectName("quickWidget");
         quickWidget->setResizeMode(QQuickWidget::ResizeMode::SizeRootObjectToView);
 
@@ -1547,7 +1523,7 @@ public:
         verticalLayout_18->setObjectName("verticalLayout_18");
         verticalLayout_11 = new QVBoxLayout();
         verticalLayout_11->setObjectName("verticalLayout_11");
-        WifiPortLabel = new QLabel(layoutWidget7);
+        WifiPortLabel = new QLabel(layoutWidget6);
         WifiPortLabel->setObjectName("WifiPortLabel");
         WifiPortLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
@@ -1561,12 +1537,12 @@ public:
         verticalLayout_7->setObjectName("verticalLayout_7");
         horizontalLayout_5 = new QHBoxLayout();
         horizontalLayout_5->setObjectName("horizontalLayout_5");
-        label_8 = new QLabel(layoutWidget7);
+        label_8 = new QLabel(layoutWidget6);
         label_8->setObjectName("label_8");
 
         horizontalLayout_5->addWidget(label_8);
 
-        TypeIP_lineEdit = new QLineEdit(layoutWidget7);
+        TypeIP_lineEdit = new QLineEdit(layoutWidget6);
         TypeIP_lineEdit->setObjectName("TypeIP_lineEdit");
         QPalette palette13;
         palette13.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1605,12 +1581,12 @@ public:
 
         horizontalLayout_10 = new QHBoxLayout();
         horizontalLayout_10->setObjectName("horizontalLayout_10");
-        label_9 = new QLabel(layoutWidget7);
+        label_9 = new QLabel(layoutWidget6);
         label_9->setObjectName("label_9");
 
         horizontalLayout_10->addWidget(label_9);
 
-        TypePORT_lineEdit = new QLineEdit(layoutWidget7);
+        TypePORT_lineEdit = new QLineEdit(layoutWidget6);
         TypePORT_lineEdit->setObjectName("TypePORT_lineEdit");
         QPalette palette14;
         palette14.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1652,7 +1628,7 @@ public:
 
         verticalLayout_24 = new QVBoxLayout();
         verticalLayout_24->setObjectName("verticalLayout_24");
-        connect_pushButton = new QPushButton(layoutWidget7);
+        connect_pushButton = new QPushButton(layoutWidget6);
         connect_pushButton->setObjectName("connect_pushButton");
         connect_pushButton->setMinimumSize(QSize(0, 45));
 
@@ -1675,7 +1651,7 @@ public:
 
         verticalLayout_18->addLayout(verticalLayout_11);
 
-        SerialPort_Label = new QLabel(layoutWidget7);
+        SerialPort_Label = new QLabel(layoutWidget6);
         SerialPort_Label->setObjectName("SerialPort_Label");
         SerialPort_Label->setTextFormat(Qt::TextFormat::AutoText);
         SerialPort_Label->setAlignment(Qt::AlignmentFlag::AlignCenter);
@@ -1684,7 +1660,7 @@ public:
 
         horizontalLayout_24 = new QHBoxLayout();
         horizontalLayout_24->setObjectName("horizontalLayout_24");
-        SerialPort_Label_3 = new QLabel(layoutWidget7);
+        SerialPort_Label_3 = new QLabel(layoutWidget6);
         SerialPort_Label_3->setObjectName("SerialPort_Label_3");
         SerialPort_Label_3->setMaximumSize(QSize(125, 16777215));
         SerialPort_Label_3->setTextFormat(Qt::TextFormat::AutoText);
@@ -1692,7 +1668,7 @@ public:
 
         horizontalLayout_24->addWidget(SerialPort_Label_3);
 
-        OpenPortcomboBox = new QComboBox(layoutWidget7);
+        OpenPortcomboBox = new QComboBox(layoutWidget6);
         OpenPortcomboBox->addItem(QString());
         OpenPortcomboBox->addItem(QString());
         OpenPortcomboBox->addItem(QString());
@@ -1706,7 +1682,7 @@ public:
 
         horizontalLayout_24->addWidget(OpenPortcomboBox);
 
-        openPortPushButton = new QPushButton(layoutWidget7);
+        openPortPushButton = new QPushButton(layoutWidget6);
         openPortPushButton->setObjectName("openPortPushButton");
         openPortPushButton->setStyleSheet(QString::fromUtf8("QPushButton{\n"
 "	color-background: gray;\n"
@@ -1719,7 +1695,7 @@ public:
 
         horizontalLayout_23 = new QHBoxLayout();
         horizontalLayout_23->setObjectName("horizontalLayout_23");
-        WifiPortLabel_3 = new QLabel(layoutWidget7);
+        WifiPortLabel_3 = new QLabel(layoutWidget6);
         WifiPortLabel_3->setObjectName("WifiPortLabel_3");
         WifiPortLabel_3->setMaximumSize(QSize(125, 16777215));
 
@@ -1727,12 +1703,12 @@ public:
 
         verticalLayout_33 = new QVBoxLayout();
         verticalLayout_33->setObjectName("verticalLayout_33");
-        REDlineEdit = new QLineEdit(layoutWidget7);
+        REDlineEdit = new QLineEdit(layoutWidget6);
         REDlineEdit->setObjectName("REDlineEdit");
 
         verticalLayout_33->addWidget(REDlineEdit);
 
-        PASSWORDlineEdit = new QLineEdit(layoutWidget7);
+        PASSWORDlineEdit = new QLineEdit(layoutWidget6);
         PASSWORDlineEdit->setObjectName("PASSWORDlineEdit");
         QPalette palette15;
         palette15.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1769,7 +1745,7 @@ public:
 
         horizontalLayout_23->addLayout(verticalLayout_33);
 
-        REDpushButton = new QPushButton(layoutWidget7);
+        REDpushButton = new QPushButton(layoutWidget6);
         REDpushButton->setObjectName("REDpushButton");
         REDpushButton->setMinimumSize(QSize(0, 45));
 
@@ -1783,7 +1759,7 @@ public:
 
         verticalLayout_5 = new QVBoxLayout();
         verticalLayout_5->setObjectName("verticalLayout_5");
-        SerialPort_Label_4 = new QLabel(layoutWidget7);
+        SerialPort_Label_4 = new QLabel(layoutWidget6);
         SerialPort_Label_4->setObjectName("SerialPort_Label_4");
         SerialPort_Label_4->setTextFormat(Qt::TextFormat::AutoText);
         SerialPort_Label_4->setAlignment(Qt::AlignmentFlag::AlignCenter);
@@ -1794,17 +1770,17 @@ public:
         horizontalLayout_22->setObjectName("horizontalLayout_22");
         verticalLayout_10 = new QVBoxLayout();
         verticalLayout_10->setObjectName("verticalLayout_10");
-        SerialPort_Label_2 = new QLabel(layoutWidget7);
+        SerialPort_Label_2 = new QLabel(layoutWidget6);
         SerialPort_Label_2->setObjectName("SerialPort_Label_2");
 
         verticalLayout_10->addWidget(SerialPort_Label_2);
 
-        InfoTextEdit = new QTextEdit(layoutWidget7);
+        InfoTextEdit = new QTextEdit(layoutWidget6);
         InfoTextEdit->setObjectName("InfoTextEdit");
 
         verticalLayout_10->addWidget(InfoTextEdit);
 
-        cleanInfoPushButton = new QPushButton(layoutWidget7);
+        cleanInfoPushButton = new QPushButton(layoutWidget6);
         cleanInfoPushButton->setObjectName("cleanInfoPushButton");
 
         verticalLayout_10->addWidget(cleanInfoPushButton);
@@ -1814,17 +1790,17 @@ public:
 
         verticalLayout_27 = new QVBoxLayout();
         verticalLayout_27->setObjectName("verticalLayout_27");
-        SerialPort_Label_5 = new QLabel(layoutWidget7);
+        SerialPort_Label_5 = new QLabel(layoutWidget6);
         SerialPort_Label_5->setObjectName("SerialPort_Label_5");
 
         verticalLayout_27->addWidget(SerialPort_Label_5);
 
-        InfoTextEdit_2 = new QTextEdit(layoutWidget7);
+        InfoTextEdit_2 = new QTextEdit(layoutWidget6);
         InfoTextEdit_2->setObjectName("InfoTextEdit_2");
 
         verticalLayout_27->addWidget(InfoTextEdit_2);
 
-        cleanInfoPushButton_2 = new QPushButton(layoutWidget7);
+        cleanInfoPushButton_2 = new QPushButton(layoutWidget6);
         cleanInfoPushButton_2->setObjectName("cleanInfoPushButton_2");
 
         verticalLayout_27->addWidget(cleanInfoPushButton_2);
@@ -1839,17 +1815,17 @@ public:
         horizontalLayout->setObjectName("horizontalLayout");
         verticalLayout_4 = new QVBoxLayout();
         verticalLayout_4->setObjectName("verticalLayout_4");
-        SerialPort_Label_7 = new QLabel(layoutWidget7);
+        SerialPort_Label_7 = new QLabel(layoutWidget6);
         SerialPort_Label_7->setObjectName("SerialPort_Label_7");
 
         verticalLayout_4->addWidget(SerialPort_Label_7);
 
-        RxTextEdit = new QTextEdit(layoutWidget7);
+        RxTextEdit = new QTextEdit(layoutWidget6);
         RxTextEdit->setObjectName("RxTextEdit");
 
         verticalLayout_4->addWidget(RxTextEdit);
 
-        cleanRxPushButton = new QPushButton(layoutWidget7);
+        cleanRxPushButton = new QPushButton(layoutWidget6);
         cleanRxPushButton->setObjectName("cleanRxPushButton");
 
         verticalLayout_4->addWidget(cleanRxPushButton);
@@ -1859,17 +1835,17 @@ public:
 
         verticalLayout_17 = new QVBoxLayout();
         verticalLayout_17->setObjectName("verticalLayout_17");
-        SerialPort_Label_6 = new QLabel(layoutWidget7);
+        SerialPort_Label_6 = new QLabel(layoutWidget6);
         SerialPort_Label_6->setObjectName("SerialPort_Label_6");
 
         verticalLayout_17->addWidget(SerialPort_Label_6);
 
-        TxTextEdit = new QTextEdit(layoutWidget7);
+        TxTextEdit = new QTextEdit(layoutWidget6);
         TxTextEdit->setObjectName("TxTextEdit");
 
         verticalLayout_17->addWidget(TxTextEdit);
 
-        cleanTxPushButton = new QPushButton(layoutWidget7);
+        cleanTxPushButton = new QPushButton(layoutWidget6);
         cleanTxPushButton->setObjectName("cleanTxPushButton");
 
         verticalLayout_17->addWidget(cleanTxPushButton);
@@ -1889,10 +1865,10 @@ public:
         stackedWidget->addWidget(PaginaPrincipal);
         PaginaCalibracin = new QWidget();
         PaginaCalibracin->setObjectName("PaginaCalibracin");
-        layoutWidget8 = new QWidget(PaginaCalibracin);
-        layoutWidget8->setObjectName("layoutWidget8");
-        layoutWidget8->setGeometry(QRect(10, 30, 562, 559));
-        verticalLayout_22 = new QVBoxLayout(layoutWidget8);
+        layoutWidget7 = new QWidget(PaginaCalibracin);
+        layoutWidget7->setObjectName("layoutWidget7");
+        layoutWidget7->setGeometry(QRect(10, 30, 562, 559));
+        verticalLayout_22 = new QVBoxLayout(layoutWidget7);
         verticalLayout_22->setObjectName("verticalLayout_22");
         verticalLayout_22->setContentsMargins(0, 0, 0, 0);
         verticalLayout_13 = new QVBoxLayout();
@@ -1903,12 +1879,12 @@ public:
         horizontalLayout_13->setObjectName("horizontalLayout_13");
         verticalLayout_16 = new QVBoxLayout();
         verticalLayout_16->setObjectName("verticalLayout_16");
-        label_6 = new QLabel(layoutWidget8);
+        label_6 = new QLabel(layoutWidget7);
         label_6->setObjectName("label_6");
 
         verticalLayout_16->addWidget(label_6);
 
-        IR_ComboBox = new QComboBox(layoutWidget8);
+        IR_ComboBox = new QComboBox(layoutWidget7);
         IR_ComboBox->addItem(QString());
         IR_ComboBox->addItem(QString());
         IR_ComboBox->addItem(QString());
@@ -1921,12 +1897,12 @@ public:
 
         verticalLayout_15 = new QVBoxLayout();
         verticalLayout_15->setObjectName("verticalLayout_15");
-        StartCalibratePushButton = new QPushButton(layoutWidget8);
+        StartCalibratePushButton = new QPushButton(layoutWidget7);
         StartCalibratePushButton->setObjectName("StartCalibratePushButton");
 
         verticalLayout_15->addWidget(StartCalibratePushButton);
 
-        StopCalibratePushButton = new QPushButton(layoutWidget8);
+        StopCalibratePushButton = new QPushButton(layoutWidget7);
         StopCalibratePushButton->setObjectName("StopCalibratePushButton");
 
         verticalLayout_15->addWidget(StopCalibratePushButton);
@@ -1939,14 +1915,14 @@ public:
 
         horizontalLayout_19 = new QHBoxLayout();
         horizontalLayout_19->setObjectName("horizontalLayout_19");
-        label_5 = new QLabel(layoutWidget8);
+        label_5 = new QLabel(layoutWidget7);
         label_5->setObjectName("label_5");
         label_5->setMaximumSize(QSize(16777215, 20));
         label_5->setAlignment(Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignVCenter);
 
         horizontalLayout_19->addWidget(label_5);
 
-        MPU_calibrate = new QPushButton(layoutWidget8);
+        MPU_calibrate = new QPushButton(layoutWidget7);
         MPU_calibrate->setObjectName("MPU_calibrate");
         MPU_calibrate->setMaximumSize(QSize(70, 16777215));
 
@@ -1963,33 +1939,33 @@ public:
         horizontalLayout_9->setObjectName("horizontalLayout_9");
         gridLayout_8 = new QGridLayout();
         gridLayout_8->setObjectName("gridLayout_8");
-        IR_1_label_6 = new QLabel(layoutWidget8);
+        IR_1_label_6 = new QLabel(layoutWidget7);
         IR_1_label_6->setObjectName("IR_1_label_6");
 
         gridLayout_8->addWidget(IR_1_label_6, 0, 3, 1, 1);
 
-        IR_2_label_4 = new QLabel(layoutWidget8);
+        IR_2_label_4 = new QLabel(layoutWidget7);
         IR_2_label_4->setObjectName("IR_2_label_4");
 
         gridLayout_8->addWidget(IR_2_label_4, 0, 5, 1, 1);
 
-        Yaw_lineEdit = new QLineEdit(layoutWidget8);
+        Yaw_lineEdit = new QLineEdit(layoutWidget7);
         Yaw_lineEdit->setObjectName("Yaw_lineEdit");
 
         gridLayout_8->addWidget(Yaw_lineEdit, 1, 5, 1, 1);
 
-        IR_3_label_4 = new QLabel(layoutWidget8);
+        IR_3_label_4 = new QLabel(layoutWidget7);
         IR_3_label_4->setObjectName("IR_3_label_4");
 
         gridLayout_8->addWidget(IR_3_label_4, 0, 2, 1, 1);
 
-        IR_1_label_5 = new QLabel(layoutWidget8);
+        IR_1_label_5 = new QLabel(layoutWidget7);
         IR_1_label_5->setObjectName("IR_1_label_5");
         IR_1_label_5->setMaximumSize(QSize(16777215, 20));
 
         gridLayout_8->addWidget(IR_1_label_5, 0, 6, 1, 1);
 
-        AngleX_LineEdit = new QLineEdit(layoutWidget8);
+        AngleX_LineEdit = new QLineEdit(layoutWidget7);
         AngleX_LineEdit->setObjectName("AngleX_LineEdit");
         QPalette palette16;
         palette16.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2023,7 +1999,7 @@ public:
 
         gridLayout_8->addWidget(AngleX_LineEdit, 1, 6, 1, 1);
 
-        Pitch_LineEdit = new QLineEdit(layoutWidget8);
+        Pitch_LineEdit = new QLineEdit(layoutWidget7);
         Pitch_LineEdit->setObjectName("Pitch_LineEdit");
         QPalette palette17;
         palette17.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2057,7 +2033,7 @@ public:
 
         gridLayout_8->addWidget(Pitch_LineEdit, 1, 3, 1, 1);
 
-        MPU_Ay = new QLineEdit(layoutWidget8);
+        MPU_Ay = new QLineEdit(layoutWidget7);
         MPU_Ay->setObjectName("MPU_Ay");
         QPalette palette18;
         palette18.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2091,17 +2067,17 @@ public:
 
         gridLayout_8->addWidget(MPU_Ay, 1, 1, 1, 1);
 
-        IR_1_label_7 = new QLabel(layoutWidget8);
+        IR_1_label_7 = new QLabel(layoutWidget7);
         IR_1_label_7->setObjectName("IR_1_label_7");
 
         gridLayout_8->addWidget(IR_1_label_7, 0, 0, 1, 1);
 
-        IR_2_label_3 = new QLabel(layoutWidget8);
+        IR_2_label_3 = new QLabel(layoutWidget7);
         IR_2_label_3->setObjectName("IR_2_label_3");
 
         gridLayout_8->addWidget(IR_2_label_3, 0, 1, 1, 1);
 
-        MPU_Ax = new QLineEdit(layoutWidget8);
+        MPU_Ax = new QLineEdit(layoutWidget7);
         MPU_Ax->setObjectName("MPU_Ax");
         QPalette palette19;
         palette19.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2135,7 +2111,7 @@ public:
 
         gridLayout_8->addWidget(MPU_Ax, 1, 0, 1, 1);
 
-        MPU_Az = new QLineEdit(layoutWidget8);
+        MPU_Az = new QLineEdit(layoutWidget7);
         MPU_Az->setObjectName("MPU_Az");
         QPalette palette20;
         palette20.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2169,12 +2145,12 @@ public:
 
         gridLayout_8->addWidget(MPU_Az, 1, 2, 1, 1);
 
-        AcLineallineEdit = new QLineEdit(layoutWidget8);
+        AcLineallineEdit = new QLineEdit(layoutWidget7);
         AcLineallineEdit->setObjectName("AcLineallineEdit");
 
         gridLayout_8->addWidget(AcLineallineEdit, 1, 7, 1, 1);
 
-        HB_LABEL_3 = new QLabel(layoutWidget8);
+        HB_LABEL_3 = new QLabel(layoutWidget7);
         HB_LABEL_3->setObjectName("HB_LABEL_3");
         HB_LABEL_3->setMaximumSize(QSize(16777215, 20));
 
@@ -2202,7 +2178,7 @@ public:
 
         verticalLayout_25 = new QVBoxLayout();
         verticalLayout_25->setObjectName("verticalLayout_25");
-        label_4 = new QLabel(layoutWidget8);
+        label_4 = new QLabel(layoutWidget7);
         label_4->setObjectName("label_4");
         label_4->setMaximumSize(QSize(16777215, 20));
         label_4->setAlignment(Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignVCenter);
@@ -2211,12 +2187,12 @@ public:
 
         gridLayout_5 = new QGridLayout();
         gridLayout_5->setObjectName("gridLayout_5");
-        IR_8_label = new QLabel(layoutWidget8);
+        IR_8_label = new QLabel(layoutWidget7);
         IR_8_label->setObjectName("IR_8_label");
 
         gridLayout_5->addWidget(IR_8_label, 0, 7, 1, 1);
 
-        IR_5_LineEdit = new QLineEdit(layoutWidget8);
+        IR_5_LineEdit = new QLineEdit(layoutWidget7);
         IR_5_LineEdit->setObjectName("IR_5_LineEdit");
         QPalette palette21;
         palette21.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2250,7 +2226,7 @@ public:
 
         gridLayout_5->addWidget(IR_5_LineEdit, 1, 4, 1, 1);
 
-        IR_8_LineEdit = new QLineEdit(layoutWidget8);
+        IR_8_LineEdit = new QLineEdit(layoutWidget7);
         IR_8_LineEdit->setObjectName("IR_8_LineEdit");
         QPalette palette22;
         palette22.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2284,7 +2260,7 @@ public:
 
         gridLayout_5->addWidget(IR_8_LineEdit, 1, 7, 1, 1);
 
-        IR_6_LineEdit = new QLineEdit(layoutWidget8);
+        IR_6_LineEdit = new QLineEdit(layoutWidget7);
         IR_6_LineEdit->setObjectName("IR_6_LineEdit");
         QPalette palette23;
         palette23.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2318,7 +2294,7 @@ public:
 
         gridLayout_5->addWidget(IR_6_LineEdit, 1, 5, 1, 1);
 
-        IR_7_LineEdit = new QLineEdit(layoutWidget8);
+        IR_7_LineEdit = new QLineEdit(layoutWidget7);
         IR_7_LineEdit->setObjectName("IR_7_LineEdit");
         QPalette palette24;
         palette24.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2352,12 +2328,12 @@ public:
 
         gridLayout_5->addWidget(IR_7_LineEdit, 1, 6, 1, 1);
 
-        IR_4_label = new QLabel(layoutWidget8);
+        IR_4_label = new QLabel(layoutWidget7);
         IR_4_label->setObjectName("IR_4_label");
 
         gridLayout_5->addWidget(IR_4_label, 0, 3, 1, 1);
 
-        IR_3_LineEdit = new QLineEdit(layoutWidget8);
+        IR_3_LineEdit = new QLineEdit(layoutWidget7);
         IR_3_LineEdit->setObjectName("IR_3_LineEdit");
         QPalette palette25;
         palette25.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2391,7 +2367,7 @@ public:
 
         gridLayout_5->addWidget(IR_3_LineEdit, 1, 2, 1, 1);
 
-        IR_4_LineEdit = new QLineEdit(layoutWidget8);
+        IR_4_LineEdit = new QLineEdit(layoutWidget7);
         IR_4_LineEdit->setObjectName("IR_4_LineEdit");
         QPalette palette26;
         palette26.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2425,12 +2401,12 @@ public:
 
         gridLayout_5->addWidget(IR_4_LineEdit, 1, 3, 1, 1);
 
-        IR_5_label = new QLabel(layoutWidget8);
+        IR_5_label = new QLabel(layoutWidget7);
         IR_5_label->setObjectName("IR_5_label");
 
         gridLayout_5->addWidget(IR_5_label, 0, 4, 1, 1);
 
-        IR_2_LineEdit = new QLineEdit(layoutWidget8);
+        IR_2_LineEdit = new QLineEdit(layoutWidget7);
         IR_2_LineEdit->setObjectName("IR_2_LineEdit");
         QPalette palette27;
         palette27.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2464,28 +2440,28 @@ public:
 
         gridLayout_5->addWidget(IR_2_LineEdit, 1, 1, 1, 1);
 
-        IR_7_label = new QLabel(layoutWidget8);
+        IR_7_label = new QLabel(layoutWidget7);
         IR_7_label->setObjectName("IR_7_label");
         IR_7_label->setMaximumSize(QSize(50, 50));
 
         gridLayout_5->addWidget(IR_7_label, 0, 6, 1, 1);
 
-        IR_6_label = new QLabel(layoutWidget8);
+        IR_6_label = new QLabel(layoutWidget7);
         IR_6_label->setObjectName("IR_6_label");
 
         gridLayout_5->addWidget(IR_6_label, 0, 5, 1, 1);
 
-        IR_3_label = new QLabel(layoutWidget8);
+        IR_3_label = new QLabel(layoutWidget7);
         IR_3_label->setObjectName("IR_3_label");
 
         gridLayout_5->addWidget(IR_3_label, 0, 2, 1, 1);
 
-        IR_2_label = new QLabel(layoutWidget8);
+        IR_2_label = new QLabel(layoutWidget7);
         IR_2_label->setObjectName("IR_2_label");
 
         gridLayout_5->addWidget(IR_2_label, 0, 1, 1, 1);
 
-        IR_1_LineEdit = new QLineEdit(layoutWidget8);
+        IR_1_LineEdit = new QLineEdit(layoutWidget7);
         IR_1_LineEdit->setObjectName("IR_1_LineEdit");
         QPalette palette28;
         palette28.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2519,7 +2495,7 @@ public:
 
         gridLayout_5->addWidget(IR_1_LineEdit, 1, 0, 1, 1);
 
-        IR_1_label = new QLabel(layoutWidget8);
+        IR_1_label = new QLabel(layoutWidget7);
         IR_1_label->setObjectName("IR_1_label");
 
         gridLayout_5->addWidget(IR_1_label, 0, 0, 1, 1);
@@ -2534,17 +2510,17 @@ public:
         horizontalLayout_4->setObjectName("horizontalLayout_4");
         verticalLayout_6 = new QVBoxLayout();
         verticalLayout_6->setObjectName("verticalLayout_6");
-        IR_1_label_14 = new QLabel(layoutWidget8);
+        IR_1_label_14 = new QLabel(layoutWidget7);
         IR_1_label_14->setObjectName("IR_1_label_14");
 
         verticalLayout_6->addWidget(IR_1_label_14);
 
-        IR_1_label_12 = new QLabel(layoutWidget8);
+        IR_1_label_12 = new QLabel(layoutWidget7);
         IR_1_label_12->setObjectName("IR_1_label_12");
 
         verticalLayout_6->addWidget(IR_1_label_12);
 
-        IR_1_label_13 = new QLabel(layoutWidget8);
+        IR_1_label_13 = new QLabel(layoutWidget7);
         IR_1_label_13->setObjectName("IR_1_label_13");
 
         verticalLayout_6->addWidget(IR_1_label_13);
@@ -2554,17 +2530,17 @@ public:
 
         verticalLayout_3 = new QVBoxLayout();
         verticalLayout_3->setObjectName("verticalLayout_3");
-        IR_1_label_11 = new QLabel(layoutWidget8);
+        IR_1_label_11 = new QLabel(layoutWidget7);
         IR_1_label_11->setObjectName("IR_1_label_11");
 
         verticalLayout_3->addWidget(IR_1_label_11);
 
-        vel_x = new QLineEdit(layoutWidget8);
+        vel_x = new QLineEdit(layoutWidget7);
         vel_x->setObjectName("vel_x");
 
         verticalLayout_3->addWidget(vel_x);
 
-        vel_y = new QLineEdit(layoutWidget8);
+        vel_y = new QLineEdit(layoutWidget7);
         vel_y->setObjectName("vel_y");
 
         verticalLayout_3->addWidget(vel_y);
@@ -2574,18 +2550,18 @@ public:
 
         verticalLayout = new QVBoxLayout();
         verticalLayout->setObjectName("verticalLayout");
-        IR_1_label_10 = new QLabel(layoutWidget8);
+        IR_1_label_10 = new QLabel(layoutWidget7);
         IR_1_label_10->setObjectName("IR_1_label_10");
         IR_1_label_10->setMaximumSize(QSize(16777215, 20));
 
         verticalLayout->addWidget(IR_1_label_10);
 
-        PosXLineEdit = new QLineEdit(layoutWidget8);
+        PosXLineEdit = new QLineEdit(layoutWidget7);
         PosXLineEdit->setObjectName("PosXLineEdit");
 
         verticalLayout->addWidget(PosXLineEdit);
 
-        PosYLineEdit = new QLineEdit(layoutWidget8);
+        PosYLineEdit = new QLineEdit(layoutWidget7);
         PosYLineEdit->setObjectName("PosYLineEdit");
 
         verticalLayout->addWidget(PosYLineEdit);
@@ -2596,12 +2572,12 @@ public:
 
         verticalLayout_13->addLayout(horizontalLayout_4);
 
-        CurrrentDegressTextEdit = new QLineEdit(layoutWidget8);
+        CurrrentDegressTextEdit = new QLineEdit(layoutWidget7);
         CurrrentDegressTextEdit->setObjectName("CurrrentDegressTextEdit");
 
         verticalLayout_13->addWidget(CurrrentDegressTextEdit);
 
-        HB_LABEL_2 = new QLabel(layoutWidget8);
+        HB_LABEL_2 = new QLabel(layoutWidget7);
         HB_LABEL_2->setObjectName("HB_LABEL_2");
         HB_LABEL_2->setMaximumSize(QSize(16777215, 20));
 
@@ -2611,13 +2587,13 @@ public:
         horizontalLayout_2->setObjectName("horizontalLayout_2");
         verticalLayout_19 = new QVBoxLayout();
         verticalLayout_19->setObjectName("verticalLayout_19");
-        IR_1_label_15 = new QLabel(layoutWidget8);
+        IR_1_label_15 = new QLabel(layoutWidget7);
         IR_1_label_15->setObjectName("IR_1_label_15");
         IR_1_label_15->setMaximumSize(QSize(16777215, 20));
 
         verticalLayout_19->addWidget(IR_1_label_15);
 
-        MODE_LABEL = new QLineEdit(layoutWidget8);
+        MODE_LABEL = new QLineEdit(layoutWidget7);
         MODE_LABEL->setObjectName("MODE_LABEL");
         QPalette palette29;
         palette29.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2656,13 +2632,13 @@ public:
 
         verticalLayout_20 = new QVBoxLayout();
         verticalLayout_20->setObjectName("verticalLayout_20");
-        IR_1_label_16 = new QLabel(layoutWidget8);
+        IR_1_label_16 = new QLabel(layoutWidget7);
         IR_1_label_16->setObjectName("IR_1_label_16");
         IR_1_label_16->setMaximumSize(QSize(16777215, 20));
 
         verticalLayout_20->addWidget(IR_1_label_16);
 
-        INFORMATION_LABEL = new QLineEdit(layoutWidget8);
+        INFORMATION_LABEL = new QLineEdit(layoutWidget7);
         INFORMATION_LABEL->setObjectName("INFORMATION_LABEL");
         QPalette palette30;
         palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2707,7 +2683,7 @@ public:
 
         verticalLayout_21 = new QVBoxLayout();
         verticalLayout_21->setObjectName("verticalLayout_21");
-        HB_LABEL = new QLabel(layoutWidget8);
+        HB_LABEL = new QLabel(layoutWidget7);
         HB_LABEL->setObjectName("HB_LABEL");
         HB_LABEL->setMaximumSize(QSize(16777215, 20));
 
@@ -2715,7 +2691,7 @@ public:
 
         horizontalLayout_3 = new QHBoxLayout();
         horizontalLayout_3->setObjectName("horizontalLayout_3");
-        HB_FRECUENCY_LineEdit = new QLineEdit(layoutWidget8);
+        HB_FRECUENCY_LineEdit = new QLineEdit(layoutWidget7);
         HB_FRECUENCY_LineEdit->setObjectName("HB_FRECUENCY_LineEdit");
         QPalette palette31;
         palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -2749,7 +2725,7 @@ public:
 
         horizontalLayout_3->addWidget(HB_FRECUENCY_LineEdit);
 
-        SET_FRECUENCY_HB_BUTTON = new QPushButton(layoutWidget8);
+        SET_FRECUENCY_HB_BUTTON = new QPushButton(layoutWidget7);
         SET_FRECUENCY_HB_BUTTON->setObjectName("SET_FRECUENCY_HB_BUTTON");
 
         horizontalLayout_3->addWidget(SET_FRECUENCY_HB_BUTTON);
@@ -2789,11 +2765,6 @@ public:
         httpSoftApButton->setObjectName("httpSoftApButton");
 
         networkCommandLayout->addWidget(httpSoftApButton);
-
-        obstacleOledButton = new QPushButton(networkCommandBox);
-        obstacleOledButton->setObjectName("obstacleOledButton");
-
-        networkCommandLayout->addWidget(obstacleOledButton);
 
         yawPdQuickBox = new QGroupBox(PaginaComandosAvanzados);
         yawPdQuickBox->setObjectName("yawPdQuickBox");
@@ -2857,6 +2828,7 @@ public:
 
         yawCfgSp = new QDoubleSpinBox(yawConfigBox);
         yawCfgSp->setObjectName("yawCfgSp");
+        yawCfgSp->setMaximum(9999.989999999999782);
 
         yawConfigLayout->addWidget(yawCfgSp, 2, 1, 1, 1);
 
@@ -2897,6 +2869,8 @@ public:
 
         yawCfgLimit = new QDoubleSpinBox(yawConfigBox);
         yawCfgLimit->setObjectName("yawCfgLimit");
+        yawCfgLimit->setDecimals(2);
+        yawCfgLimit->setMaximum(90119.000000000000000);
 
         yawConfigLayout->addWidget(yawCfgLimit, 6, 1, 1, 1);
 
@@ -2920,70 +2894,80 @@ public:
 
         yawConfigLayout->addWidget(flCfgBalanceMs, 8, 1, 1, 1);
 
+        flCfgBalanceSteeringLabel = new QLabel(yawConfigBox);
+        flCfgBalanceSteeringLabel->setObjectName("flCfgBalanceSteeringLabel");
+
+        yawConfigLayout->addWidget(flCfgBalanceSteeringLabel, 9, 0, 1, 1);
+
+        flCfgBalanceSteering = new QDoubleSpinBox(yawConfigBox);
+        flCfgBalanceSteering->setObjectName("flCfgBalanceSteering");
+
+        yawConfigLayout->addWidget(flCfgBalanceSteering, 9, 1, 1, 1);
+
         yawCfgSend = new QPushButton(yawConfigBox);
         yawCfgSend->setObjectName("yawCfgSend");
 
-        yawConfigLayout->addWidget(yawCfgSend, 9, 0, 1, 1);
+        yawConfigLayout->addWidget(yawCfgSend, 10, 0, 1, 1);
 
         flCfgSend = new QPushButton(yawConfigBox);
         flCfgSend->setObjectName("flCfgSend");
 
-        yawConfigLayout->addWidget(flCfgSend, 9, 1, 1, 1);
+        yawConfigLayout->addWidget(flCfgSend, 10, 1, 1, 1);
 
         yawCfgOled = new QPushButton(yawConfigBox);
         yawCfgOled->setObjectName("yawCfgOled");
 
-        yawConfigLayout->addWidget(yawCfgOled, 10, 1, 1, 1);
+        yawConfigLayout->addWidget(yawCfgOled, 11, 1, 1, 1);
 
         turnAngleLabel = new QLabel(yawConfigBox);
         turnAngleLabel->setObjectName("turnAngleLabel");
 
-        yawConfigLayout->addWidget(turnAngleLabel, 11, 0, 1, 1);
+        yawConfigLayout->addWidget(turnAngleLabel, 12, 0, 1, 1);
 
         turnAngleSpin = new QDoubleSpinBox(yawConfigBox);
         turnAngleSpin->setObjectName("turnAngleSpin");
 
-        yawConfigLayout->addWidget(turnAngleSpin, 11, 1, 1, 1);
+        yawConfigLayout->addWidget(turnAngleSpin, 12, 1, 1, 1);
 
         turnModeLabel = new QLabel(yawConfigBox);
         turnModeLabel->setObjectName("turnModeLabel");
 
-        yawConfigLayout->addWidget(turnModeLabel, 12, 0, 1, 1);
+        yawConfigLayout->addWidget(turnModeLabel, 13, 0, 1, 1);
 
         turnModeCombo = new QComboBox(yawConfigBox);
         turnModeCombo->setObjectName("turnModeCombo");
 
-        yawConfigLayout->addWidget(turnModeCombo, 12, 1, 1, 1);
+        yawConfigLayout->addWidget(turnModeCombo, 13, 1, 1, 1);
 
         turnWheelLabel = new QLabel(yawConfigBox);
         turnWheelLabel->setObjectName("turnWheelLabel");
 
-        yawConfigLayout->addWidget(turnWheelLabel, 13, 0, 1, 1);
+        yawConfigLayout->addWidget(turnWheelLabel, 14, 0, 1, 1);
 
         turnWheelCombo = new QComboBox(yawConfigBox);
         turnWheelCombo->setObjectName("turnWheelCombo");
 
-        yawConfigLayout->addWidget(turnWheelCombo, 13, 1, 1, 1);
+        yawConfigLayout->addWidget(turnWheelCombo, 14, 1, 1, 1);
 
         turnArcPercentLabel = new QLabel(yawConfigBox);
         turnArcPercentLabel->setObjectName("turnArcPercentLabel");
 
-        yawConfigLayout->addWidget(turnArcPercentLabel, 14, 0, 1, 1);
+        yawConfigLayout->addWidget(turnArcPercentLabel, 15, 0, 1, 1);
 
         turnArcPercentSpin = new QDoubleSpinBox(yawConfigBox);
         turnArcPercentSpin->setObjectName("turnArcPercentSpin");
 
-        yawConfigLayout->addWidget(turnArcPercentSpin, 14, 1, 1, 1);
+        yawConfigLayout->addWidget(turnArcPercentSpin, 15, 1, 1, 1);
 
         turnStartButton = new QPushButton(yawConfigBox);
         turnStartButton->setObjectName("turnStartButton");
 
-        yawConfigLayout->addWidget(turnStartButton, 15, 1, 1, 1);
+        yawConfigLayout->addWidget(turnStartButton, 16, 1, 1, 1);
 
         obstacleFollowStartButton = new QPushButton(yawConfigBox);
         obstacleFollowStartButton->setObjectName("obstacleFollowStartButton");
 
-        yawConfigLayout->addWidget(obstacleFollowStartButton, 16, 0, 1, 2);
+        yawConfigLayout->addWidget(obstacleFollowStartButton, 17, 0, 1, 2);
 
         stackedWidget->addWidget(PaginaComandosAvanzados);
 
@@ -3025,6 +3009,29 @@ public:
 
 
         horizontalLayout_30->addLayout(horizontalLayout_29);
+
+        verticalLayout_28 = new QVBoxLayout();
+        verticalLayout_28->setObjectName("verticalLayout_28");
+        ChangeModeIddlePushButton = new QPushButton(layoutWidget);
+        ChangeModeIddlePushButton->setObjectName("ChangeModeIddlePushButton");
+        ChangeModeIddlePushButton->setMinimumSize(QSize(0, 50));
+
+        verticalLayout_28->addWidget(ChangeModeIddlePushButton);
+
+        ChangeModeRCPushButton = new QPushButton(layoutWidget);
+        ChangeModeRCPushButton->setObjectName("ChangeModeRCPushButton");
+        ChangeModeRCPushButton->setMinimumSize(QSize(0, 50));
+
+        verticalLayout_28->addWidget(ChangeModeRCPushButton);
+
+        ChangeModeFLPushButton = new QPushButton(layoutWidget);
+        ChangeModeFLPushButton->setObjectName("ChangeModeFLPushButton");
+        ChangeModeFLPushButton->setMinimumSize(QSize(0, 50));
+
+        verticalLayout_28->addWidget(ChangeModeFLPushButton);
+
+
+        horizontalLayout_30->addLayout(verticalLayout_28);
 
         verticalLayout_2 = new QVBoxLayout();
         verticalLayout_2->setObjectName("verticalLayout_2");
@@ -3083,18 +3090,13 @@ public:
 
         pushButton = new QPushButton(layoutWidget);
         pushButton->setObjectName("pushButton");
-        pushButton->setMinimumSize(QSize(50, 80));
+        pushButton->setMinimumSize(QSize(50, 160));
         pushButton->setMaximumSize(QSize(120, 16777215));
 
         horizontalLayout_30->addWidget(pushButton);
 
         verticalLayout_9 = new QVBoxLayout();
         verticalLayout_9->setObjectName("verticalLayout_9");
-        WifiPortLabel_2 = new QLabel(layoutWidget);
-        WifiPortLabel_2->setObjectName("WifiPortLabel_2");
-
-        verticalLayout_9->addWidget(WifiPortLabel_2);
-
         OffPushButton = new QPushButton(layoutWidget);
         OffPushButton->setObjectName("OffPushButton");
 
@@ -3112,8 +3114,15 @@ public:
 
         Screen2PushButton_2 = new QPushButton(layoutWidget);
         Screen2PushButton_2->setObjectName("Screen2PushButton_2");
+        Screen2PushButton_2->setMinimumSize(QSize(0, 10));
 
         verticalLayout_9->addWidget(Screen2PushButton_2);
+
+        obstacleOledButton = new QPushButton(layoutWidget);
+        obstacleOledButton->setObjectName("obstacleOledButton");
+        obstacleOledButton->setMinimumSize(QSize(0, 10));
+
+        verticalLayout_9->addWidget(obstacleOledButton);
 
 
         horizontalLayout_30->addLayout(verticalLayout_9);
@@ -3129,6 +3138,9 @@ public:
         SerialPort_Label_8->setScaledContents(true);
         SerialPort_Label_8->setAlignment(Qt::AlignmentFlag::AlignCenter);
         SerialPort_Label_8->setWordWrap(true);
+        WifiPortLabel_2 = new QLabel(centralwidget);
+        WifiPortLabel_2->setObjectName("WifiPortLabel_2");
+        WifiPortLabel_2->setGeometry(QRect(1160, 820, 98, 23));
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
@@ -3143,7 +3155,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        stackedWidget->setCurrentIndex(2);
+        stackedWidget->setCurrentIndex(4);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
@@ -3194,13 +3206,10 @@ public:
         OUT_LineEdit_5->setText(QCoreApplication::translate("MainWindow", "500", nullptr));
         CHANGE_RC_SETPOINT_label->setText(QCoreApplication::translate("MainWindow", "Cambiar Ajuste de setpoint al inclinar", nullptr));
         IR_1_label_33->setText(QCoreApplication::translate("MainWindow", "Cambiar el Limite de Inclinaci\303\263n para mover el robot", nullptr));
-        ChangeModeIddlePushButton->setText(QCoreApplication::translate("MainWindow", "Cambiar a IDDLE", nullptr));
-        ChangeModeRCPushButton->setText(QCoreApplication::translate("MainWindow", "Cambiar a RC", nullptr));
-        ChangeModeFLPushButton->setText(QCoreApplication::translate("MainWindow", "Cambiar a Follow Line", nullptr));
         lineEdit_7->setText(QCoreApplication::translate("MainWindow", "Br\303\272jula", nullptr));
         WifiPortLabel->setText(QCoreApplication::translate("MainWindow", "Conexi\303\263n Inalambrica ", nullptr));
         label_8->setText(QCoreApplication::translate("MainWindow", "Type   IP", nullptr));
-        TypeIP_lineEdit->setText(QCoreApplication::translate("MainWindow", "172.23.188.145", nullptr));
+        TypeIP_lineEdit->setText(QCoreApplication::translate("MainWindow", "192.168.1.51", nullptr));
         TypeIP_lineEdit->setPlaceholderText(QCoreApplication::translate("MainWindow", "192.168.1.XX", nullptr));
         label_9->setText(QCoreApplication::translate("MainWindow", "Type PORT", nullptr));
         TypePORT_lineEdit->setInputMask(QString());
@@ -3273,7 +3282,6 @@ public:
         aliveUdpButton->setText(QCoreApplication::translate("MainWindow", "ALIVE UDP", nullptr));
         telemetryUdpButton->setText(QCoreApplication::translate("MainWindow", "START TEL", nullptr));
         httpSoftApButton->setText(QCoreApplication::translate("MainWindow", "HTTP AP", nullptr));
-        obstacleOledButton->setText(QCoreApplication::translate("MainWindow", "OBS", nullptr));
         yawPdQuickBox->setTitle(QCoreApplication::translate("MainWindow", "Yaw PD rapido", nullptr));
         yawKpLabel->setText(QCoreApplication::translate("MainWindow", "KpY", nullptr));
         yawKpEdit->setText(QCoreApplication::translate("MainWindow", "100.0", nullptr));
@@ -3290,6 +3298,7 @@ public:
         yawCfgLimitLabel->setText(QCoreApplication::translate("MainWindow", "Limit", nullptr));
         flCfgMotionMsLabel->setText(QCoreApplication::translate("MainWindow", "Move ms", nullptr));
         flCfgBalanceMsLabel->setText(QCoreApplication::translate("MainWindow", "Bal ms", nullptr));
+        flCfgBalanceSteeringLabel->setText(QCoreApplication::translate("MainWindow", "Bal steer", nullptr));
         yawCfgSend->setText(QCoreApplication::translate("MainWindow", "APPLY", nullptr));
         flCfgSend->setText(QCoreApplication::translate("MainWindow", "APPLY FL", nullptr));
         yawCfgOled->setText(QCoreApplication::translate("MainWindow", "OLED", nullptr));
@@ -3304,17 +3313,21 @@ public:
         ScreenCalibrar_pushbutton->setText(QCoreApplication::translate("MainWindow", "Calibraci\303\263n ", nullptr));
         SistemasDeControl_pushButton->setText(QCoreApplication::translate("MainWindow", "Sistemas de Control", nullptr));
         Advanced_pushButton->setText(QCoreApplication::translate("MainWindow", "AVANZADO", nullptr));
+        ChangeModeIddlePushButton->setText(QCoreApplication::translate("MainWindow", "Cambiar a IDDLE", nullptr));
+        ChangeModeRCPushButton->setText(QCoreApplication::translate("MainWindow", "Cambiar a RC", nullptr));
+        ChangeModeFLPushButton->setText(QCoreApplication::translate("MainWindow", "Cambiar a Follow Line", nullptr));
         TPCCONECTED->setText(QString());
         label_11->setText(QCoreApplication::translate("MainWindow", "Comunicaci\303\263n inalambrica", nullptr));
         TPCCONECTED_2->setText(QString());
         MODO_LABEL->setText(QCoreApplication::translate("MainWindow", "Modo: IDDLE", nullptr));
         pushButton->setText(QCoreApplication::translate("MainWindow", "MotorIsOn", nullptr));
-        WifiPortLabel_2->setText(QCoreApplication::translate("MainWindow", "OLED Screen", nullptr));
         OffPushButton->setText(QCoreApplication::translate("MainWindow", "OFF", nullptr));
         Screen1PushButton->setText(QCoreApplication::translate("MainWindow", "1", nullptr));
         Screen2PushButton->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
         Screen2PushButton_2->setText(QCoreApplication::translate("MainWindow", "3", nullptr));
+        obstacleOledButton->setText(QCoreApplication::translate("MainWindow", "4", nullptr));
         SerialPort_Label_8->setText(QCoreApplication::translate("MainWindow", "CLICK AC\303\201 PARA USAR EL MODO RC", nullptr));
+        WifiPortLabel_2->setText(QCoreApplication::translate("MainWindow", "OLED Screen", nullptr));
         toolBar->setWindowTitle(QCoreApplication::translate("MainWindow", "toolBar", nullptr));
     } // retranslateUi
 
