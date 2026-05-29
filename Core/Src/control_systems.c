@@ -19,6 +19,7 @@
 volatile uint8_t turn_maneuver_active = 0;
 volatile uint8_t turn_maneuver_mode = TURN_MANEUVER_MODE_TWO_WHEELS;
 volatile uint8_t turn_maneuver_wheel = TURN_MANEUVER_WHEEL_LEFT;
+volatile float turn_maneuver_setpoint = 0.0f;
 volatile int16_t turn_maneuver_steering = 0;
 
 static float turn_maneuver_start_yaw_deg = 0.0f;
@@ -104,6 +105,11 @@ void PID_PITCH(void)
         steering = RC_steering;
         break;
 
+    case CONTROL_MODE_OBSTACLE_FOLLOW:
+        target_setpoint = setpoint + obstacle_follow_setpoint;
+        steering = obstacle_follow_steering;
+        break;
+
     case CONTROL_MODE_FL_INICIO:
     case CONTROL_MODE_FL_BUSQUEDA_INICIAL:
     case CONTROL_MODE_FL_SIGUIENDO:
@@ -145,8 +151,8 @@ void PID_PITCH(void)
     }
 
     if (turn_maneuver_active) {
-        target_setpoint = setpoint + RC_setpoint;
-        steering = RC_steering;
+        target_setpoint = setpoint + turn_maneuver_setpoint;
+        steering = turn_maneuver_steering;
     }
 
     error = angle_y - target_setpoint;
@@ -194,6 +200,7 @@ void FollowLine_Task(void)
     if (currentMode < CONTROL_MODE_FL_INICIO ||
         currentMode > CONTROL_MODE_FL_INGRESO_A_90 ||
         currentMode == CONTROL_MODE_FL_INICIO ||
+        currentMode == CONTROL_MODE_OBSTACLE_FOLLOW ||
         flag_calibrando_linea) {
         FL_steering = 0;
         fl_steering_slow = 0.0f;
@@ -266,7 +273,9 @@ static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
     }
 
     if (!flagMotorsAreOn ||
-        (wheel_mode != TURN_MANEUVER_MODE_ARC && currentMode != CONTROL_MODE_RC) ||
+        (wheel_mode != TURN_MANEUVER_MODE_ARC &&
+         currentMode != CONTROL_MODE_RC &&
+         currentMode != CONTROL_MODE_OBSTACLE_FOLLOW) ||
         (wheel_mode == TURN_MANEUVER_MODE_ARC && currentMode == CONTROL_MODE_IDLE)) {
         return TURN_MANEUVER_STATUS_MODE;
     }
@@ -286,10 +295,11 @@ static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
     turn_maneuver_mode = wheel_mode;
     turn_maneuver_wheel = wheel_select;
     turn_maneuver_arc_inner_ratio = ((float)inner_wheel_percent) / 100.0f;
+    turn_maneuver_setpoint = (wheel_mode == TURN_MANEUVER_MODE_ARC) ? (FL_setpoint * ARC_MANEUVER_FORWARD_RATIO) : 0.0f;
     turn_maneuver_steering = 0;
     turn_maneuver_active = 1;
     flag_RC_active = 0;
-    RC_setpoint = (wheel_mode == TURN_MANEUVER_MODE_ARC) ? (FL_setpoint * ARC_MANEUVER_FORWARD_RATIO) : 0.0f;
+    RC_setpoint = 0.0f;
     RC_steering = 0;
 
     return TURN_MANEUVER_STATUS_OK;
@@ -311,6 +321,7 @@ uint8_t TurnManeuver_StartArc(float target_angle_deg, uint8_t outer_wheel, uint8
 void TurnManeuver_Cancel(void)
 {
     turn_maneuver_active = 0;
+    turn_maneuver_setpoint = 0.0f;
     turn_maneuver_steering = 0;
     turn_maneuver_steering_slow = 0.0f;
     turn_maneuver_error_filtered = 0.0f;
@@ -327,7 +338,9 @@ void TurnManeuver_Task(void)
 
     uint32_t now = HAL_GetTick();
     if (!flagMotorsAreOn ||
-        (turn_maneuver_mode != TURN_MANEUVER_MODE_ARC && currentMode != CONTROL_MODE_RC) ||
+        (turn_maneuver_mode != TURN_MANEUVER_MODE_ARC &&
+         currentMode != CONTROL_MODE_RC &&
+         currentMode != CONTROL_MODE_OBSTACLE_FOLLOW) ||
         (turn_maneuver_mode == TURN_MANEUVER_MODE_ARC && currentMode == CONTROL_MODE_IDLE)) {
         TurnManeuver_Cancel();
         return;
@@ -385,8 +398,7 @@ void TurnManeuver_Task(void)
     turn_maneuver_steering_slow = clamp_float(turn_maneuver_steering_slow, yaw_limit);
 
     turn_maneuver_steering = (int16_t)turn_maneuver_steering_slow;
-    RC_setpoint = (turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) ?
-                  (FL_setpoint * ARC_MANEUVER_FORWARD_RATIO * forward_ratio) :
-                  0.0f;
-    RC_steering = turn_maneuver_steering;
+    turn_maneuver_setpoint = (turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) ?
+                              (FL_setpoint * ARC_MANEUVER_FORWARD_RATIO * forward_ratio) :
+                              0.0f;
 }

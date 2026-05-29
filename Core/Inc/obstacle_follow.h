@@ -37,6 +37,7 @@ extern volatile uint16_t obstacle_right_ir_baseline;
 extern volatile uint16_t obstacle_follow_target_adc;
 extern volatile int16_t obstacle_follow_adc_error;
 extern volatile int16_t obstacle_follow_yaw_error_cdeg;
+extern volatile float obstacle_follow_setpoint;
 extern volatile int16_t obstacle_follow_steering;
 extern volatile int16_t obstacle_follow_side_steering;
 extern volatile uint8_t obstacle_follow_steering_saturated;

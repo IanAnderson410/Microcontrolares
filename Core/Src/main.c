@@ -111,7 +111,7 @@ enum {
 	MODO_FL_SIGUIENDO			= 4,
 	MODO_FL_RESCATE				= 5,
 	MODO_FL_PERDIDO_FAILSAFE  	= 6,
-	MODO_FL_ESQUIVAR_OBSTACULO 	= 7,
+	MODO_OBSTACLE_FOLLOW 		= CONTROL_MODE_OBSTACLE_FOLLOW,
 	MODO_FL_INGRESO_A_90		= 8
 };
 enum {
@@ -915,6 +915,9 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 
             if (action == 0U) {
                 ObstacleFollow_Stop();
+                if (currentMode == MODO_OBSTACLE_FOLLOW) {
+                    currentMode = MODO_RC;
+                }
                 uner_ack_status = OBSTACLE_FOLLOW_STATUS_OK;
             } else if (action == 1U) {
                 uner_ack_status = ObstacleFollow_Start(side);
@@ -985,11 +988,16 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         if (payload_len >= 2) {
             int16_t requested_mode = UNER_ReadInt16LE(payload);
             if (requested_mode >= MODO_IDDLE && requested_mode <= MODO_FL_INGRESO_A_90) {
-                if (requested_mode != MODO_RC) {
+                if (requested_mode != MODO_RC && requested_mode != MODO_OBSTACLE_FOLLOW) {
                     TurnManeuver_Cancel();
                 }
-                currentMode = (uint8_t)requested_mode;
-                uner_ack_status = 0;
+                if (requested_mode != MODO_OBSTACLE_FOLLOW) {
+                    ObstacleFollow_Stop();
+                    currentMode = (uint8_t)requested_mode;
+                    uner_ack_status = 0;
+                } else {
+                    uner_ack_status = ObstacleFollow_Start(OBSTACLE_FOLLOW_SIDE_RIGHT);
+                }
             } else {
                 uner_ack_status = 1;
             }
@@ -1109,7 +1117,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_RC:
         if (payload_len >= 4) {
-            if (turn_maneuver_active) {
+            if (currentMode != MODO_RC || turn_maneuver_active) {
                 break;
             }
             uint8_t active = payload[0];

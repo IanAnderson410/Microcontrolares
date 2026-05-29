@@ -29,6 +29,7 @@ volatile uint16_t obstacle_right_ir_baseline = 0;
 volatile uint16_t obstacle_follow_target_adc = OBSTACLE_RIGHT_TARGET_ADC;
 volatile int16_t obstacle_follow_adc_error = 0;
 volatile int16_t obstacle_follow_yaw_error_cdeg = 0;
+volatile float obstacle_follow_setpoint = 0.0f;
 volatile int16_t obstacle_follow_steering = 0;
 volatile int16_t obstacle_follow_side_steering = 0;
 volatile uint8_t obstacle_follow_steering_saturated = 0;
@@ -100,14 +101,13 @@ static void ObstacleFollow_ClearOutput(void)
     obstacle_follow_side_steering = 0;
     obstacle_follow_adc_error = 0;
     obstacle_follow_yaw_error_cdeg = 0;
+    obstacle_follow_setpoint = 0.0f;
     obstacle_follow_steering_saturated = 0;
     obstacle_follow_steering_slow = 0.0f;
     obstacle_follow_yaw_error_filtered = 0.0f;
     obstacle_follow_forward_phase_tick = 0;
     obstacle_follow_motion_phase = 1U;
     obstacle_follow_lost_count = 0;
-    RC_setpoint = 0.0f;
-    RC_steering = 0;
 }
 
 uint8_t ObstacleFollow_Start(uint8_t side)
@@ -115,13 +115,17 @@ uint8_t ObstacleFollow_Start(uint8_t side)
     if (side != OBSTACLE_FOLLOW_SIDE_RIGHT) {
         return OBSTACLE_FOLLOW_STATUS_RANGE;
     }
-    if (currentMode != CONTROL_MODE_RC || turn_maneuver_active) {
+    if ((currentMode != CONTROL_MODE_RC && currentMode != CONTROL_MODE_OBSTACLE_FOLLOW) ||
+        turn_maneuver_active) {
         return OBSTACLE_FOLLOW_STATUS_MODE;
     }
 
     obstacle_follow_side = side;
     obstacle_follow_active = 1U;
+    currentMode = CONTROL_MODE_OBSTACLE_FOLLOW;
     flag_RC_active = 0U;
+    RC_setpoint = 0.0f;
+    RC_steering = 0;
     ObstacleFollow_ClearOutput();
     ObstacleFollow_UpdateRightSensor();
     obstacle_follow_yaw_reference = angle_yaw;
@@ -156,7 +160,7 @@ void ObstacleFollow_Task(void)
         return;
     }
 
-    if (currentMode != CONTROL_MODE_RC ||
+    if (currentMode != CONTROL_MODE_OBSTACLE_FOLLOW ||
         (turn_maneuver_active && obstacle_follow_state != OBSTACLE_FOLLOW_STATE_CORNER_TURN)) {
         ObstacleFollow_Stop();
         return;
@@ -169,7 +173,7 @@ void ObstacleFollow_Task(void)
         return;
     }
 
-    RC_setpoint = 0.0f;
+    obstacle_follow_setpoint = 0.0f;
 
     switch (obstacle_follow_state) {
     case OBSTACLE_FOLLOW_STATE_FACE_ALIGN:
@@ -279,6 +283,5 @@ void ObstacleFollow_Task(void)
         obstacle_follow_motion_phase = 1U;
     }
 
-    RC_setpoint = target_setpoint;
-    RC_steering = obstacle_follow_steering;
+    obstacle_follow_setpoint = target_setpoint;
 }

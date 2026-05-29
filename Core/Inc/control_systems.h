@@ -15,6 +15,7 @@ extern "C" {
 #define CONTROL_MODE_FL_SIGUIENDO          4U
 #define CONTROL_MODE_FL_RESCATE            5U
 #define CONTROL_MODE_FL_PERDIDO_FAILSAFE   6U
+#define CONTROL_MODE_OBSTACLE_FOLLOW       7U
 #define CONTROL_MODE_FL_INGRESO_A_90       8U
 #define TURN_MANEUVER_MODE_TWO_WHEELS      0U
 #define TURN_MANEUVER_MODE_ONE_WHEEL       1U
@@ -46,6 +47,8 @@ extern volatile float RC_setpoint;
 extern volatile int16_t RC_steering;
 extern volatile float FL_setpoint;
 extern volatile int16_t FL_steering;
+extern volatile float obstacle_follow_setpoint;
+extern volatile int16_t obstacle_follow_steering;
 extern volatile uint16_t FL_motion_phase_ms;
 extern volatile uint16_t FL_balance_phase_ms;
 
@@ -79,6 +82,7 @@ extern float yaw_steering_limit;
 extern volatile uint8_t turn_maneuver_active;
 extern volatile uint8_t turn_maneuver_mode;
 extern volatile uint8_t turn_maneuver_wheel;
+extern volatile float turn_maneuver_setpoint;
 extern volatile int16_t turn_maneuver_steering;
 
 void PID_PITCH(void);

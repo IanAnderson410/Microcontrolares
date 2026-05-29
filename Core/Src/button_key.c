@@ -147,8 +147,9 @@ static void KEY_HandleDoubleClick(void)
     key_last_event = KEY_EVENT_DOUBLE_CLICK;
     key_last_event_tick = HAL_GetTick();
 
-    if (currentMode >= CONTROL_MODE_FL_INICIO &&
-        currentMode <= CONTROL_MODE_FL_INGRESO_A_90) {
+    if (currentMode == CONTROL_MODE_OBSTACLE_FOLLOW ||
+        (currentMode >= CONTROL_MODE_FL_INICIO &&
+         currentMode <= CONTROL_MODE_FL_INGRESO_A_90)) {
         currentMode = CONTROL_MODE_RC;
         key_last_action = KEY_ACTION_MODE_RC;
     } else {

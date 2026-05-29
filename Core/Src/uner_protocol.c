@@ -174,7 +174,15 @@ uint8_t UNER_SendTelemetryV1(void)
     payload.roll_cdeg = (int16_t)(angle_roll * 100.0f);
     payload.yaw_cdeg = (int16_t)(angle_yaw * 100.0f);
     payload.pos_x_mm = (int32_t)(error_linea * 1000.0f);
-    payload.pos_y_mm = (int32_t)((currentMode >= CONTROL_MODE_FL_INICIO) ? FL_steering : RC_steering);
+    if (turn_maneuver_active) {
+        payload.pos_y_mm = (int32_t)turn_maneuver_steering;
+    } else if (currentMode == CONTROL_MODE_OBSTACLE_FOLLOW) {
+        payload.pos_y_mm = (int32_t)obstacle_follow_steering;
+    } else if (currentMode >= CONTROL_MODE_FL_INICIO) {
+        payload.pos_y_mm = (int32_t)FL_steering;
+    } else {
+        payload.pos_y_mm = (int32_t)RC_steering;
+    }
     int32_t velocity_mm_s = (int32_t)(imu_velocity_mps * 1000.0f);
     if (velocity_mm_s > 32767) {
         velocity_mm_s = 32767;
