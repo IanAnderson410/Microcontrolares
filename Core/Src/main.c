@@ -257,6 +257,7 @@ volatile 	int16_t   		RC_steering = 0;
 volatile 	int16_t   		FL_steering = 0;
 volatile    uint16_t        FL_motion_phase_ms = 200;
 volatile    uint16_t        FL_balance_phase_ms = 500;
+volatile    uint16_t        forward_motion_balance_only_steering = FORWARD_MOTION_DEFAULT_BALANCE_ONLY_STEERING;
 float 		paso = 0.1f; // Velocidad de inclinación
 // =================[ Protocolo UNER ] =================//
 volatile 	uint16_t 		accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
@@ -315,6 +316,31 @@ char esp01_last_rx[18] = "-";
 float showoutput=0;
 float multiplicadorYaw 	 = 0.01;
 float error=0;
+
+float ForwardMotion_Generate(float motion_setpoint,
+                             int16_t steering,
+                             uint32_t now,
+                             uint32_t *phase_tick,
+                             uint8_t *motion_phase)
+{
+    if (*phase_tick == 0U) {
+        *phase_tick = now;
+        *motion_phase = 1U;
+    }
+
+    uint16_t phase_ms = *motion_phase ? FL_motion_phase_ms : FL_balance_phase_ms;
+    if ((uint32_t)(now - *phase_tick) >= phase_ms) {
+        *phase_tick = now;
+        *motion_phase = !(*motion_phase);
+    }
+
+    int16_t steering_limit = (int16_t)forward_motion_balance_only_steering;
+    if (steering > steering_limit || steering < -steering_limit) {
+        return 0.0f;
+    }
+
+    return *motion_phase ? motion_setpoint : 0.0f;
+}
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -833,7 +859,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 curve_mul >= 0.0f && curve_mul <= 1.0f &&
                 filter_alpha >= 0.0f && filter_alpha <= 0.995f &&
                 steering_step >= 1.0f && steering_step <= 2000.0f &&
-                steering_limit >= 0.0f && steering_limit <= 4000.0f) {
+                steering_limit >= 0.0f && steering_limit <= 90.0f) {
                 Kp_yaw = kp;
                 Kd_yaw = kd;
                 multiplicadorYaw = curve_mul;
@@ -858,17 +884,23 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             float fl_sp = UNER_ReadFloatLE(payload);
             uint16_t motion_ms = (uint16_t)payload[4] | ((uint16_t)payload[5] << 8);
             uint16_t balance_ms = motion_ms;
+            uint16_t balance_only_steering = forward_motion_balance_only_steering;
 
             if (payload_len >= 8) {
                 balance_ms = (uint16_t)payload[6] | ((uint16_t)payload[7] << 8);
             }
+            if (payload_len >= 10) {
+                balance_only_steering = (uint16_t)payload[8] | ((uint16_t)payload[9] << 8);
+            }
 
-            if (fl_sp >= -10.0f && fl_sp <= 10.0f &&
+            if (fl_sp >= -10.0f && fl_sp <= 90.0f &&
                 motion_ms >= 20U && motion_ms <= 2000U &&
-                balance_ms >= 20U && balance_ms <= 5000U) {
+                balance_ms >= 20U && balance_ms <= 5000U &&
+                balance_only_steering <= 4000U) {
                 FL_setpoint = fl_sp;
                 FL_motion_phase_ms = motion_ms;
                 FL_balance_phase_ms = balance_ms;
+                forward_motion_balance_only_steering = balance_only_steering;
                 uner_ack_status = 0;
             } else {
                 uner_ack_status = 1;
@@ -1126,7 +1158,13 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             rc_last_packet_tick = HAL_GetTick();
             flag_RC_active = (active != 0) ? 1 : 0;
             if (flag_RC_active) {
-                RC_setpoint = ((float)setpoint_cmd) / 10.0f;
+                if (setpoint_cmd > 0) {
+                    RC_setpoint = 1.0f;
+                } else if (setpoint_cmd < 0) {
+                    RC_setpoint = -1.0f;
+                } else {
+                    RC_setpoint = 0.0f;
+                }
                 RC_steering = steering_cmd;
             } else {
                 RC_setpoint = 0.0f;

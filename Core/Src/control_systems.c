@@ -3,7 +3,6 @@
 #include <math.h>
 
 #define FL_RECOVERY_STEERING         700
-#define FL_BALANCE_ONLY_STEERING     250
 #define TURN_MANEUVER_MIN_ANGLE_DEG  1.0f
 #define TURN_MANEUVER_MAX_ANGLE_DEG  360.0f
 #define TURN_MANEUVER_TOLERANCE_DEG  2.0f
@@ -80,6 +79,8 @@ void PID_PITCH(void)
     float gyro_rate = giro;
     float target_setpoint = setpoint;
     int16_t steering = 0;
+    static uint32_t rc_phase_tick = 0;
+    static uint8_t rc_motion_phase = 1;
     static uint32_t fl_phase_tick = 0;
     static uint8_t fl_motion_phase = 1;
     uint32_t now = HAL_GetTick();
@@ -101,11 +102,23 @@ void PID_PITCH(void)
 
     switch (currentMode) {
     case CONTROL_MODE_RC:
-        target_setpoint = setpoint + RC_setpoint;
         steering = RC_steering;
+        if (flag_RC_active && RC_setpoint != 0.0f) {
+            target_setpoint = setpoint + ForwardMotion_Generate(FL_setpoint * RC_setpoint,
+                                                                steering,
+                                                                now,
+                                                                &rc_phase_tick,
+                                                                &rc_motion_phase);
+        } else {
+            rc_phase_tick = 0U;
+            rc_motion_phase = 1U;
+            target_setpoint = setpoint;
+        }
         break;
 
     case CONTROL_MODE_OBSTACLE_FOLLOW:
+        rc_phase_tick = 0U;
+        rc_motion_phase = 1U;
         target_setpoint = setpoint + obstacle_follow_setpoint;
         steering = obstacle_follow_steering;
         break;
@@ -113,36 +126,33 @@ void PID_PITCH(void)
     case CONTROL_MODE_FL_INICIO:
     case CONTROL_MODE_FL_BUSQUEDA_INICIAL:
     case CONTROL_MODE_FL_SIGUIENDO:
-        if (fl_phase_tick == 0U) {
-            fl_phase_tick = now;
-            fl_motion_phase = 1U;
-        }
-
-        uint16_t phase_ms = fl_motion_phase ? FL_motion_phase_ms : FL_balance_phase_ms;
-        if ((uint32_t)(now - fl_phase_tick) >= phase_ms) {
-            fl_phase_tick = now;
-            fl_motion_phase = !fl_motion_phase;
-        }
-
+        rc_phase_tick = 0U;
+        rc_motion_phase = 1U;
         steering = FL_steering;
-        if (steering > FL_BALANCE_ONLY_STEERING || steering < -FL_BALANCE_ONLY_STEERING) {
-            target_setpoint = setpoint;
-        } else {
-            target_setpoint = setpoint + (fl_motion_phase ? FL_setpoint : 0.0f);
-        }
+        target_setpoint = setpoint + ForwardMotion_Generate(FL_setpoint,
+                                                            steering,
+                                                            now,
+                                                            &fl_phase_tick,
+                                                            &fl_motion_phase);
         break;
 
     case CONTROL_MODE_FL_RESCATE:
     case CONTROL_MODE_FL_INGRESO_A_90:
+        rc_phase_tick = 0U;
+        rc_motion_phase = 1U;
         target_setpoint = setpoint;
         steering = FL_steering;
         break;
     case CONTROL_MODE_FL_PERDIDO_FAILSAFE:
+        rc_phase_tick = 0U;
+        rc_motion_phase = 1U;
         target_setpoint = setpoint;
         steering = 0;
         break;
     case CONTROL_MODE_IDLE:
     default:
+        rc_phase_tick = 0U;
+        rc_motion_phase = 1U;
         fl_phase_tick = 0U;
         fl_motion_phase = 1U;
         target_setpoint = setpoint;

@@ -17,6 +17,7 @@ extern "C" {
 #define CONTROL_MODE_FL_PERDIDO_FAILSAFE   6U
 #define CONTROL_MODE_OBSTACLE_FOLLOW       7U
 #define CONTROL_MODE_FL_INGRESO_A_90       8U
+#define FORWARD_MOTION_DEFAULT_BALANCE_ONLY_STEERING 250U
 #define TURN_MANEUVER_MODE_TWO_WHEELS      0U
 #define TURN_MANEUVER_MODE_ONE_WHEEL       1U
 #define TURN_MANEUVER_MODE_ARC             2U
@@ -51,6 +52,7 @@ extern volatile float obstacle_follow_setpoint;
 extern volatile int16_t obstacle_follow_steering;
 extern volatile uint16_t FL_motion_phase_ms;
 extern volatile uint16_t FL_balance_phase_ms;
+extern volatile uint16_t forward_motion_balance_only_steering;
 
 extern float angle_y;
 extern float angle_yaw;
@@ -88,6 +90,11 @@ extern volatile int16_t turn_maneuver_steering;
 void PID_PITCH(void);
 void PID_PITCH_ResetState(void);
 void Control_SetMotorsEnabled(uint8_t enabled);
+float ForwardMotion_Generate(float motion_setpoint,
+                             int16_t steering,
+                             uint32_t now,
+                             uint32_t *phase_tick,
+                             uint8_t *motion_phase);
 void FollowLine_Task(void);
 int16_t Calcular_PID_YAW(float error_linea);
 uint8_t TurnManeuver_Start(float target_angle_deg, uint8_t wheel_mode, uint8_t wheel_select);

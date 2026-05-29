@@ -15,7 +15,6 @@
 #define OBSTACLE_FOLLOW_IMU_STALE_MS         100U
 #define OBSTACLE_FOLLOW_YAW_LIMIT            260.0f
 #define OBSTACLE_FOLLOW_SIDE_CORRECTION      200.0f
-#define OBSTACLE_FOLLOW_BALANCE_ONLY_STEERING 250
 #define OBSTACLE_FOLLOW_CORNER_TURN_DEG      90.0f
 #define OBSTACLE_FOLLOW_RIGHT_STEER_SIGN     -1.0f
 
@@ -261,23 +260,11 @@ void ObstacleFollow_Task(void)
 
     obstacle_follow_steering = (int16_t)obstacle_follow_steering_slow;
     if (obstacle_follow_state == OBSTACLE_FOLLOW_STATE_FACE_FOLLOW) {
-        if (obstacle_follow_forward_phase_tick == 0U) {
-            obstacle_follow_forward_phase_tick = now;
-            obstacle_follow_motion_phase = 1U;
-        }
-
-        uint16_t phase_ms = obstacle_follow_motion_phase ? FL_motion_phase_ms : FL_balance_phase_ms;
-        if ((uint32_t)(now - obstacle_follow_forward_phase_tick) >= phase_ms) {
-            obstacle_follow_forward_phase_tick = now;
-            obstacle_follow_motion_phase = !obstacle_follow_motion_phase;
-        }
-
-        if (obstacle_follow_steering > OBSTACLE_FOLLOW_BALANCE_ONLY_STEERING ||
-            obstacle_follow_steering < -OBSTACLE_FOLLOW_BALANCE_ONLY_STEERING) {
-            target_setpoint = 0.0f;
-        } else {
-            target_setpoint = obstacle_follow_motion_phase ? FL_setpoint : 0.0f;
-        }
+        target_setpoint = ForwardMotion_Generate(FL_setpoint,
+                                                 obstacle_follow_steering,
+                                                 now,
+                                                 &obstacle_follow_forward_phase_tick,
+                                                 &obstacle_follow_motion_phase);
     } else {
         obstacle_follow_forward_phase_tick = 0U;
         obstacle_follow_motion_phase = 1U;

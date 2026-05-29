@@ -1,8 +1,8 @@
-../Core/Src/obstacle_follow.c:46:14:ObstacleFollow_ClampFloat	4
-../Core/Src/obstacle_follow.c:60:13:ObstacleFollow_UpdateRightSensor	6
-../Core/Src/obstacle_follow.c:91:13:ObstacleFollow_SetState	1
-../Core/Src/obstacle_follow.c:98:13:ObstacleFollow_ClearOutput	1
-../Core/Src/obstacle_follow.c:113:9:ObstacleFollow_Start	5
-../Core/Src/obstacle_follow.c:137:6:ObstacleFollow_Stop	1
-../Core/Src/obstacle_follow.c:144:9:ObstacleFollow_IsActive	1
-../Core/Src/obstacle_follow.c:149:6:ObstacleFollow_Task	34
+../Core/Src/obstacle_follow.c:45:14:ObstacleFollow_ClampFloat	4
+../Core/Src/obstacle_follow.c:59:13:ObstacleFollow_UpdateRightSensor	6
+../Core/Src/obstacle_follow.c:90:13:ObstacleFollow_SetState	1
+../Core/Src/obstacle_follow.c:97:13:ObstacleFollow_ClearOutput	1
+../Core/Src/obstacle_follow.c:112:9:ObstacleFollow_Start	5
+../Core/Src/obstacle_follow.c:136:6:ObstacleFollow_Stop	1
+../Core/Src/obstacle_follow.c:143:9:ObstacleFollow_IsActive	1
+../Core/Src/obstacle_follow.c:148:6:ObstacleFollow_Task	28
