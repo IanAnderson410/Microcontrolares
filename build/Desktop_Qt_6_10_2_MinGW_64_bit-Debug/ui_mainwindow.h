@@ -483,7 +483,7 @@ public:
         centralwidget->setObjectName("centralwidget");
         layoutWidget = new QWidget(centralwidget);
         layoutWidget->setObjectName("layoutWidget");
-        layoutWidget->setGeometry(QRect(60, -10, 1291, 811));
+        layoutWidget->setGeometry(QRect(60, -10, 1171, 781));
         verticalLayout_35 = new QVBoxLayout(layoutWidget);
         verticalLayout_35->setObjectName("verticalLayout_35");
         verticalLayout_35->setContentsMargins(0, 0, 0, 0);
@@ -1513,6 +1513,8 @@ public:
         lineEdit_7->setObjectName("lineEdit_7");
         lineEdit_7->setGeometry(QRect(437, 450, 431, 20));
         stackedWidget->addWidget(page);
+        layoutWidget3->raise();
+        layoutWidget3->raise();
         PitchQuickWidget->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
@@ -3121,7 +3123,7 @@ public:
 
         SerialPort_Label_8 = new QLabel(centralwidget);
         SerialPort_Label_8->setObjectName("SerialPort_Label_8");
-        SerialPort_Label_8->setGeometry(QRect(1370, 50, 141, 681));
+        SerialPort_Label_8->setGeometry(QRect(1260, 60, 141, 681));
         SerialPort_Label_8->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
         SerialPort_Label_8->setTextFormat(Qt::TextFormat::AutoText);
         SerialPort_Label_8->setScaledContents(true);

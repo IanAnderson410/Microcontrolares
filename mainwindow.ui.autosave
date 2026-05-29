@@ -4121,7 +4121,7 @@ QComboBox{
                            </palette>
                           </property>
                           <property name="text">
-                           <string>172.23.188.145</string>
+                           <string>192.168.1.51</string>
                           </property>
                           <property name="placeholderText">
                            <string>192.168.1.XX</string>
