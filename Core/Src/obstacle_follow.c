@@ -4,16 +4,19 @@
 #include <math.h>
 
 #define OBSTACLE_RIGHT_ADC_INDEX             6U
-#define OBSTACLE_RIGHT_TOO_CLOSE_THRESHOLD   2500U
-#define OBSTACLE_RIGHT_OK_LOW_THRESHOLD      2500U
-#define OBSTACLE_RIGHT_OK_HIGH_THRESHOLD     3000U
-#define OBSTACLE_RIGHT_TOO_FAR_THRESHOLD     3000U
+#define OBSTACLE_RIGHT_TOO_CLOSE_THRESHOLD   600U
+#define OBSTACLE_RIGHT_OK_LOW_THRESHOLD      600U
+#define OBSTACLE_RIGHT_OK_HIGH_THRESHOLD     2700U
+#define OBSTACLE_RIGHT_TOO_FAR_THRESHOLD     2700U
 #define OBSTACLE_RIGHT_LOST_THRESHOLD        3900U
-#define OBSTACLE_RIGHT_TARGET_ADC            2750U
+#define OBSTACLE_RIGHT_TARGET_ADC            1650U
 #define OBSTACLE_FOLLOW_ALIGN_CONFIRM_TICKS  10U
+#define OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS   8U
 #define OBSTACLE_FOLLOW_IMU_STALE_MS         100U
 #define OBSTACLE_FOLLOW_YAW_LIMIT            260.0f
-#define OBSTACLE_FOLLOW_SIDE_CORRECTION      260.0f
+#define OBSTACLE_FOLLOW_SIDE_CORRECTION      200.0f
+#define OBSTACLE_FOLLOW_BALANCE_ONLY_STEERING 250
+#define OBSTACLE_FOLLOW_CORNER_TURN_DEG      90.0f
 #define OBSTACLE_FOLLOW_RIGHT_STEER_SIGN     -1.0f
 
 volatile uint8_t obstacle_follow_active = 0;
@@ -34,6 +37,9 @@ static float obstacle_follow_yaw_reference = 0.0f;
 static float obstacle_follow_yaw_error_filtered = 0.0f;
 static float obstacle_follow_steering_slow = 0.0f;
 static uint8_t obstacle_follow_align_count = 0;
+static uint8_t obstacle_follow_lost_count = 0;
+static uint32_t obstacle_follow_forward_phase_tick = 0;
+static uint8_t obstacle_follow_motion_phase = 1;
 static uint8_t obstacle_right_filter_ready = 0;
 
 static float ObstacleFollow_ClampFloat(float value, float limit)
@@ -85,6 +91,7 @@ static void ObstacleFollow_SetState(uint8_t state)
 {
     obstacle_follow_state = state;
     obstacle_follow_align_count = 0;
+    obstacle_follow_lost_count = 0;
 }
 
 static void ObstacleFollow_ClearOutput(void)
@@ -96,6 +103,9 @@ static void ObstacleFollow_ClearOutput(void)
     obstacle_follow_steering_saturated = 0;
     obstacle_follow_steering_slow = 0.0f;
     obstacle_follow_yaw_error_filtered = 0.0f;
+    obstacle_follow_forward_phase_tick = 0;
+    obstacle_follow_motion_phase = 1U;
+    obstacle_follow_lost_count = 0;
     RC_setpoint = 0.0f;
     RC_steering = 0;
 }
@@ -136,6 +146,7 @@ void ObstacleFollow_Task(void)
 {
     float target_steering = 0.0f;
     float side_steering = 0.0f;
+    float target_setpoint = 0.0f;
     uint32_t now = HAL_GetTick();
 
     ObstacleFollow_UpdateRightSensor();
@@ -145,7 +156,8 @@ void ObstacleFollow_Task(void)
         return;
     }
 
-    if (currentMode != CONTROL_MODE_RC || turn_maneuver_active) {
+    if (currentMode != CONTROL_MODE_RC ||
+        (turn_maneuver_active && obstacle_follow_state != OBSTACLE_FOLLOW_STATE_CORNER_TURN)) {
         ObstacleFollow_Stop();
         return;
     }
@@ -179,10 +191,21 @@ void ObstacleFollow_Task(void)
 
     case OBSTACLE_FOLLOW_STATE_FACE_FOLLOW:
         if (obstacle_right_face_state == OBSTACLE_RIGHT_FACE_LOST) {
-            ObstacleFollow_ClearOutput();
-            ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
+            if (obstacle_follow_lost_count < OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
+                obstacle_follow_lost_count++;
+            }
+            if (obstacle_follow_lost_count >= OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
+                ObstacleFollow_ClearOutput();
+                if (TurnManeuver_Start(-95, TURN_MANEUVER_MODE_ONE_WHEEL,
+                                       TURN_MANEUVER_WHEEL_LEFT) == TURN_MANEUVER_STATUS_OK) {
+                    ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_CORNER_TURN);
+                } else {
+                    ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
+                }
+            }
             break;
         }
+        obstacle_follow_lost_count = 0;
 
         if (obstacle_right_face_state == OBSTACLE_RIGHT_FACE_TOO_CLOSE) {
             side_steering = -OBSTACLE_FOLLOW_RIGHT_STEER_SIGN * OBSTACLE_FOLLOW_SIDE_CORRECTION;
@@ -190,6 +213,16 @@ void ObstacleFollow_Task(void)
             side_steering = OBSTACLE_FOLLOW_RIGHT_STEER_SIGN * OBSTACLE_FOLLOW_SIDE_CORRECTION;
         }
         target_steering += side_steering;
+        break;
+
+    case OBSTACLE_FOLLOW_STATE_CORNER_TURN:
+        if (turn_maneuver_active) {
+            obstacle_follow_steering = 0;
+            obstacle_follow_side_steering = 0;
+            return;
+        }
+        ObstacleFollow_ClearOutput();
+        ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
         break;
 
     case OBSTACLE_FOLLOW_STATE_IDLE:
@@ -223,5 +256,29 @@ void ObstacleFollow_Task(void)
                                                               OBSTACLE_FOLLOW_YAW_LIMIT);
 
     obstacle_follow_steering = (int16_t)obstacle_follow_steering_slow;
+    if (obstacle_follow_state == OBSTACLE_FOLLOW_STATE_FACE_FOLLOW) {
+        if (obstacle_follow_forward_phase_tick == 0U) {
+            obstacle_follow_forward_phase_tick = now;
+            obstacle_follow_motion_phase = 1U;
+        }
+
+        uint16_t phase_ms = obstacle_follow_motion_phase ? FL_motion_phase_ms : FL_balance_phase_ms;
+        if ((uint32_t)(now - obstacle_follow_forward_phase_tick) >= phase_ms) {
+            obstacle_follow_forward_phase_tick = now;
+            obstacle_follow_motion_phase = !obstacle_follow_motion_phase;
+        }
+
+        if (obstacle_follow_steering > OBSTACLE_FOLLOW_BALANCE_ONLY_STEERING ||
+            obstacle_follow_steering < -OBSTACLE_FOLLOW_BALANCE_ONLY_STEERING) {
+            target_setpoint = 0.0f;
+        } else {
+            target_setpoint = obstacle_follow_motion_phase ? FL_setpoint : 0.0f;
+        }
+    } else {
+        obstacle_follow_forward_phase_tick = 0U;
+        obstacle_follow_motion_phase = 1U;
+    }
+
+    RC_setpoint = target_setpoint;
     RC_steering = obstacle_follow_steering;
 }
