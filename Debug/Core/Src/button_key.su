@@ -1,5 +1,5 @@
 ../Core/Src/button_key.c:22:6:KEY_Init	32	static
 ../Core/Src/button_key.c:34:6:KEY_CalibrationTask	24	static
 ../Core/Src/button_key.c:127:13:KEY_HandleSingleClick	8	static
-../Core/Src/button_key.c:145:13:KEY_HandleDoubleClick	8	static
-../Core/Src/button_key.c:163:13:KEY_HandleLongPress	8	static
+../Core/Src/button_key.c:152:13:KEY_HandleDoubleClick	8	static
+../Core/Src/button_key.c:176:13:KEY_HandleLongPress	8	static

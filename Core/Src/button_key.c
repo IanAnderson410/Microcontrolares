@@ -133,10 +133,17 @@ static void KEY_HandleSingleClick(void)
         Finalizar_Calibracion_Linea();
         currentMode = CONTROL_MODE_FL_BUSQUEDA_INICIAL;
         key_last_action = KEY_ACTION_CAL_DONE;
-    } else {
+    } else if (currentMode == CONTROL_MODE_IDLE) {
+        TurnManeuver_Cancel();
+        flag_RC_active = 0;
+        RC_setpoint = 0.0f;
+        RC_steering = 0;
+        FL_steering = 0;
+        currentMode = CONTROL_MODE_IDLE;
         Iniciar_Calibracion_Linea();
-        currentMode = CONTROL_MODE_FL_INICIO;
         key_last_action = KEY_ACTION_CAL_START;
+    } else {
+        key_last_action = KEY_ACTION_NONE;
     }
 
     screenScheduler();
@@ -146,6 +153,12 @@ static void KEY_HandleDoubleClick(void)
 {
     key_last_event = KEY_EVENT_DOUBLE_CLICK;
     key_last_event_tick = HAL_GetTick();
+
+    if (flag_calibrando_linea) {
+        key_last_action = KEY_ACTION_NONE;
+        screenScheduler();
+        return;
+    }
 
     if (currentMode == CONTROL_MODE_OBSTACLE_FOLLOW ||
         (currentMode >= CONTROL_MODE_FL_INICIO &&

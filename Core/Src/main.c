@@ -190,7 +190,7 @@ ESP01_App_t ESP = {0};
 volatile	uint8_t			currentMode = MODO_IDDLE;
 // ================= [ Flags ] ================= //
 volatile	uint8_t			flagWIFI				=   0;
-volatile	uint8_t 		flagOLED 				= 	2;
+volatile	uint8_t 		flagOLED 				= 	1;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
@@ -447,6 +447,270 @@ void screenScheduler(void){
     uint8_t line_s1 = estado_sensores[1] ? 1U : 0U;
     uint8_t line_s2 = estado_sensores[2] ? 1U : 0U;
     uint8_t line_s3 = estado_sensores[3] ? 1U : 0U;
+    const char *screen_desc = "SYS";
+
+    if (flagOLED < 1U || flagOLED > 9U) {
+        flagOLED = 1U;
+    }
+
+    switch (flagOLED) {
+    case 1: screen_desc = "WIFI"; break;
+    case 2: screen_desc = "ADC"; break;
+    case 3: screen_desc = "PIDP"; break;
+    case 4: screen_desc = "YAW"; break;
+    case 5: screen_desc = "SYS"; break;
+    case 6: screen_desc = "MPU"; break;
+    case 7: screen_desc = "COMP"; break;
+    case 8: screen_desc = "BOX"; break;
+    case 9: screen_desc = "KEY"; break;
+    default: break;
+    }
+
+    snprintf(msg, sizeof(msg), "S:%u | M:%u | %s", flagOLED, currentMode, screen_desc);
+    SSD1306_GotoXY(0, 0);
+    SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+    if (flagOLED == 1) {
+        SSD1306_GotoXY(0, 10);
+        SSD1306_Puts("WIRELESS", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 20);
+        snprintf(msg, sizeof(msg), "IP:%s", ip_address);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 30);
+        snprintf(msg, sizeof(msg), "W:%d U:%u/%u", flagWIFI, ESP.udp_connected, ESP.udp_started);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 40);
+        snprintf(msg, sizeof(msg), "TX:%lu RX:%lu", (unsigned long)esp01_tx_count, (unsigned long)esp01_rx_count);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 50);
+        snprintf(msg, sizeof(msg), "P:%lu A:%lu B:%lu", (unsigned long)esp01_payload_count,
+                 (unsigned long)esp01_ack_count, (unsigned long)uner_tx_busy_count);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        OLED_RequestUpdate();
+        return;
+    }
+
+    if (flagOLED == 2) {
+        for (int i = 0; i < 8; i++) {
+            uint8_t barWidth = (uint8_t)((adc_filtrado[i] * 42U) / 4095U);
+            uint8_t yPos = 9U + (uint8_t)(i * 7U);
+            snprintf(msg, sizeof(msg), "%u:%4u", i, adc_filtrado[i]);
+            SSD1306_GotoXY(0, yPos);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+            SSD1306_DrawRectangle(48, yPos, 42, 5, SSD1306_COLOR_WHITE);
+            SSD1306_DrawFilledRectangle(48, yPos, barWidth, 5, SSD1306_COLOR_WHITE);
+        }
+        OLED_RequestUpdate();
+        return;
+    }
+
+    if (flagOLED == 3) {
+        SSD1306_GotoXY(0, 10);
+        snprintf(msg, sizeof(msg), "P:%4.1f SP:%4.1f", angle_y, setpoint);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 20);
+        snprintf(msg, sizeof(msg), "E:%5.1f O:%5.0f", error, output);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 30);
+        snprintf(msg, sizeof(msg), "P:%4.0f I:%4.0f", P, I);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 40);
+        snprintf(msg, sizeof(msg), "D:%4.0f G:%4.1f", D, giro);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 50);
+        snprintf(msg, sizeof(msg), "Lost:%lu S:%lu", (unsigned long)control_missed_slots,
+                 (unsigned long)control_slots_serviced);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        OLED_RequestUpdate();
+        return;
+    }
+
+    if (flagOLED == 4) {
+        SSD1306_GotoXY(0, 10);
+        snprintf(msg, sizeof(msg), "Yaw:%5.1f G:%4.1f", angle_yaw, giro_z);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 20);
+        snprintf(msg, sizeof(msg), "L:%u%u%u%u E:%+.2f", line_s3, line_s2, line_s1, line_s0, error_linea);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 30);
+        snprintf(msg, sizeof(msg), "St:%d Lim:%4.0f", FL_steering, yaw_steering_limit);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 40);
+        snprintf(msg, sizeof(msg), "Kp:%4.0f Kd:%3.0f", Kp_yaw, Kd_yaw);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 50);
+        snprintf(msg, sizeof(msg), "IP:%.15s", ip_address);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        OLED_RequestUpdate();
+        return;
+    }
+
+    if (flagOLED == 5) {
+        uint32_t now = HAL_GetTick();
+        SSD1306_GotoXY(0, 10);
+        snprintf(msg, sizeof(msg), "Up:%lus Mot:%u", (unsigned long)(now / 1000U), flagMotorsAreOn);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 20);
+        snprintf(msg, sizeof(msg), "Cal:%u Ready:%u", flag_calibrando_linea, flagCalibrationIsReady);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 30);
+        snprintf(msg, sizeof(msg), "V:%+.2f A:%+.2f", imu_velocity_mps, imu_accel_forward_mps2);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 40);
+        snprintf(msg, sizeof(msg), "IP:%s", ip_address);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 50);
+        snprintf(msg, sizeof(msg), "OLED:%lu E:%lu", (unsigned long)oled_frames_done,
+                 (unsigned long)oled_i2c_errors);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        OLED_RequestUpdate();
+        return;
+    }
+
+    if (flagOLED == 6) {
+        SSD1306_GotoXY(0, 10);
+        snprintf(msg, sizeof(msg), "P:%4.1f R:%4.1f", angle_y, angle_roll);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 20);
+        snprintf(msg, sizeof(msg), "Y:%5.1f Gy:%4.1f", angle_yaw, giro_z);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 30);
+        snprintf(msg, sizeof(msg), "AX:%d", axRaw);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(64, 30);
+        snprintf(msg, sizeof(msg), "AY:%d", ayRaw);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 40);
+        snprintf(msg, sizeof(msg), "AZ:%d", azRaw);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(64, 40);
+        snprintf(msg, sizeof(msg), "GP:%d", gyPitchRaw);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 50);
+        snprintf(msg, sizeof(msg), "GZ:%d C:%u", gzYawRaw, flagCalibrationIsReady);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        OLED_RequestUpdate();
+        return;
+    }
+
+    if (flagOLED == 7) {
+        static uint8_t compass_ready = 0;
+        static float compass_north_yaw = 0.0f;
+        if (!compass_ready) {
+            compass_north_yaw = angle_yaw;
+            compass_ready = 1U;
+        }
+        float rel_yaw = angle_yaw - compass_north_yaw;
+        while (rel_yaw < 0.0f) rel_yaw += 360.0f;
+        while (rel_yaw >= 360.0f) rel_yaw -= 360.0f;
+
+        const int16_t cx = 39;
+        const int16_t cy = 36;
+        const int16_t r = 21;
+        const float rad = rel_yaw * 0.01745329252f;
+        const int16_t nx = (int16_t)(cx + sinf(rad) * 17.0f);
+        const int16_t ny = (int16_t)(cy - cosf(rad) * 17.0f);
+        const int16_t tx = (int16_t)(cx - sinf(rad) * 7.0f);
+        const int16_t ty = (int16_t)(cy + cosf(rad) * 7.0f);
+
+        SSD1306_DrawCircle(cx, cy, r, SSD1306_COLOR_WHITE);
+        SSD1306_DrawCircle(cx, cy, r - 1, SSD1306_COLOR_WHITE);
+        SSD1306_DrawLine(cx, cy - r, cx, cy - r + 4, SSD1306_COLOR_WHITE);
+        SSD1306_DrawLine(cx + r - 4, cy, cx + r, cy, SSD1306_COLOR_WHITE);
+        SSD1306_DrawLine(cx, cy + r - 4, cx, cy + r, SSD1306_COLOR_WHITE);
+        SSD1306_DrawLine(cx - r, cy, cx - r + 4, cy, SSD1306_COLOR_WHITE);
+        SSD1306_DrawLine(tx, ty, nx, ny, SSD1306_COLOR_WHITE);
+        SSD1306_DrawFilledCircle(nx, ny, 2, SSD1306_COLOR_WHITE);
+        SSD1306_DrawFilledCircle(cx, cy, 1, SSD1306_COLOR_WHITE);
+
+        SSD1306_GotoXY(36, 12);
+        SSD1306_Puts("N", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(13, 33);
+        SSD1306_Puts("W", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(61, 33);
+        SSD1306_Puts("E", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(36, 51);
+        SSD1306_Puts("S", &Font_7x10, SSD1306_COLOR_WHITE);
+
+        SSD1306_GotoXY(84, 18);
+        SSD1306_Puts("YAW", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(82, 32);
+        snprintf(msg, sizeof(msg), "%6.1f", rel_yaw);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(93, 44);
+        SSD1306_Puts("deg", &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(82, 54);
+        snprintf(msg, sizeof(msg), "Raw:%4.0f", angle_yaw);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        OLED_RequestUpdate();
+        return;
+    }
+
+    if (flagOLED == 8) {
+        SSD1306_GotoXY(0, 10);
+        snprintf(msg, sizeof(msg), "A:%u S:%u F:%u", obstacle_follow_active,
+                 obstacle_follow_state, obstacle_right_face_state);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 20);
+        snprintf(msg, sizeof(msg), "R:%4u F:%4u", obstacle_right_ir_raw, obstacle_right_ir_filtered);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 30);
+        snprintf(msg, sizeof(msg), "Fr:%4u %u", obstacle_ir_filtered, obstacle_detected);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 40);
+        snprintf(msg, sizeof(msg), "T:%4u E:%5d", obstacle_follow_target_adc, obstacle_follow_adc_error);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 50);
+        snprintf(msg, sizeof(msg), "St:%4d T%u S%u", obstacle_follow_steering,
+                 turn_maneuver_active, obstacle_follow_steering_saturated);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        OLED_RequestUpdate();
+        return;
+    }
+
+    if (flagOLED == 9) {
+        const char *event_label = "--";
+        const char *action_label = "--";
+        uint32_t now = HAL_GetTick();
+        uint32_t event_age_s = (key_last_event == KEY_EVENT_NONE) ? 0U :
+                               (uint32_t)((now - key_last_event_tick) / 1000U);
+
+        switch (key_last_event) {
+        case KEY_EVENT_SHORT_PRESS: event_label = "S"; break;
+        case KEY_EVENT_DOUBLE_CLICK: event_label = "D"; break;
+        case KEY_EVENT_LONG_PRESS: event_label = "L"; break;
+        default: break;
+        }
+
+        switch (key_last_action) {
+        case KEY_ACTION_CAL_START: action_label = "CAL+"; break;
+        case KEY_ACTION_CAL_DONE: action_label = "CAL-"; break;
+        case KEY_ACTION_MODE_RC: action_label = "RC"; break;
+        case KEY_ACTION_MODE_FL: action_label = "FL"; break;
+        case KEY_ACTION_MOTORS_ON: action_label = "ON"; break;
+        case KEY_ACTION_MOTORS_OFF: action_label = "OFF"; break;
+        default: break;
+        }
+
+        SSD1306_GotoXY(0, 10);
+        snprintf(msg, sizeof(msg), "Btn:%c Raw:%c", key_stable_pressed ? 'P' : 'R',
+                 key_raw_pressed ? 'P' : 'R');
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 20);
+        snprintf(msg, sizeof(msg), "Pend:%u Long:%u", key_click_pending, key_long_press_done);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 30);
+        snprintf(msg, sizeof(msg), "Hold:%lu/%ums", (unsigned long)key_press_duration_ms, KEY_LONG_PRESS_MS);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 40);
+        snprintf(msg, sizeof(msg), "E:%s A:%s %lus", event_label, action_label, (unsigned long)event_age_s);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 50);
+        snprintf(msg, sizeof(msg), "Cal:%u Mot:%u", flag_calibrando_linea, flagMotorsAreOn);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        OLED_RequestUpdate();
+        return;
+    }
 
     if (flagOLED == 0) {
         SSD1306_GotoXY(0, 0);
@@ -859,7 +1123,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 curve_mul >= 0.0f && curve_mul <= 1.0f &&
                 filter_alpha >= 0.0f && filter_alpha <= 0.995f &&
                 steering_step >= 1.0f && steering_step <= 2000.0f &&
-                steering_limit >= 0.0f && steering_limit <= 90.0f) {
+                steering_limit >= 0.0f && steering_limit <= 5000.0f) {
                 Kp_yaw = kp;
                 Kd_yaw = kd;
                 multiplicadorYaw = curve_mul;
@@ -1019,7 +1283,9 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
     case CMD_CHANGE_MODE:
         if (payload_len >= 2) {
             int16_t requested_mode = UNER_ReadInt16LE(payload);
-            if (requested_mode >= MODO_IDDLE && requested_mode <= MODO_FL_INGRESO_A_90) {
+            if (flag_calibrando_linea) {
+                uner_ack_status = 1;
+            } else if (requested_mode >= MODO_IDDLE && requested_mode <= MODO_FL_INGRESO_A_90) {
                 if (requested_mode != MODO_RC && requested_mode != MODO_OBSTACLE_FOLLOW) {
                     TurnManeuver_Cancel();
                 }
@@ -1132,7 +1398,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             if (payload_len >= 2) {
                 requested_page = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
             }
-            if (requested_page <= 5) {
+            if (requested_page >= 1U && requested_page <= 9U) {
                 flagOLED = (uint8_t)requested_page;
                 uner_ack_status = 0;
             } else {
@@ -1218,12 +1484,22 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         }
         break;
     case CMD_IR_INICIAR_CALIBRACION:
-        Iniciar_Calibracion_Linea();
-        currentMode = MODO_FL_INICIO;
+        if (currentMode == MODO_IDDLE && !flag_calibrando_linea) {
+            TurnManeuver_Cancel();
+            ObstacleFollow_Stop();
+            flag_RC_active = 0;
+            RC_setpoint = 0.0f;
+            RC_steering = 0;
+            FL_steering = 0;
+            currentMode = MODO_IDDLE;
+            Iniciar_Calibracion_Linea();
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 1;
+        }
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_IR_INICIAR_CALIBRACION;
             uner_ack_seq = seq;
-            uner_ack_status = 0;
             uner_ack_pending = 1;
         }
         break;
@@ -1461,14 +1737,16 @@ int main(void)
 		if(flag10ms){
 			flag10ms = 0;
 			Telemetry_UpdateMPU();
-			ObstacleFollow_Task();
-			FollowLine_Task();
-			if (currentMode == MODO_RC && flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
-				flag_RC_active = 0;
-				RC_setpoint = 0.0f;
-				RC_steering = 0;
+			if (!flag_calibrando_linea) {
+				ObstacleFollow_Task();
+				FollowLine_Task();
+				if (currentMode == MODO_RC && flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
+					flag_RC_active = 0;
+					RC_setpoint = 0.0f;
+					RC_steering = 0;
+				}
+				TurnManeuver_Task();
 			}
-			TurnManeuver_Task();
 			PID_PITCH();
 			control_slots_serviced++;
 			OLED_Service();
