@@ -16,7 +16,7 @@
 #define OBSTACLE_FOLLOW_YAW_LIMIT            260.0f
 #define OBSTACLE_FOLLOW_SIDE_CORRECTION      200.0f
 #define OBSTACLE_FOLLOW_CORNER_TURN_DEG      90.0f
-#define OBSTACLE_FOLLOW_RIGHT_STEER_SIGN     -1.0f
+#define OBSTACLE_FOLLOW_RIGHT_STEER_SIGN     1.0f
 
 volatile uint8_t obstacle_follow_active = 0;
 volatile uint8_t obstacle_follow_state = OBSTACLE_FOLLOW_STATE_IDLE;
@@ -145,8 +145,7 @@ uint8_t ObstacleFollow_IsActive(void)
     return obstacle_follow_active;
 }
 
-void ObstacleFollow_Task(void)
-{
+void ObstacleFollow_Task(void){
     float target_steering = 0.0f;
     float side_steering = 0.0f;
     float target_setpoint = 0.0f;
@@ -154,20 +153,14 @@ void ObstacleFollow_Task(void)
 
     ObstacleFollow_UpdateRightSensor();
     obstacle_follow_adc_error = (int16_t)obstacle_right_ir_filtered - (int16_t)OBSTACLE_RIGHT_TARGET_ADC;
-
-    if (!obstacle_follow_active) {
-        return;
-    }
+    if (!obstacle_follow_active)   return;
 
     if (currentMode != CONTROL_MODE_OBSTACLE_FOLLOW ||
         (turn_maneuver_active && obstacle_follow_state != OBSTACLE_FOLLOW_STATE_CORNER_TURN)) {
         ObstacleFollow_Stop();
         return;
     }
-
-    if (!flagMotorsAreOn ||
-        imu_last_update_tick == 0U ||
-        (uint32_t)(now - imu_last_update_tick) > OBSTACLE_FOLLOW_IMU_STALE_MS) {
+    if (!flagMotorsAreOn||imu_last_update_tick == 0U||(uint32_t)(now - imu_last_update_tick) > OBSTACLE_FOLLOW_IMU_STALE_MS){
         ObstacleFollow_ClearOutput();
         return;
     }
@@ -199,8 +192,8 @@ void ObstacleFollow_Task(void)
             }
             if (obstacle_follow_lost_count >= OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
                 ObstacleFollow_ClearOutput();
-                if (TurnManeuver_Start(-95, TURN_MANEUVER_MODE_ONE_WHEEL,
-                                       TURN_MANEUVER_WHEEL_LEFT) == TURN_MANEUVER_STATUS_OK) {
+                if (TurnManeuver_Start(90, TURN_MANEUVER_MODE_ONE_WHEEL,
+                                       TURN_MANEUVER_WHEEL_RIGHT) == TURN_MANEUVER_STATUS_OK) {
                     ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_CORNER_TURN);
                 } else {
                     ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
@@ -260,7 +253,7 @@ void ObstacleFollow_Task(void)
 
     obstacle_follow_steering = (int16_t)obstacle_follow_steering_slow;
     if (obstacle_follow_state == OBSTACLE_FOLLOW_STATE_FACE_FOLLOW) {
-        target_setpoint = ForwardMotion_Generate(FL_setpoint,
+        target_setpoint = ForwardMotion_Generate(-FL_setpoint,
                                                  obstacle_follow_steering,
                                                  now,
                                                  &obstacle_follow_forward_phase_tick,

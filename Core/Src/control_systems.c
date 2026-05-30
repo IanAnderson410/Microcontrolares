@@ -129,11 +129,7 @@ void PID_PITCH(void)
         rc_phase_tick = 0U;
         rc_motion_phase = 1U;
         steering = FL_steering;
-        target_setpoint = setpoint + ForwardMotion_Generate(FL_setpoint,
-                                                            steering,
-                                                            now,
-                                                            &fl_phase_tick,
-                                                            &fl_motion_phase);
+        target_setpoint = setpoint + ForwardMotion_Generate(FL_setpoint, steering, now, &fl_phase_tick, &fl_motion_phase);
         break;
 
     case CONTROL_MODE_FL_RESCATE:
