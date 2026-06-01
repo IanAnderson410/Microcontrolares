@@ -171,10 +171,10 @@ void PID_PITCH(void)
 
     error = angle_y - target_setpoint;
     integral += error * CONTROL_DT_PID;
-    if (integral > 1200.0f) {
-        integral = 1200.0f;
-    } else if (integral < -1200.0f) {
-        integral = -1200.0f;
+    if (integral > integral_limit) {
+        integral = integral_limit;
+    } else if (integral < -integral_limit) {
+        integral = -integral_limit;
     }
     P = Kp * error;
     I = Ki * integral;

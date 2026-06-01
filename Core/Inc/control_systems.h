@@ -59,6 +59,7 @@ extern float angle_yaw;
 extern float Kp;
 extern float Ki;
 extern float Kd;
+extern float integral_limit;
 extern float setpoint;
 extern float integral;
 extern float last_error;

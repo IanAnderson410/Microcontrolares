@@ -162,7 +162,8 @@ enum {
        CMD_SET_YAW_CONFIG           = 64,
        CMD_SET_FL_CONFIG            = 65,
        CMD_TURN_MANEUVER            = 66,
-       CMD_OBSTACLE_FOLLOW          = 67
+       CMD_OBSTACLE_FOLLOW          = 67,
+       CMD_PID_INTEGRAL_LIMIT       = 68
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -206,6 +207,7 @@ volatile 	uint32_t 		control_slots_serviced = 0;
 			float 			Kp = 130.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 1700.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
 			float 			Kd = 2.5f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float			integral_limit = 1200.0f;
 			float 			setpoint = 3.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 			float 			setpointDeEquilibrio = 0.1f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
@@ -1448,6 +1450,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
     case CMD_PID_YAW_KD:
     case CMD_PID_YAW_SP:
     case CMD_PID_YAW_MULTIPLICADOR:
+    case CMD_PID_INTEGRAL_LIMIT:
         if (payload_len >= 4) {
             float value = UNER_ReadFloatLE(payload);
             switch (cmd) {
@@ -1461,6 +1464,14 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             case CMD_PID_YAW_KD: Kd_yaw = value; break;
             case CMD_PID_YAW_SP: FL_setpoint = value; break;
             case CMD_PID_YAW_MULTIPLICADOR: multiplicadorYaw = value; break;
+            case CMD_PID_INTEGRAL_LIMIT:
+                integral_limit = value;
+                if (integral_limit < 0.0f) {
+                    integral_limit = 0.0f;
+                } else if (integral_limit > 3600.0f) {
+                    integral_limit = 3600.0f;
+                }
+                break;
             default: break;
             }
             uner_ack_status = 0;
