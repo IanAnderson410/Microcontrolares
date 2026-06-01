@@ -31,6 +31,7 @@
 #include <QDoubleSpinBox>
 #include <QGroupBox>
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QtEndian>
 #include <cstring>
 
@@ -240,6 +241,23 @@ MainWindow::MainWindow(QWidget *parent)
     configureSpin(ui->turnArcPercentSpin, 50.0, 0.0, 100.0, 5.0, 0);
     ui->turnArcPercentSpin->setSuffix("%");
     ui->turnArcPercentSpin->setEnabled(false);
+
+    auto *integralLimitLabel = new QLabel("Limite anti-windup", this);
+    auto *integralLimitSpin = new QDoubleSpinBox(this);
+    auto *integralLimitButton = new QPushButton("Ajustar", this);
+    configureSpin(integralLimitSpin, 1200.0, 0.0, 3600.0, 50.0, 0);
+    integralLimitButton->setToolTip("Configura el limite del acumulador integral del PID Pitch");
+    auto *integralLimitLayout = new QHBoxLayout();
+    integralLimitLayout->addWidget(integralLimitLabel);
+    integralLimitLayout->addWidget(integralLimitSpin);
+    integralLimitLayout->addWidget(integralLimitButton);
+    ui->verticalLayout_29->insertLayout(4, integralLimitLayout);
+
+    connect(integralLimitButton, &QPushButton::clicked, this, [this, integralLimitSpin]() {
+        float value = static_cast<float>(integralLimitSpin->value());
+        enviarFloat(CMD_PID_INTEGRAL_LIMIT, value);
+        ui->TxTextEdit->append("PC: Cambia anti-windup a " + QString::number(value, 'f', 0));
+    });
 
     ui->turnModeCombo->clear();
     ui->turnModeCombo->addItem("2 wheels", 0);
@@ -798,6 +816,7 @@ bool MainWindow::isCriticalCommand(uint8_t cmd) const
     case CMD_SET_FL_CONFIG:
     case CMD_TURN_MANEUVER:
     case CMD_OBSTACLE_FOLLOW:
+    case CMD_PID_INTEGRAL_LIMIT:
         return true;
     default:
         return false;
