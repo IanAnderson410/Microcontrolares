@@ -175,9 +175,9 @@ void PID_PITCH(void)
         int16_t pitch_output = (int16_t)output;
 
         if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
-            Robot_Drive(pitch_output + steering, pitch_output);
+            Robot_Drive(pitch_output + steering, 0);
         } else {
-            Robot_Drive(pitch_output, pitch_output - steering);
+            Robot_Drive(0, pitch_output - steering);
         }
     } else if (turn_maneuver_active && turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) {
         int16_t pitch_output = (int16_t)output;
