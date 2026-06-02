@@ -88,8 +88,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->quickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20/qcomunication/3dmodels/main.qml"));
     ui->quickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
 
-    // ui->PitchQuickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20/qcomunication/3dmodels/pitchmodel.qml"));
-    // ui->PitchQuickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    ui->PitchQuickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20/qcomunication/3dmodels/main.qml"));
+    ui->PitchQuickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
+
 // este qquickwidget me crashea la interfaZ
 //ui->VistaSuperiorQuickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20/qcomunication/3dmodels/vistaSuperior.qml"));
 // ui->VistaSuperiorQuickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
@@ -1433,7 +1434,7 @@ void MainWindow::actualizarPitch3D(float pitch, float yaw, float roll) {
     QObject *robot = ui->PitchQuickWidget->rootObject()->findChild<QObject*>("robotVisual");
 
     if (robot) {
-        robot->setProperty("eulerRotation", QVector3D(pitch, yaw, roll));
+        robot->setProperty("eulerRotation", QVector3D( yaw, pitch, roll));
     } else {
         qDebug() << "Sigo sin encontrar robotVisual. RevisÃ¡ el objectName en el Model.";
     }
