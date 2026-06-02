@@ -6,10 +6,8 @@
 #define TURN_MANEUVER_MIN_ANGLE_DEG  1.0f
 #define TURN_MANEUVER_MAX_ANGLE_DEG  360.0f
 #define TURN_MANEUVER_TOLERANCE_DEG  2.0f
-#define TURN_MANEUVER_SLOW_ZONE_DEG  15.0f
 #define TURN_MANEUVER_TIMEOUT_MS     6000U
 #define TURN_MANEUVER_IMU_STALE_MS   100U
-#define TURN_MANEUVER_SLOW_RATIO     0.35f
 #define TURN_MANEUVER_YAW_BOOST      1000.0f
 #define ARC_MANEUVER_FORWARD_RATIO   0.50f
 
@@ -326,6 +324,8 @@ void TurnManeuver_Cancel(void)
     turn_maneuver_steering_slow = 0.0f;
     turn_maneuver_error_filtered = 0.0f;
     turn_maneuver_arc_inner_ratio = 0.0f;
+    integral = 0.0f;
+    I = 0.0f;
     RC_setpoint = 0.0f;
     RC_steering = 0;
 }
@@ -363,10 +363,6 @@ void TurnManeuver_Task(void)
 
     float yaw_limit = yaw_steering_limit;
     float forward_ratio = 1.0f;
-    if (fabsf(remaining_deg) <= TURN_MANEUVER_SLOW_ZONE_DEG) {
-        yaw_limit *= TURN_MANEUVER_SLOW_RATIO;
-        forward_ratio = TURN_MANEUVER_SLOW_RATIO;
-    }
 
     float yaw_error = remaining_deg * multiplicadorYaw;
     turn_maneuver_error_filtered =
@@ -374,8 +370,8 @@ void TurnManeuver_Task(void)
         ((1.0f - yaw_error_filter_alpha) * yaw_error);
 
     float effective_Kp = Kp_yaw + 1500.0f;
-    float target_steering = ((effective_Kp * turn_maneuver_error_filtered) * TURN_MANEUVER_YAW_BOOST) -
-                            (Kd_yaw * giro_z);
+    float target_steering = -(((effective_Kp * turn_maneuver_error_filtered) * TURN_MANEUVER_YAW_BOOST) -
+                              (Kd_yaw * giro_z));
     target_steering = clamp_float(target_steering, yaw_limit);
 
     float delta_steering = target_steering - turn_maneuver_steering_slow;

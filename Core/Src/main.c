@@ -222,7 +222,7 @@ volatile 	uint32_t 		control_slots_serviced = 0;
 volatile    float 		FL_setpoint = 4.4f;
 			float 		yaw_error_filter_alpha = 0.70f;
 			float 		yaw_steering_step_max = 90.0f;
-			float 		yaw_steering_limit = 500.0f;
+			float 		yaw_steering_limit = 3600.0f;
 			float 		last_state_linea = 0.0f;
 			float 		error_linea;
 volatile 	uint16_t 	adc_filtrado[8] = {2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000};
