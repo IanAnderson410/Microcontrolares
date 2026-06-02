@@ -16,6 +16,18 @@ volatile uint8_t turn_maneuver_mode = TURN_MANEUVER_MODE_TWO_WHEELS;
 volatile uint8_t turn_maneuver_wheel = TURN_MANEUVER_WHEEL_LEFT;
 volatile float turn_maneuver_setpoint = 0.0f;
 volatile int16_t turn_maneuver_steering = 0;
+volatile float turn_debug_target_deg = 0.0f;
+volatile float turn_debug_turned_deg = 0.0f;
+volatile float turn_debug_remaining_deg = 0.0f;
+volatile float turn_debug_target_steering = 0.0f;
+volatile float turn_debug_steering_ramp = 0.0f;
+volatile float turn_debug_effective_limit = 0.0f;
+volatile int16_t turn_debug_motor_left_cmd = 0;
+volatile int16_t turn_debug_motor_right_cmd = 0;
+volatile int16_t turn_debug_active_motor_cmd = 0;
+volatile int16_t turn_debug_pivot_motor_cmd = 0;
+volatile uint8_t turn_debug_steering_clamped = 0;
+volatile uint8_t turn_debug_motor_saturated = 0;
 
 static float turn_maneuver_start_yaw_deg = 0.0f;
 static float turn_maneuver_target_delta_deg = 0.0f;
@@ -48,6 +60,11 @@ void PID_PITCH_ResetState(void)
     output = 0.0f;
     showoutput = 0.0f;
     error = 0.0f;
+    turn_debug_motor_left_cmd = 0;
+    turn_debug_motor_right_cmd = 0;
+    turn_debug_active_motor_cmd = 0;
+    turn_debug_pivot_motor_cmd = 0;
+    turn_debug_motor_saturated = 0;
 }
 
 void Control_SetMotorsEnabled(uint8_t enabled)
@@ -295,6 +312,18 @@ static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
     turn_maneuver_arc_inner_ratio = ((float)inner_wheel_percent) / 100.0f;
     turn_maneuver_setpoint = (wheel_mode == TURN_MANEUVER_MODE_ARC) ? (FL_setpoint * ARC_MANEUVER_FORWARD_RATIO) : 0.0f;
     turn_maneuver_steering = 0;
+    turn_debug_target_deg = target_angle_deg;
+    turn_debug_turned_deg = 0.0f;
+    turn_debug_remaining_deg = target_angle_deg;
+    turn_debug_target_steering = 0.0f;
+    turn_debug_steering_ramp = 0.0f;
+    turn_debug_effective_limit = yaw_steering_limit;
+    turn_debug_steering_clamped = 0;
+    turn_debug_motor_left_cmd = 0;
+    turn_debug_motor_right_cmd = 0;
+    turn_debug_active_motor_cmd = 0;
+    turn_debug_pivot_motor_cmd = 0;
+    turn_debug_motor_saturated = 0;
     turn_maneuver_active = 1;
     flag_RC_active = 0;
     RC_setpoint = 0.0f;
@@ -324,6 +353,8 @@ void TurnManeuver_Cancel(void)
     turn_maneuver_steering_slow = 0.0f;
     turn_maneuver_error_filtered = 0.0f;
     turn_maneuver_arc_inner_ratio = 0.0f;
+    turn_debug_target_steering = 0.0f;
+    turn_debug_steering_ramp = 0.0f;
     integral = 0.0f;
     I = 0.0f;
     RC_setpoint = 0.0f;
@@ -355,6 +386,9 @@ void TurnManeuver_Task(void)
 
     float turned_deg = angle_yaw - turn_maneuver_start_yaw_deg;
     float remaining_deg = turn_maneuver_target_delta_deg - turned_deg;
+    turn_debug_target_deg = turn_maneuver_target_delta_deg;
+    turn_debug_turned_deg = turned_deg;
+    turn_debug_remaining_deg = remaining_deg;
 
     if (fabsf(remaining_deg) <= TURN_MANEUVER_TOLERANCE_DEG) {
         TurnManeuver_Cancel();
@@ -372,6 +406,9 @@ void TurnManeuver_Task(void)
     float effective_Kp = Kp_yaw + 1500.0f;
     float target_steering = -(((effective_Kp * turn_maneuver_error_filtered) * TURN_MANEUVER_YAW_BOOST) -
                               (Kd_yaw * giro_z));
+    turn_debug_target_steering = target_steering;
+    turn_debug_effective_limit = yaw_limit;
+    turn_debug_steering_clamped = (yaw_limit > 0.0f && fabsf(target_steering) > yaw_limit) ? 1U : 0U;
     target_steering = clamp_float(target_steering, yaw_limit);
 
     float delta_steering = target_steering - turn_maneuver_steering_slow;
@@ -380,6 +417,7 @@ void TurnManeuver_Task(void)
     turn_maneuver_steering_slow = clamp_float(turn_maneuver_steering_slow, yaw_limit);
 
     turn_maneuver_steering = (int16_t)turn_maneuver_steering_slow;
+    turn_debug_steering_ramp = turn_maneuver_steering_slow;
     turn_maneuver_setpoint = (turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) ?
                               (FL_setpoint * ARC_MANEUVER_FORWARD_RATIO * forward_ratio) :
                               0.0f;

@@ -87,6 +87,18 @@ extern volatile uint8_t turn_maneuver_mode;
 extern volatile uint8_t turn_maneuver_wheel;
 extern volatile float turn_maneuver_setpoint;
 extern volatile int16_t turn_maneuver_steering;
+extern volatile float turn_debug_target_deg;
+extern volatile float turn_debug_turned_deg;
+extern volatile float turn_debug_remaining_deg;
+extern volatile float turn_debug_target_steering;
+extern volatile float turn_debug_steering_ramp;
+extern volatile float turn_debug_effective_limit;
+extern volatile int16_t turn_debug_motor_left_cmd;
+extern volatile int16_t turn_debug_motor_right_cmd;
+extern volatile int16_t turn_debug_active_motor_cmd;
+extern volatile int16_t turn_debug_pivot_motor_cmd;
+extern volatile uint8_t turn_debug_steering_clamped;
+extern volatile uint8_t turn_debug_motor_saturated;
 
 void PID_PITCH(void);
 void PID_PITCH_ResetState(void);

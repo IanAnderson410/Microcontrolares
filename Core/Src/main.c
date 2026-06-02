@@ -191,7 +191,7 @@ ESP01_App_t ESP = {0};
 volatile	uint8_t			currentMode = MODO_IDDLE;
 // ================= [ Flags ] ================= //
 volatile	uint8_t			flagWIFI				=   0;
-volatile	uint8_t 		flagOLED 				= 	1;
+volatile	uint8_t 		flagOLED 				= 	10;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
@@ -451,8 +451,8 @@ void screenScheduler(void){
     uint8_t line_s3 = estado_sensores[3] ? 1U : 0U;
     const char *screen_desc = "SYS";
 
-    if (flagOLED < 1U || flagOLED > 9U) {
-        flagOLED = 1U;
+    if (flagOLED < 1U || flagOLED > 10U) {
+        flagOLED = 10U;
     }
 
     switch (flagOLED) {
@@ -465,12 +465,79 @@ void screenScheduler(void){
     case 7: screen_desc = "COMP"; break;
     case 8: screen_desc = "BOX"; break;
     case 9: screen_desc = "KEY"; break;
+    case 10: screen_desc = "TURN"; break;
     default: break;
     }
 
     snprintf(msg, sizeof(msg), "S:%u | M:%u | %s", flagOLED, currentMode, screen_desc);
     SSD1306_GotoXY(0, 0);
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+    if (flagOLED == 10) {
+        uint8_t dbg_page = (uint8_t)((HAL_GetTick() / 1000U) % 3U);
+        char wheel_label = (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) ? 'L' : 'R';
+
+        if (turn_maneuver_mode == TURN_MANEUVER_MODE_TWO_WHEELS) {
+            wheel_label = 'B';
+        }
+
+        SSD1306_GotoXY(0, 10);
+        snprintf(msg, sizeof(msg), "A:%u W:%c M:%u V:%u", turn_maneuver_active,
+                 wheel_label, turn_maneuver_mode, dbg_page);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+        if (dbg_page == 0U) {
+            SSD1306_GotoXY(0, 20);
+            snprintf(msg, sizeof(msg), "T:%5.0f Tr:%5.0f", turn_debug_target_deg,
+                     turn_debug_turned_deg);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+            SSD1306_GotoXY(0, 30);
+            snprintf(msg, sizeof(msg), "R:%5.0f Y:%5.1f", turn_debug_remaining_deg,
+                     angle_yaw);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+            SSD1306_GotoXY(0, 40);
+            snprintf(msg, sizeof(msg), "St:%5d L:%4.0f", turn_maneuver_steering,
+                     turn_debug_effective_limit);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+            SSD1306_GotoXY(0, 50);
+            snprintf(msg, sizeof(msg), "Rp:%5d C%uS%u", turn_maneuver_steering,
+                     turn_debug_steering_clamped, turn_debug_motor_saturated);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        } else if (dbg_page == 1U) {
+            SSD1306_GotoXY(0, 20);
+            snprintf(msg, sizeof(msg), "Kp:%4.0f Kd:%4.0f", Kp_yaw, Kd_yaw);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+            SSD1306_GotoXY(0, 30);
+            snprintf(msg, sizeof(msg), "P:%5.0f I:%5.0f", P, I);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+            SSD1306_GotoXY(0, 40);
+            snprintf(msg, sizeof(msg), "D:%5.0f O:%5.0f", D, output);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+            SSD1306_GotoXY(0, 50);
+            snprintf(msg, sizeof(msg), "Pi:%4.1f Gz:%4.1f", angle_y, giro_z);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        } else {
+            SSD1306_GotoXY(0, 20);
+            snprintf(msg, sizeof(msg), "L:%5d R:%5d", turn_debug_motor_left_cmd,
+                     turn_debug_motor_right_cmd);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+            SSD1306_GotoXY(0, 30);
+            snprintf(msg, sizeof(msg), "Ac:%5d Pv:%5d", turn_debug_active_motor_cmd,
+                     turn_debug_pivot_motor_cmd);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+            SSD1306_GotoXY(0, 40);
+            snprintf(msg, sizeof(msg), "Tg:%5.0f St:%5d", turn_debug_target_steering,
+                     turn_maneuver_steering);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+            SSD1306_GotoXY(0, 50);
+            snprintf(msg, sizeof(msg), "SP:%4.1f E:%5.1f", turn_maneuver_setpoint,
+                     error);
+            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        }
+
+        OLED_RequestUpdate();
+        return;
+    }
 
     if (flagOLED == 1) {
         SSD1306_GotoXY(0, 10);
@@ -1400,7 +1467,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             if (payload_len >= 2) {
                 requested_page = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
             }
-            if (requested_page >= 1U && requested_page <= 9U) {
+            if (requested_page >= 1U && requested_page <= 10U) {
                 flagOLED = (uint8_t)requested_page;
                 uner_ack_status = 0;
             } else {
@@ -1543,6 +1610,22 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    if (speed_L < -3599) speed_L = -3599;
 	    if (speed_R > 3599) speed_R = 3599;
 	    if (speed_R < -3599) speed_R = -3599;
+	    turn_debug_motor_left_cmd = speed_L;
+	    turn_debug_motor_right_cmd = speed_R;
+	    turn_debug_motor_saturated = (speed_L >= 3599 || speed_L <= -3599 ||
+	                                  speed_R >= 3599 || speed_R <= -3599) ? 1U : 0U;
+	    if (turn_maneuver_mode == TURN_MANEUVER_MODE_ONE_WHEEL) {
+	        if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
+	            turn_debug_active_motor_cmd = speed_L;
+	            turn_debug_pivot_motor_cmd = speed_R;
+	        } else {
+	            turn_debug_active_motor_cmd = speed_R;
+	            turn_debug_pivot_motor_cmd = speed_L;
+	        }
+	    } else {
+	        turn_debug_active_motor_cmd = speed_L;
+	        turn_debug_pivot_motor_cmd = speed_R;
+	    }
 	if (speed_L == 0) { // Motor 1 (PA8, PA9, PB4)
 		HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin, GPIO_PIN_RESET);
