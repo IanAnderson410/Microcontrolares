@@ -28,6 +28,14 @@ extern "C" {
 #define TURN_MANEUVER_STATUS_PAYLOAD       2U
 #define TURN_MANEUVER_STATUS_MODE          3U
 #define TURN_MANEUVER_STATUS_SENSOR        4U
+#define TURN_MANEUVER_EXIT_NONE            0U
+#define TURN_MANEUVER_EXIT_TARGET_REACHED  1U
+#define TURN_MANEUVER_EXIT_TIMEOUT         2U
+#define TURN_MANEUVER_EXIT_MOTORS_OFF      3U
+#define TURN_MANEUVER_EXIT_MODE_CHANGE     4U
+#define TURN_MANEUVER_EXIT_IMU_STALE       5U
+#define TURN_MANEUVER_EXIT_PITCH_SAFETY    6U
+#define TURN_MANEUVER_EXIT_EXTERNAL_CANCEL 7U
 
 extern volatile uint8_t currentMode;
 extern volatile uint8_t flagMotorsAreOn;
@@ -99,6 +107,7 @@ extern volatile int16_t turn_debug_active_motor_cmd;
 extern volatile int16_t turn_debug_pivot_motor_cmd;
 extern volatile uint8_t turn_debug_steering_clamped;
 extern volatile uint8_t turn_debug_motor_saturated;
+extern volatile uint8_t turn_debug_exit_reason;
 
 void PID_PITCH(void);
 void PID_PITCH_ResetState(void);
@@ -113,6 +122,7 @@ int16_t Calcular_PID_YAW(float error_linea);
 uint8_t TurnManeuver_Start(float target_angle_deg, uint8_t wheel_mode, uint8_t wheel_select);
 uint8_t TurnManeuver_StartArc(float target_angle_deg, uint8_t outer_wheel, uint8_t inner_wheel_percent);
 void TurnManeuver_Cancel(void);
+void TurnManeuver_CancelWithReason(uint8_t reason);
 void TurnManeuver_Task(void);
 void Robot_Drive(int16_t speed_L, int16_t speed_R);
 

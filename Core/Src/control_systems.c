@@ -28,6 +28,7 @@ volatile int16_t turn_debug_active_motor_cmd = 0;
 volatile int16_t turn_debug_pivot_motor_cmd = 0;
 volatile uint8_t turn_debug_steering_clamped = 0;
 volatile uint8_t turn_debug_motor_saturated = 0;
+volatile uint8_t turn_debug_exit_reason = TURN_MANEUVER_EXIT_NONE;
 
 static float turn_maneuver_start_yaw_deg = 0.0f;
 static float turn_maneuver_target_delta_deg = 0.0f;
@@ -48,6 +49,29 @@ static float clamp_float(float value, float limit)
         return -limit;
     }
     return value;
+}
+
+static int16_t sign_preserving_limit(float value, float limit)
+{
+    if (limit < 0.0f) {
+        limit = -limit;
+    }
+    return (int16_t)clamp_float(value, limit);
+}
+
+static void TurnManeuver_ApplyOneWheelMix(int16_t pitch_output, int16_t steering)
+{
+    float active_yaw = (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) ?
+                       (float)(-steering) :
+                       (float)steering;
+    int16_t active_cmd = sign_preserving_limit((float)pitch_output + active_yaw, 3599.0f);
+    int16_t pivot_cmd = sign_preserving_limit((float)pitch_output, 3599.0f);
+
+    if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
+        Robot_Drive(active_cmd, pivot_cmd);
+    } else {
+        Robot_Drive(pivot_cmd, active_cmd);
+    }
 }
 
 void PID_PITCH_ResetState(void)
@@ -78,7 +102,9 @@ void Control_SetMotorsEnabled(uint8_t enabled)
     flagMotorsAreOn = enabled;
 
     if (!enabled) {
-        TurnManeuver_Cancel();
+        if (turn_maneuver_active) {
+            TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_MOTORS_OFF);
+        }
         RC_setpoint = 0.0f;
         RC_steering = 0;
         Robot_Drive(0, 0);
@@ -107,6 +133,9 @@ void PID_PITCH(void)
     }
 
     if (angle_y > 65.0f || angle_y < -65.0f) {
+        if (turn_maneuver_active) {
+            TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_PITCH_SAFETY);
+        }
         Control_SetMotorsEnabled(0U);
         return;
     }
@@ -188,23 +217,18 @@ void PID_PITCH(void)
 
     if (turn_maneuver_active && turn_maneuver_mode == TURN_MANEUVER_MODE_ONE_WHEEL) {
         int16_t pitch_output = (int16_t)output;
-
-        if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
-            Robot_Drive(pitch_output + steering, 0);
-        } else {
-            Robot_Drive(0, pitch_output - steering);
-        }
+        TurnManeuver_ApplyOneWheelMix(pitch_output, steering);
     } else if (turn_maneuver_active && turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) {
         int16_t pitch_output = (int16_t)output;
         int16_t inner_steering = (int16_t)((float)steering * turn_maneuver_arc_inner_ratio);
 
         if (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) {
-            Robot_Drive(pitch_output + steering, pitch_output - inner_steering);
+            Robot_Drive(pitch_output - steering, pitch_output + inner_steering);
         } else {
-            Robot_Drive(pitch_output + inner_steering, pitch_output - steering);
+            Robot_Drive(pitch_output - inner_steering, pitch_output + steering);
         }
     } else {
-        Robot_Drive((int16_t)output + steering, (int16_t)output - steering);
+        Robot_Drive((int16_t)output - steering, (int16_t)output + steering);
     }
 }
 
@@ -324,6 +348,7 @@ static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
     turn_debug_active_motor_cmd = 0;
     turn_debug_pivot_motor_cmd = 0;
     turn_debug_motor_saturated = 0;
+    turn_debug_exit_reason = TURN_MANEUVER_EXIT_NONE;
     turn_maneuver_active = 1;
     flag_RC_active = 0;
     RC_setpoint = 0.0f;
@@ -345,8 +370,9 @@ uint8_t TurnManeuver_StartArc(float target_angle_deg, uint8_t outer_wheel, uint8
                                       inner_wheel_percent);
 }
 
-void TurnManeuver_Cancel(void)
+void TurnManeuver_CancelWithReason(uint8_t reason)
 {
+    turn_debug_exit_reason = reason;
     turn_maneuver_active = 0;
     turn_maneuver_setpoint = 0.0f;
     turn_maneuver_steering = 0;
@@ -361,6 +387,11 @@ void TurnManeuver_Cancel(void)
     RC_steering = 0;
 }
 
+void TurnManeuver_Cancel(void)
+{
+    TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_EXTERNAL_CANCEL);
+}
+
 void TurnManeuver_Task(void)
 {
     if (!turn_maneuver_active) return;
@@ -371,16 +402,19 @@ void TurnManeuver_Task(void)
          currentMode != CONTROL_MODE_RC &&
          currentMode != CONTROL_MODE_OBSTACLE_FOLLOW) ||
         (turn_maneuver_mode == TURN_MANEUVER_MODE_ARC && currentMode == CONTROL_MODE_IDLE)) {
-        TurnManeuver_Cancel();
+        TurnManeuver_CancelWithReason(!flagMotorsAreOn ?
+                                      TURN_MANEUVER_EXIT_MOTORS_OFF :
+                                      TURN_MANEUVER_EXIT_MODE_CHANGE);
         return;
     }
     if (imu_last_update_tick == 0U ||
         (uint32_t)(now - imu_last_update_tick) > TURN_MANEUVER_IMU_STALE_MS) {
+        TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_IMU_STALE);
         Control_SetMotorsEnabled(0U);
         return;
     }
     if ((uint32_t)(now - turn_maneuver_start_tick) > TURN_MANEUVER_TIMEOUT_MS) {
-        TurnManeuver_Cancel();
+        TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_TIMEOUT);
         return;
     }
 
@@ -391,7 +425,7 @@ void TurnManeuver_Task(void)
     turn_debug_remaining_deg = remaining_deg;
 
     if (fabsf(remaining_deg) <= TURN_MANEUVER_TOLERANCE_DEG) {
-        TurnManeuver_Cancel();
+        TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_TARGET_REACHED);
         return;
     }
 

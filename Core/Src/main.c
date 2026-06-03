@@ -191,7 +191,7 @@ ESP01_App_t ESP = {0};
 volatile	uint8_t			currentMode = MODO_IDDLE;
 // ================= [ Flags ] ================= //
 volatile	uint8_t			flagWIFI				=   0;
-volatile	uint8_t 		flagOLED 				= 	10;
+volatile	uint8_t 		flagOLED 				= 	1;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
@@ -474,66 +474,47 @@ void screenScheduler(void){
     SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
     if (flagOLED == 10) {
-        uint8_t dbg_page = (uint8_t)((HAL_GetTick() / 1000U) % 3U);
         char wheel_label = (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) ? 'L' : 'R';
+        const char *exit_label = "NON";
 
         if (turn_maneuver_mode == TURN_MANEUVER_MODE_TWO_WHEELS) {
             wheel_label = 'B';
         }
 
-        SSD1306_GotoXY(0, 10);
-        snprintf(msg, sizeof(msg), "A:%u W:%c M:%u V:%u", turn_maneuver_active,
-                 wheel_label, turn_maneuver_mode, dbg_page);
-        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-
-        if (dbg_page == 0U) {
-            SSD1306_GotoXY(0, 20);
-            snprintf(msg, sizeof(msg), "T:%5.0f Tr:%5.0f", turn_debug_target_deg,
-                     turn_debug_turned_deg);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-            SSD1306_GotoXY(0, 30);
-            snprintf(msg, sizeof(msg), "R:%5.0f Y:%5.1f", turn_debug_remaining_deg,
-                     angle_yaw);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-            SSD1306_GotoXY(0, 40);
-            snprintf(msg, sizeof(msg), "St:%5d L:%4.0f", turn_maneuver_steering,
-                     turn_debug_effective_limit);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-            SSD1306_GotoXY(0, 50);
-            snprintf(msg, sizeof(msg), "Rp:%5d C%uS%u", turn_maneuver_steering,
-                     turn_debug_steering_clamped, turn_debug_motor_saturated);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        } else if (dbg_page == 1U) {
-            SSD1306_GotoXY(0, 20);
-            snprintf(msg, sizeof(msg), "Kp:%4.0f Kd:%4.0f", Kp_yaw, Kd_yaw);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-            SSD1306_GotoXY(0, 30);
-            snprintf(msg, sizeof(msg), "P:%5.0f I:%5.0f", P, I);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-            SSD1306_GotoXY(0, 40);
-            snprintf(msg, sizeof(msg), "D:%5.0f O:%5.0f", D, output);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-            SSD1306_GotoXY(0, 50);
-            snprintf(msg, sizeof(msg), "Pi:%4.1f Gz:%4.1f", angle_y, giro_z);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        } else {
-            SSD1306_GotoXY(0, 20);
-            snprintf(msg, sizeof(msg), "L:%5d R:%5d", turn_debug_motor_left_cmd,
-                     turn_debug_motor_right_cmd);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-            SSD1306_GotoXY(0, 30);
-            snprintf(msg, sizeof(msg), "Ac:%5d Pv:%5d", turn_debug_active_motor_cmd,
-                     turn_debug_pivot_motor_cmd);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-            SSD1306_GotoXY(0, 40);
-            snprintf(msg, sizeof(msg), "Tg:%5.0f St:%5d", turn_debug_target_steering,
-                     turn_maneuver_steering);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-            SSD1306_GotoXY(0, 50);
-            snprintf(msg, sizeof(msg), "SP:%4.1f E:%5.1f", turn_maneuver_setpoint,
-                     error);
-            SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        switch (turn_debug_exit_reason) {
+        case TURN_MANEUVER_EXIT_TARGET_REACHED: exit_label = "TAR"; break;
+        case TURN_MANEUVER_EXIT_TIMEOUT: exit_label = "TMO"; break;
+        case TURN_MANEUVER_EXIT_MOTORS_OFF: exit_label = "MOT"; break;
+        case TURN_MANEUVER_EXIT_MODE_CHANGE: exit_label = "MOD"; break;
+        case TURN_MANEUVER_EXIT_IMU_STALE: exit_label = "IMU"; break;
+        case TURN_MANEUVER_EXIT_PITCH_SAFETY: exit_label = "PIT"; break;
+        case TURN_MANEUVER_EXIT_EXTERNAL_CANCEL: exit_label = "EXT"; break;
+        default: break;
         }
+
+        SSD1306_GotoXY(0, 10);
+        snprintf(msg, sizeof(msg), "A%cM%u W%c C%cS%c",
+                 turn_maneuver_active ? '1' : '0',
+                 turn_maneuver_mode,
+                 wheel_label,
+                 turn_debug_steering_clamped ? '1' : '0',
+                 turn_debug_motor_saturated ? '1' : '0');
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 20);
+        snprintf(msg, sizeof(msg), "T%4.0f D%4.0f R%4.0f", turn_debug_target_deg,
+                 turn_debug_turned_deg, turn_debug_remaining_deg);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 30);
+        snprintf(msg, sizeof(msg), "Ac%5d Pv%5d", turn_debug_active_motor_cmd,
+                 turn_debug_pivot_motor_cmd);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 40);
+        snprintf(msg, sizeof(msg), "St%5d L%5.0f", turn_maneuver_steering,
+                 turn_debug_effective_limit);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        SSD1306_GotoXY(0, 50);
+        snprintf(msg, sizeof(msg), "Po%5.0f X%s", output, exit_label);
+        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
         OLED_RequestUpdate();
         return;
@@ -1356,7 +1337,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 uner_ack_status = 1;
             } else if (requested_mode >= MODO_IDDLE && requested_mode <= MODO_FL_INGRESO_A_90) {
                 if (requested_mode != MODO_RC && requested_mode != MODO_OBSTACLE_FOLLOW) {
-                    TurnManeuver_Cancel();
+                    TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_MODE_CHANGE);
                 }
                 if (requested_mode != MODO_OBSTACLE_FOLLOW) {
                     ObstacleFollow_Stop();
