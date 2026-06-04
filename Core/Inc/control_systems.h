@@ -90,6 +90,7 @@ extern float multiplicadorYaw;
 extern float yaw_error_filter_alpha;
 extern float yaw_steering_step_max;
 extern float yaw_steering_limit;
+extern float turn_maneuver_forward_bias_deg;
 extern volatile uint8_t turn_maneuver_active;
 extern volatile uint8_t turn_maneuver_mode;
 extern volatile uint8_t turn_maneuver_wheel;

@@ -51,6 +51,17 @@ static float clamp_float(float value, float limit)
     return value;
 }
 
+static float TurnManeuver_GetActiveSetpoint(void)
+{
+    float maneuver_setpoint = turn_maneuver_forward_bias_deg;
+
+    if (turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) {
+        maneuver_setpoint += FL_setpoint * ARC_MANEUVER_FORWARD_RATIO;
+    }
+
+    return maneuver_setpoint;
+}
+
 static int16_t sign_preserving_limit(float value, float limit)
 {
     if (limit < 0.0f) {
@@ -197,6 +208,7 @@ void PID_PITCH(void)
     }
 
     if (turn_maneuver_active) {
+        turn_maneuver_setpoint = TurnManeuver_GetActiveSetpoint();
         target_setpoint = setpoint + turn_maneuver_setpoint;
         steering = turn_maneuver_steering;
     }
@@ -334,7 +346,7 @@ static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
     turn_maneuver_mode = wheel_mode;
     turn_maneuver_wheel = wheel_select;
     turn_maneuver_arc_inner_ratio = ((float)inner_wheel_percent) / 100.0f;
-    turn_maneuver_setpoint = (wheel_mode == TURN_MANEUVER_MODE_ARC) ? (FL_setpoint * ARC_MANEUVER_FORWARD_RATIO) : 0.0f;
+    turn_maneuver_setpoint = TurnManeuver_GetActiveSetpoint();
     turn_maneuver_steering = 0;
     turn_debug_target_deg = target_angle_deg;
     turn_debug_turned_deg = 0.0f;
@@ -430,8 +442,6 @@ void TurnManeuver_Task(void)
     }
 
     float yaw_limit = yaw_steering_limit;
-    float forward_ratio = 1.0f;
-
     float yaw_error = remaining_deg * multiplicadorYaw;
     turn_maneuver_error_filtered =
         (yaw_error_filter_alpha * turn_maneuver_error_filtered) +
@@ -452,7 +462,5 @@ void TurnManeuver_Task(void)
 
     turn_maneuver_steering = (int16_t)turn_maneuver_steering_slow;
     turn_debug_steering_ramp = turn_maneuver_steering_slow;
-    turn_maneuver_setpoint = (turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) ?
-                              (FL_setpoint * ARC_MANEUVER_FORWARD_RATIO * forward_ratio) :
-                              0.0f;
+    turn_maneuver_setpoint = TurnManeuver_GetActiveSetpoint();
 }

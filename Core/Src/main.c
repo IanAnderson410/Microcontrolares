@@ -191,7 +191,7 @@ ESP01_App_t ESP = {0};
 volatile	uint8_t			currentMode = MODO_IDDLE;
 // ================= [ Flags ] ================= //
 volatile	uint8_t			flagWIFI				=   0;
-volatile	uint8_t 		flagOLED 				= 	1;
+volatile	uint8_t 		flagOLED 				= 	10;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
@@ -223,6 +223,7 @@ volatile    float 		FL_setpoint = 4.4f;
 			float 		yaw_error_filter_alpha = 0.70f;
 			float 		yaw_steering_step_max = 90.0f;
 			float 		yaw_steering_limit = 3600.0f;
+			float 		turn_maneuver_forward_bias_deg = 1.0f;
 			float 		last_state_linea = 0.0f;
 			float 		error_linea;
 volatile 	uint16_t 	adc_filtrado[8] = {2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000};
@@ -513,7 +514,9 @@ void screenScheduler(void){
                  turn_debug_effective_limit);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 50);
-        snprintf(msg, sizeof(msg), "Po%5.0f X%s", output, exit_label);
+        snprintf(msg, sizeof(msg), "P%4.0f B%3.1f X%s", output,
+                 turn_maneuver_active ? turn_maneuver_forward_bias_deg : 0.0f,
+                 exit_label);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 
         OLED_RequestUpdate();
@@ -1163,9 +1166,13 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             float filter_alpha = UNER_ReadFloatLE(payload + 12);
             float steering_step = UNER_ReadFloatLE(payload + 16);
             float steering_limit = yaw_steering_limit;
+            float turn_bias = turn_maneuver_forward_bias_deg;
 
             if (payload_len >= 24) {
                 steering_limit = UNER_ReadFloatLE(payload + 20);
+            }
+            if (payload_len >= 28) {
+                turn_bias = UNER_ReadFloatLE(payload + 24);
             }
 
             if (kp >= 0.0f && kp <= 20000.0f &&
@@ -1173,13 +1180,15 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 curve_mul >= 0.0f && curve_mul <= 1.0f &&
                 filter_alpha >= 0.0f && filter_alpha <= 0.995f &&
                 steering_step >= 1.0f && steering_step <= 2000.0f &&
-                steering_limit >= 0.0f && steering_limit <= 5000.0f) {
+                steering_limit >= 0.0f && steering_limit <= 5000.0f &&
+                turn_bias >= -10.0f && turn_bias <= 10.0f) {
                 Kp_yaw = kp;
                 Kd_yaw = kd;
                 multiplicadorYaw = curve_mul;
                 yaw_error_filter_alpha = filter_alpha;
                 yaw_steering_step_max = steering_step;
                 yaw_steering_limit = steering_limit;
+                turn_maneuver_forward_bias_deg = turn_bias;
                 uner_ack_status = 0;
             } else {
                 uner_ack_status = 1;
@@ -1234,15 +1243,35 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             float target_angle_deg = ((float)target_cdeg) / 100.0f;
             uint8_t wheel_mode = payload[2];
             uint8_t wheel_select = payload[3];
+            float turn_bias = turn_maneuver_forward_bias_deg;
+            uint8_t turn_bias_valid = 1U;
 
             if (wheel_mode == TURN_MANEUVER_MODE_ARC) {
                 if (payload_len >= 5) {
-                    uner_ack_status = TurnManeuver_StartArc(target_angle_deg, wheel_select, payload[4]);
+                    if (payload_len >= 9) {
+                        turn_bias = UNER_ReadFloatLE(payload + 5);
+                    }
+                    turn_bias_valid = (turn_bias >= -10.0f && turn_bias <= 10.0f) ? 1U : 0U;
+                    if (turn_bias_valid) {
+                        turn_maneuver_forward_bias_deg = turn_bias;
+                        uner_ack_status = TurnManeuver_StartArc(target_angle_deg, wheel_select, payload[4]);
+                    } else {
+                        uner_ack_status = TURN_MANEUVER_STATUS_RANGE;
+                    }
                 } else {
                     uner_ack_status = TURN_MANEUVER_STATUS_PAYLOAD;
                 }
             } else {
-                uner_ack_status = TurnManeuver_Start(target_angle_deg, wheel_mode, wheel_select);
+                if (payload_len >= 8) {
+                    turn_bias = UNER_ReadFloatLE(payload + 4);
+                }
+                turn_bias_valid = (turn_bias >= -10.0f && turn_bias <= 10.0f) ? 1U : 0U;
+                if (turn_bias_valid) {
+                    turn_maneuver_forward_bias_deg = turn_bias;
+                    uner_ack_status = TurnManeuver_Start(target_angle_deg, wheel_mode, wheel_select);
+                } else {
+                    uner_ack_status = TURN_MANEUVER_STATUS_RANGE;
+                }
             }
         } else {
             uner_ack_status = TURN_MANEUVER_STATUS_PAYLOAD;
