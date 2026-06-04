@@ -270,7 +270,7 @@ void SSD1306_InvertDisplay (int i);
 // clear the display
 void SSD1306_Clear (void);
 
-void SSD1306_UpdatePage_DMA(uint8_t page);
+HAL_StatusTypeDef SSD1306_UpdatePage_DMA(uint8_t page);
 /* C++ detection */
 #ifdef __cplusplus
 }

@@ -36,7 +36,6 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-extern uint8_t mpu_data[14];
 extern TIM_HandleTypeDef htim3; // También la vas a necesitar para los motores
 /* USER CODE END PM */
 

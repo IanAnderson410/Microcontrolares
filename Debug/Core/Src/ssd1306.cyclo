@@ -26,4 +26,4 @@
 ../Core/Src/ssd1306.c:624:6:ssd1306_I2C_Init	2
 ../Core/Src/ssd1306.c:636:6:ssd1306_I2C_WriteMulti	2
 ../Core/Src/ssd1306.c:644:6:ssd1306_I2C_Write	1
-../Core/Src/ssd1306.c:651:6:SSD1306_UpdatePage_DMA	5
+../Core/Src/ssd1306.c:651:19:SSD1306_UpdatePage_DMA	5

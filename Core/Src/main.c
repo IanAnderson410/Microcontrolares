@@ -114,6 +114,11 @@ enum {
 	MODO_OBSTACLE_FOLLOW 		= CONTROL_MODE_OBSTACLE_FOLLOW,
 	MODO_FL_INGRESO_A_90		= 8
 };
+typedef enum {
+    I2C1_OWNER_NONE = 0,
+    I2C1_OWNER_MPU,
+    I2C1_OWNER_OLED
+} I2C1_BusOwner_t;
 enum {
        CMD_ALIVE       			= 0, 		/*!< Busca confirmar conexión inalambrica						*/
        CMD_ACK 	      			= 1, 		/*!< Confirma conexión inalambrica								*/
@@ -177,6 +182,8 @@ ESP01_App_t ESP = {0};
 // ================= [ PID ] ================= //
 //#define 	ALPHA_PID 			0.98f    // Suaviza las vibraciones del acelerómetro
 #define 	DT_PID 				0.01f
+#define     OLED_GUARD_WINDOW_MS  5U
+#define     OLED_DMA_TIMEOUT_MS   5U
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		        64
 #define     ESP01_RX_DMA_SIZE          256
@@ -191,7 +198,7 @@ ESP01_App_t ESP = {0};
 volatile	uint8_t			currentMode = MODO_IDDLE;
 // ================= [ Flags ] ================= //
 volatile	uint8_t			flagWIFI				=   0;
-volatile	uint8_t 		flagOLED 				= 	10;
+volatile	uint8_t 		flagOLED 				= 	6;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
@@ -253,7 +260,6 @@ volatile 	uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estam
 			float 			gyro_bias_y ;
 			float 			gyro_bias_z ;
 // =================[ Buffers de Sensores ] =================//
-			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
 volatile 	uint16_t 		adc_buffer[8]; // El buffer que llena el DMA
 // =================[ Modo Radio Control ] =================//
 volatile 	float 			RC_setpoint 			= 0;
@@ -280,6 +286,12 @@ volatile 	uint32_t 		oled_pages_sent = 0;
 volatile 	uint32_t 		oled_frames_done = 0;
 volatile 	uint32_t 		oled_i2c_errors = 0;
 volatile 	uint32_t 		oled_busy_skips = 0;
+volatile 	uint32_t 		oled_deferred_count = 0;
+volatile    uint32_t        oled_dma_start_tick = 0;
+volatile    I2C1_BusOwner_t i2c1_bus_owner = I2C1_OWNER_NONE;
+volatile    uint8_t         i2c1_recovery_requested = 0;
+volatile    uint32_t        control_slot_counter = 0;
+volatile    uint32_t        control_last_slot_tick = 0;
 	float P =  0;
 	float I =  0;
 	float D =  0;
@@ -313,7 +325,6 @@ volatile uint32_t uner_tx_last_ok_tick = 0;
 volatile uint32_t uner_tx_recover_count = 0;
 volatile uint8_t uner_recovering_udp = 0;
 volatile uint32_t uner_next_telemetry_tick = 0;
-volatile uint8_t mpu_calibration_requested = 0;
 volatile uint32_t rc_last_packet_tick = 0;
 char esp01_last_debug[18] = "-";
 char esp01_last_rx[18] = "-";
@@ -386,11 +397,15 @@ void ESP01_App_Task(void);
 _eESP01STATUS ESP01_StartTransport(void);
 
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len);
-void Telemetry_UpdateMPU(void);
+void Telemetry_ProcessMPU(void);
 void screenScheduler(void);
 void KEY_CalibrationTask(void);
 void OLED_RequestUpdate(void);
 void OLED_Service(void);
+void MPU_HighPriorityService(uint32_t now);
+void MPU_RequestNextSample(uint32_t slot, uint32_t now);
+void Control_RunControlSlot(uint32_t slot, uint32_t now);
+void I2C1_Recover(void);
 /**
  * @details 							Crea una respuesta en forma de impulso con los motores la cual es proporcional
  * 										al error (pitch) del robot.	Implementa un filtro complementario para fusionar
@@ -402,19 +417,13 @@ void OLED_Service(void);
  * @param cmd: 							Código del comando (CMD)
  * @param param: 						Parámetro de 16 bits (enviado en Little Endian ).
  */
-void Telemetry_UpdateMPU(void)
+void Telemetry_ProcessMPU(void)
 {
-    uint8_t buffer[14];
-
-    if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, 0x3B, 1, buffer, sizeof(buffer), 2) != HAL_OK) {
-        return;
-    }
-
-    axRaw = (int16_t)((buffer[0] << 8) | buffer[1]);
-    ayRaw = (int16_t)((buffer[2] << 8) | buffer[3]);
-    azRaw = (int16_t)((buffer[4] << 8) | buffer[5]);
-    gyPitchRaw = (int16_t)((buffer[10] << 8) | buffer[11]);
-    gzYawRaw = (int16_t)((buffer[12] << 8) | buffer[13]);
+    axRaw = (int16_t)((mpu_data[0] << 8) | mpu_data[1]);
+    ayRaw = (int16_t)((mpu_data[2] << 8) | mpu_data[3]);
+    azRaw = (int16_t)((mpu_data[4] << 8) | mpu_data[5]);
+    gyPitchRaw = (int16_t)((mpu_data[10] << 8) | mpu_data[11]);
+    gzYawRaw = (int16_t)((mpu_data[12] << 8) | mpu_data[13]);
 
     float gyro_pitch_rate = -(((float)gyPitchRaw - gyro_bias_y) / 131.0f);
     float gyro_yaw_rate = (((float)gzYawRaw - gyro_bias_z) / 131.0f);
@@ -424,16 +433,22 @@ void Telemetry_UpdateMPU(void)
 
     giro = gyro_pitch_rate;
     giro_z = gyro_yaw_rate;
-    angle_y = ALPHA_PID * (angle_y + gyro_pitch_rate * DT_PID) + (1.0f - ALPHA_PID) * pitch_accel;
-    angle_yaw += gyro_yaw_rate * DT_PID;
     imu_accel_forward_mps2 = accel_x_mps2 - (sinf(pitch_rad) * 9.80665f);
 
-    imu_velocity_mps += imu_accel_forward_mps2 * DT_PID;
+    if (mpu_filter_resync_required && !flagMotorsAreOn) {
+        angle_y = pitch_accel;
+        mpu_filter_resync_required = 0;
+    } else {
+        angle_y = ALPHA_PID * (angle_y + gyro_pitch_rate * DT_PID) + (1.0f - ALPHA_PID) * pitch_accel;
+        angle_yaw += gyro_yaw_rate * DT_PID;
+        imu_velocity_mps += imu_accel_forward_mps2 * DT_PID;
+        mpu_filter_resync_required = 0;
+    }
 
     accelx = axRaw;
     accely = ayRaw;
     accelz = azRaw;
-    imu_last_update_tick = HAL_GetTick();
+    imu_last_update_tick = mpu_last_valid_tick;
 }
 
 void screenScheduler(void){
@@ -642,19 +657,20 @@ void screenScheduler(void){
         snprintf(msg, sizeof(msg), "Y:%5.1f Gy:%4.1f", angle_yaw, giro_z);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 30);
-        snprintf(msg, sizeof(msg), "AX:%d", axRaw);
-        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_GotoXY(64, 30);
-        snprintf(msg, sizeof(msg), "AY:%d", ayRaw);
+        snprintf(msg, sizeof(msg), "S:%u OK:%lu", mpu_acq_state,
+                 (unsigned long)mpu_dma_complete_count);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 40);
-        snprintf(msg, sizeof(msg), "AZ:%d", azRaw);
-        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-        SSD1306_GotoXY(64, 40);
-        snprintf(msg, sizeof(msg), "GP:%d", gyPitchRaw);
+        snprintf(msg, sizeof(msg), "M:%lu L:%lu",
+                 (unsigned long)mpu_consecutive_missed_samples,
+                 (unsigned long)mpu_late_sample_count);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 50);
-        snprintf(msg, sizeof(msg), "GZ:%d C:%u", gzYawRaw, flagCalibrationIsReady);
+        snprintf(msg, sizeof(msg), "B:%lu E:%lu T:%lu R:%lu",
+                 (unsigned long)mpu_hal_busy_count,
+                 (unsigned long)mpu_dma_error_count,
+                 (unsigned long)mpu_timeout_count,
+                 (unsigned long)mpu_i2c_recovery_count);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         OLED_RequestUpdate();
         return;
@@ -1120,17 +1136,139 @@ void OLED_RequestUpdate(void)
     oled_update_requested = 1;
 }
 
+void MPU_RequestNextSample(uint32_t slot, uint32_t now)
+{
+    HAL_StatusTypeDef status;
+
+    if (mpu_acq_state != MPU_ACQ_IDLE || mpu_recovery_requested || i2c1_recovery_requested) {
+        return;
+    }
+
+    MPU6050_RequestSample(slot, now);
+    if (i2c1_bus_owner != I2C1_OWNER_NONE ||
+        HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY) {
+        return;
+    }
+
+    i2c1_bus_owner = I2C1_OWNER_MPU;
+    status = MPU6050_StartPendingDMA(&hi2c1, now);
+    if (status != HAL_OK) {
+        i2c1_bus_owner = I2C1_OWNER_NONE;
+    }
+}
+
+void Control_RunControlSlot(uint32_t slot, uint32_t now)
+{
+    uint8_t sample_valid = MPU6050_TakeReadySample(slot - 1U, now);
+
+    if (sample_valid) {
+        Telemetry_ProcessMPU();
+        MPU6050_CalibrationProcessSample(mpu_data);
+        MPU6050_ReleaseConsumedSample();
+    } else {
+        MPU6050_RecordMissedControlSample();
+        control_missed_slots++;
+        angle_y += giro * DT_PID;
+        angle_yaw += giro_z * DT_PID;
+    }
+
+    if (!flag_calibrando_linea) {
+        ObstacleFollow_Task();
+        FollowLine_Task();
+        if (currentMode == MODO_RC && flag_RC_active &&
+            (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
+            flag_RC_active = 0;
+            RC_setpoint = 0.0f;
+            RC_steering = 0;
+        }
+        TurnManeuver_Task();
+    }
+
+    if (flagMotorsAreOn &&
+        (mpu_consecutive_missed_samples >= MPU6050_MAX_CONSECUTIVE_MISSES ||
+         mpu_last_valid_tick == 0U ||
+         (uint32_t)(now - mpu_last_valid_tick) > MPU6050_STALE_TIMEOUT_MS)) {
+        Control_SetMotorsEnabled(0U);
+    }
+
+    PID_PITCH(sample_valid);
+    control_slots_serviced++;
+    MPU_RequestNextSample(slot, now);
+}
+
+void I2C1_Recover(void)
+{
+    HAL_DMA_Abort(&hdma_i2c1_rx);
+    HAL_DMA_Abort(&hdma_i2c1_tx);
+    HAL_I2C_DeInit(&hi2c1);
+    __HAL_RCC_I2C1_FORCE_RESET();
+    __HAL_RCC_I2C1_RELEASE_RESET();
+    MX_I2C1_Init();
+
+    oled_is_busy = 0;
+    oled_current_page = 0;
+    i2c1_bus_owner = I2C1_OWNER_NONE;
+    i2c1_recovery_requested = 0;
+    MPU6050_MarkRecoveryComplete();
+}
+
+void MPU_HighPriorityService(uint32_t now)
+{
+    HAL_StatusTypeDef status;
+
+    MPU6050_CheckActiveTimeout(now);
+
+    if (oled_is_busy && (uint32_t)(now - oled_dma_start_tick) >= OLED_DMA_TIMEOUT_MS) {
+        oled_i2c_errors++;
+        i2c1_recovery_requested = 1;
+    }
+
+    if (mpu_recovery_requested || i2c1_recovery_requested) {
+        I2C1_Recover();
+        return;
+    }
+
+    if (mpu_acq_state == MPU_ACQ_REQUEST_PENDING && i2c1_bus_owner == I2C1_OWNER_NONE) {
+        if ((uint32_t)(now - mpu_request_tick) >= MPU6050_DMA_TIMEOUT_MS) {
+            MPU6050_DropPendingSample();
+            return;
+        }
+        i2c1_bus_owner = I2C1_OWNER_MPU;
+        status = MPU6050_StartPendingDMA(&hi2c1, now);
+        if (status != HAL_OK) {
+            i2c1_bus_owner = I2C1_OWNER_NONE;
+        }
+        if (status == HAL_BUSY &&
+            (uint32_t)(HAL_GetTick() - mpu_request_tick) >= MPU6050_DMA_TIMEOUT_MS) {
+            MPU6050_NotifyI2CError(HAL_I2C_ERROR_TIMEOUT);
+        }
+    }
+}
+
 void OLED_Service(void)
 {
-    if (!esp01_oled_ready || !oled_update_requested || oled_is_busy || flag10ms) {
+    uint32_t elapsed_since_slot;
+
+    if (!esp01_oled_ready || !oled_update_requested) {
         return;
     }
 
-    if (HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY) {
+    elapsed_since_slot = HAL_GetTick() - control_last_slot_tick;
+    if (oled_is_busy ||
+        i2c1_bus_owner != I2C1_OWNER_NONE ||
+        MPU6050_IsBusPriorityActive() ||
+        elapsed_since_slot >= OLED_GUARD_WINDOW_MS ||
+        HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY) {
+        oled_deferred_count++;
         return;
     }
 
-    SSD1306_UpdatePage_DMA(oled_current_page);
+    i2c1_bus_owner = I2C1_OWNER_OLED;
+    if (SSD1306_UpdatePage_DMA(oled_current_page) == HAL_OK) {
+        oled_dma_start_tick = HAL_GetTick();
+    } else {
+        i2c1_bus_owner = I2C1_OWNER_NONE;
+    }
 }
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len)
 {
@@ -1360,8 +1498,8 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         }
         break;
     case CMD_CALIBRATE:
-        flagCalibrationIsReady = 0;
-        mpu_calibration_requested = 1;
+        Control_SetMotorsEnabled(0U);
+        MPU6050_Calibrate();
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_CALIBRATE;
             uner_ack_seq = seq;
@@ -1710,12 +1848,12 @@ void ESP01_Generic_Functions(uint32_t now){
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
     if (htim->Instance == TIM4) {
+        uint32_t now = HAL_GetTick();
         ESP01_Timeout10ms();
-        if (flag10ms) {
-            control_missed_slots++;
-        } else {
-            flag10ms=1;
-        }
+        control_slot_counter++;
+        control_last_slot_tick = now;
+        Control_RunControlSlot(control_slot_counter, now);
+        flag10ms = 1;
         counterHB++;
         if (counterHB >= delayHB) {
             counterHB = 0;
@@ -1725,8 +1863,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 }
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
-    if (hi2c->Instance == I2C1 && oled_is_busy) {
+    if (hi2c->Instance == I2C1 && i2c1_bus_owner == I2C1_OWNER_OLED && oled_is_busy) {
         oled_is_busy = 0;
+        i2c1_bus_owner = I2C1_OWNER_NONE;
         oled_pages_sent++;
         oled_current_page++;
         if (oled_current_page >= 8U) {
@@ -1737,13 +1876,27 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
     }
 }
 
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    if (hi2c->Instance == I2C1 && i2c1_bus_owner == I2C1_OWNER_MPU) {
+        i2c1_bus_owner = I2C1_OWNER_NONE;
+        MPU6050_NotifyDmaComplete();
+    }
+}
+
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
 {
-    if (hi2c->Instance == I2C1 && oled_is_busy) {
-        oled_i2c_errors++;
-        oled_is_busy = 0;
-        oled_current_page = 0;
-        oled_update_requested = 0;
+    if (hi2c->Instance == I2C1) {
+        if (i2c1_bus_owner == I2C1_OWNER_MPU) {
+            MPU6050_NotifyI2CError(HAL_I2C_GetError(hi2c));
+        } else if (i2c1_bus_owner == I2C1_OWNER_OLED || oled_is_busy) {
+            oled_i2c_errors++;
+            oled_is_busy = 0;
+            oled_current_page = 0;
+            oled_update_requested = 0;
+            i2c1_recovery_requested = 1;
+        }
+        i2c1_bus_owner = I2C1_OWNER_NONE;
     }
 }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
@@ -1842,6 +1995,7 @@ int main(void)
       ESP01_SetWIFI(WIFI_SSID, WIFI_PASSWORD);
       ESP01_StartTransport();
       ESP.udp_started = 1;
+      MPU_RequestNextSample(0U, HAL_GetTick());
       HAL_TIM_Base_Start_IT(&htim4);
   /* USER CODE END 2 */
 
@@ -1857,6 +2011,8 @@ int main(void)
 	  	static uint8_t last_motors_are_on = 0;
 		uint32_t now = HAL_GetTick();
 
+		MPU_HighPriorityService(now);
+
 		if (flagMotorsAreOn != last_motors_are_on) {
 			PID_PITCH_ResetState();
 			last_motors_are_on = flagMotorsAreOn;
@@ -1868,23 +2024,7 @@ int main(void)
 			ObstacleSensor_Task();
 			Leer_Linea_Digital();
 			if (flag_calibrando_linea){	Procesar_Calibracion_Linea();}
-		}
-		if(flag10ms){
 			flag10ms = 0;
-			Telemetry_UpdateMPU();
-			if (!flag_calibrando_linea) {
-				ObstacleFollow_Task();
-				FollowLine_Task();
-				if (currentMode == MODO_RC && flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
-					flag_RC_active = 0;
-					RC_setpoint = 0.0f;
-					RC_steering = 0;
-				}
-				TurnManeuver_Task();
-			}
-			PID_PITCH();
-			control_slots_serviced++;
-			OLED_Service();
 		}
 
 	  	ESP01_App_Task();
@@ -1894,6 +2034,7 @@ int main(void)
 		if((now - last_oled_update)>=500){last_oled_update = now;screenScheduler();	}
 		ESP01_Generic_Functions(now);
 		ESP01_Task();
+		OLED_Service();
   }
   /* USER CODE END 3 */
 }

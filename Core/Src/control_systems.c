@@ -1,5 +1,6 @@
 #include "control_systems.h"
 #include "line_sensors.h"
+#include "mpu6050_app.h"
 #include <math.h>
 
 #define FL_RECOVERY_STEERING         700
@@ -109,6 +110,10 @@ void Control_SetMotorsEnabled(uint8_t enabled)
 {
     enabled = enabled ? 1U : 0U;
 
+    if (enabled && !MPU6050_IsMotorEnableAllowed(HAL_GetTick())) {
+        enabled = 0U;
+    }
+
     if (flagMotorsAreOn != enabled) {
         PID_PITCH_ResetState();
     }
@@ -125,7 +130,7 @@ void Control_SetMotorsEnabled(uint8_t enabled)
     }
 }
 
-void PID_PITCH(void)
+void PID_PITCH(uint8_t integrate)
 {
     float gyro_rate = giro;
     float target_setpoint = setpoint;
@@ -217,11 +222,13 @@ void PID_PITCH(void)
     }
 
     error = angle_y - target_setpoint;
-    integral += error * CONTROL_DT_PID;
-    if (integral > integral_limit) {
-        integral = integral_limit;
-    } else if (integral < -integral_limit) {
-        integral = -integral_limit;
+    if (integrate) {
+        integral += error * CONTROL_DT_PID;
+        if (integral > integral_limit) {
+            integral = integral_limit;
+        } else if (integral < -integral_limit) {
+            integral = -integral_limit;
+        }
     }
     P = Kp * error;
     I = Ki * integral;

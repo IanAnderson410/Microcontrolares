@@ -116,7 +116,7 @@ extern volatile uint8_t turn_debug_motor_saturated;
 extern volatile uint8_t turn_debug_exit_reason;
 extern volatile uint16_t turn_debug_prepare_remaining_ms;
 
-void PID_PITCH(void);
+void PID_PITCH(uint8_t integrate);
 void PID_PITCH_ResetState(void);
 void Control_SetMotorsEnabled(uint8_t enabled);
 float ForwardMotion_Generate(float motion_setpoint,
