@@ -123,6 +123,7 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
         "steeringStep",
         "steeringLimit",
         "turnBiasDeg",
+        "preBiasDelayMs",
         "enviarFlConfig",
         "flSetpoint",
         "motionMs",
@@ -256,104 +257,109 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
             { 0x80000000 | 26, 27 }, { 0x80000000 | 51, 49 },
         }}),
         // Slot 'enviarYawConfig'
-        QtMocHelpers::SlotData<void(float, float, float, float, float, float, float)>(52, 2, QMC::AccessPrivate, QMetaType::Void, {{
+        QtMocHelpers::SlotData<void(float, float, float, float, float, float, float, quint16)>(52, 2, QMC::AccessPrivate, QMetaType::Void, {{
             { QMetaType::Float, 53 }, { QMetaType::Float, 54 }, { QMetaType::Float, 55 }, { QMetaType::Float, 56 },
-            { QMetaType::Float, 57 }, { QMetaType::Float, 58 }, { QMetaType::Float, 59 },
+            { QMetaType::Float, 57 }, { QMetaType::Float, 58 }, { QMetaType::Float, 59 }, { QMetaType::UShort, 60 },
         }}),
         // Slot 'enviarFlConfig'
-        QtMocHelpers::SlotData<void(float, quint16, quint16)>(60, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Float, 61 }, { QMetaType::UShort, 62 }, { QMetaType::UShort, 63 },
+        QtMocHelpers::SlotData<void(float, quint16, quint16)>(61, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Float, 62 }, { QMetaType::UShort, 63 }, { QMetaType::UShort, 64 },
         }}),
         // Slot 'enviarTurnManeuver'
-        QtMocHelpers::SlotData<void(float, quint8, quint8, quint8, float)>(64, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Float, 65 }, { QMetaType::UChar, 66 }, { QMetaType::UChar, 67 }, { QMetaType::UChar, 68 },
+        QtMocHelpers::SlotData<void(float, quint8, quint8, quint8, float, quint16)>(65, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Float, 66 }, { QMetaType::UChar, 67 }, { QMetaType::UChar, 68 }, { QMetaType::UChar, 69 },
+            { QMetaType::Float, 59 }, { QMetaType::UShort, 60 },
+        }}),
+        // Slot 'enviarTurnManeuver'
+        QtMocHelpers::SlotData<void(float, quint8, quint8, quint8, float)>(65, 2, QMC::AccessPrivate | QMC::MethodCloned, QMetaType::Void, {{
+            { QMetaType::Float, 66 }, { QMetaType::UChar, 67 }, { QMetaType::UChar, 68 }, { QMetaType::UChar, 69 },
             { QMetaType::Float, 59 },
         }}),
         // Slot 'enviarTurnManeuver'
-        QtMocHelpers::SlotData<void(float, quint8, quint8, quint8)>(64, 2, QMC::AccessPrivate | QMC::MethodCloned, QMetaType::Void, {{
-            { QMetaType::Float, 65 }, { QMetaType::UChar, 66 }, { QMetaType::UChar, 67 }, { QMetaType::UChar, 68 },
+        QtMocHelpers::SlotData<void(float, quint8, quint8, quint8)>(65, 2, QMC::AccessPrivate | QMC::MethodCloned, QMetaType::Void, {{
+            { QMetaType::Float, 66 }, { QMetaType::UChar, 67 }, { QMetaType::UChar, 68 }, { QMetaType::UChar, 69 },
         }}),
         // Slot 'enviarTurnManeuver'
-        QtMocHelpers::SlotData<void(float, quint8, quint8)>(64, 2, QMC::AccessPrivate | QMC::MethodCloned, QMetaType::Void, {{
-            { QMetaType::Float, 65 }, { QMetaType::UChar, 66 }, { QMetaType::UChar, 67 },
+        QtMocHelpers::SlotData<void(float, quint8, quint8)>(65, 2, QMC::AccessPrivate | QMC::MethodCloned, QMetaType::Void, {{
+            { QMetaType::Float, 66 }, { QMetaType::UChar, 67 }, { QMetaType::UChar, 68 },
         }}),
         // Slot 'buildUnerV1'
-        QtMocHelpers::SlotData<QByteArray(uint8_t, uint8_t, const QByteArray &)>(69, 2, QMC::AccessPrivate, QMetaType::QByteArray, {{
-            { 0x80000000 | 26, 27 }, { 0x80000000 | 26, 70 }, { QMetaType::QByteArray, 28 },
+        QtMocHelpers::SlotData<QByteArray(uint8_t, uint8_t, const QByteArray &)>(70, 2, QMC::AccessPrivate, QMetaType::QByteArray, {{
+            { 0x80000000 | 26, 27 }, { 0x80000000 | 26, 71 }, { QMetaType::QByteArray, 28 },
         }}),
         // Slot 'unerCrc16Ccitt'
-        QtMocHelpers::SlotData<uint16_t(const QByteArray &)>(71, 2, QMC::AccessPrivate, 0x80000000 | 72, {{
-            { QMetaType::QByteArray, 73 },
+        QtMocHelpers::SlotData<uint16_t(const QByteArray &)>(72, 2, QMC::AccessPrivate, 0x80000000 | 73, {{
+            { QMetaType::QByteArray, 74 },
         }}),
         // Slot 'isCriticalCommand'
-        QtMocHelpers::SlotData<bool(uint8_t) const>(74, 2, QMC::AccessPrivate, QMetaType::Bool, {{
+        QtMocHelpers::SlotData<bool(uint8_t) const>(75, 2, QMC::AccessPrivate, QMetaType::Bool, {{
             { 0x80000000 | 26, 27 },
         }}),
         // Slot 'processUnerV1Datagram'
-        QtMocHelpers::SlotData<void(const QByteArray &)>(75, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QByteArray, 73 },
+        QtMocHelpers::SlotData<void(const QByteArray &)>(76, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QByteArray, 74 },
         }}),
         // Slot 'processTcpUnerStream'
-        QtMocHelpers::SlotData<void()>(76, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(77, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'handleUnerV1Packet'
-        QtMocHelpers::SlotData<void(uint8_t, uint8_t, uint8_t, const QByteArray &)>(77, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { 0x80000000 | 26, 27 }, { 0x80000000 | 26, 70 }, { 0x80000000 | 26, 78 }, { QMetaType::QByteArray, 79 },
+        QtMocHelpers::SlotData<void(uint8_t, uint8_t, uint8_t, const QByteArray &)>(78, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { 0x80000000 | 26, 27 }, { 0x80000000 | 26, 71 }, { 0x80000000 | 26, 79 }, { QMetaType::QByteArray, 80 },
         }}),
         // Slot 'processPendingAckRetry'
-        QtMocHelpers::SlotData<void()>(80, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_PID_Alpha_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(81, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_Home_pushButton_clicked'
+        // Slot 'on_PID_Alpha_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(82, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_Ejecucion_pushButton_clicked'
+        // Slot 'on_Home_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(83, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_ScreenCalibrar_pushbutton_clicked'
+        // Slot 'on_Ejecucion_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(84, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_SistemasDeControl_pushButton_clicked'
+        // Slot 'on_ScreenCalibrar_pushbutton_clicked'
         QtMocHelpers::SlotData<void()>(85, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_Advanced_pushButton_clicked'
+        // Slot 'on_SistemasDeControl_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(86, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_Advanced_pushButton_clicked'
+        QtMocHelpers::SlotData<void()>(87, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_Setpoint_spinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(87, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 88 },
+        QtMocHelpers::SlotData<void(const QString &)>(88, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 89 },
         }}),
         // Slot 'on_StartCalibratePushButton_clicked'
-        QtMocHelpers::SlotData<void()>(89, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_StopCalibratePushButton_clicked'
         QtMocHelpers::SlotData<void()>(90, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_SP_yaw_pushButton_clicked'
+        // Slot 'on_StopCalibratePushButton_clicked'
         QtMocHelpers::SlotData<void()>(91, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_Kd_yaw_pushButton_clicked'
+        // Slot 'on_SP_yaw_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(92, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_Kp_yaw_pushButton_clicked'
+        // Slot 'on_Kd_yaw_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(93, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_ChangeModeIddlePushButton_clicked'
+        // Slot 'on_Kp_yaw_pushButton_clicked'
         QtMocHelpers::SlotData<void()>(94, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_ChangeModeRCPushButton_clicked'
+        // Slot 'on_ChangeModeIddlePushButton_clicked'
         QtMocHelpers::SlotData<void()>(95, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_ChangeModeFLPushButton_clicked'
+        // Slot 'on_ChangeModeRCPushButton_clicked'
         QtMocHelpers::SlotData<void()>(96, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_ChangeModeFLPushButton_clicked'
+        QtMocHelpers::SlotData<void()>(97, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_Setpoint_doubleSpinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(97, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 88 },
+        QtMocHelpers::SlotData<void(const QString &)>(98, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 89 },
         }}),
         // Slot 'on_Screen2PushButton_2_clicked'
-        QtMocHelpers::SlotData<void()>(98, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(99, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_Setpoint_FL_doubleSpinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(99, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 88 },
+        QtMocHelpers::SlotData<void(const QString &)>(100, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 89 },
         }}),
         // Slot 'on_Setpoint_FL_spinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(100, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 88 },
+        QtMocHelpers::SlotData<void(const QString &)>(101, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 89 },
         }}),
         // Slot 'on_Ajust_RC_Setpoint_spinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(101, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 88 },
+        QtMocHelpers::SlotData<void(const QString &)>(102, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 89 },
         }}),
         // Slot 'on_Limite_error_spinBox_textChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(102, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 88 },
+        QtMocHelpers::SlotData<void(const QString &)>(103, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 89 },
         }}),
     };
     QtMocHelpers::UintData qt_properties {
@@ -414,42 +420,43 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 32: _t->actualizarPitch3D((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[3]))); break;
         case 33: _t->enviarFloat((*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[2]))); break;
         case 34: _t->enviarInt16((*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<int16_t>>(_a[2]))); break;
-        case 35: _t->enviarYawConfig((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[3])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[4])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[5])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[6])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[7]))); break;
+        case 35: _t->enviarYawConfig((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[3])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[4])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[5])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[6])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[7])),(*reinterpret_cast<std::add_pointer_t<quint16>>(_a[8]))); break;
         case 36: _t->enviarFlConfig((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<quint16>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<quint16>>(_a[3]))); break;
-        case 37: _t->enviarTurnManeuver((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[3])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[4])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[5]))); break;
-        case 38: _t->enviarTurnManeuver((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[3])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[4]))); break;
-        case 39: _t->enviarTurnManeuver((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[3]))); break;
-        case 40: { QByteArray _r = _t->buildUnerV1((*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[3])));
+        case 37: _t->enviarTurnManeuver((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[3])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[4])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[5])),(*reinterpret_cast<std::add_pointer_t<quint16>>(_a[6]))); break;
+        case 38: _t->enviarTurnManeuver((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[3])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[4])),(*reinterpret_cast<std::add_pointer_t<float>>(_a[5]))); break;
+        case 39: _t->enviarTurnManeuver((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[3])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[4]))); break;
+        case 40: _t->enviarTurnManeuver((*reinterpret_cast<std::add_pointer_t<float>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<quint8>>(_a[3]))); break;
+        case 41: { QByteArray _r = _t->buildUnerV1((*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[3])));
             if (_a[0]) *reinterpret_cast<QByteArray*>(_a[0]) = std::move(_r); }  break;
-        case 41: { uint16_t _r = _t->unerCrc16Ccitt((*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[1])));
+        case 42: { uint16_t _r = _t->unerCrc16Ccitt((*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[1])));
             if (_a[0]) *reinterpret_cast<uint16_t*>(_a[0]) = std::move(_r); }  break;
-        case 42: { bool _r = _t->isCriticalCommand((*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[1])));
+        case 43: { bool _r = _t->isCriticalCommand((*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[1])));
             if (_a[0]) *reinterpret_cast<bool*>(_a[0]) = std::move(_r); }  break;
-        case 43: _t->processUnerV1Datagram((*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[1]))); break;
-        case 44: _t->processTcpUnerStream(); break;
-        case 45: _t->handleUnerV1Packet((*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[3])),(*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[4]))); break;
-        case 46: _t->processPendingAckRetry(); break;
-        case 47: _t->on_PID_Alpha_pushButton_clicked(); break;
-        case 48: _t->on_Home_pushButton_clicked(); break;
-        case 49: _t->on_Ejecucion_pushButton_clicked(); break;
-        case 50: _t->on_ScreenCalibrar_pushbutton_clicked(); break;
-        case 51: _t->on_SistemasDeControl_pushButton_clicked(); break;
-        case 52: _t->on_Advanced_pushButton_clicked(); break;
-        case 53: _t->on_Setpoint_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 54: _t->on_StartCalibratePushButton_clicked(); break;
-        case 55: _t->on_StopCalibratePushButton_clicked(); break;
-        case 56: _t->on_SP_yaw_pushButton_clicked(); break;
-        case 57: _t->on_Kd_yaw_pushButton_clicked(); break;
-        case 58: _t->on_Kp_yaw_pushButton_clicked(); break;
-        case 59: _t->on_ChangeModeIddlePushButton_clicked(); break;
-        case 60: _t->on_ChangeModeRCPushButton_clicked(); break;
-        case 61: _t->on_ChangeModeFLPushButton_clicked(); break;
-        case 62: _t->on_Setpoint_doubleSpinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 63: _t->on_Screen2PushButton_2_clicked(); break;
-        case 64: _t->on_Setpoint_FL_doubleSpinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 65: _t->on_Setpoint_FL_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 66: _t->on_Ajust_RC_Setpoint_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 67: _t->on_Limite_error_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 44: _t->processUnerV1Datagram((*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[1]))); break;
+        case 45: _t->processTcpUnerStream(); break;
+        case 46: _t->handleUnerV1Packet((*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[2])),(*reinterpret_cast<std::add_pointer_t<uint8_t>>(_a[3])),(*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[4]))); break;
+        case 47: _t->processPendingAckRetry(); break;
+        case 48: _t->on_PID_Alpha_pushButton_clicked(); break;
+        case 49: _t->on_Home_pushButton_clicked(); break;
+        case 50: _t->on_Ejecucion_pushButton_clicked(); break;
+        case 51: _t->on_ScreenCalibrar_pushbutton_clicked(); break;
+        case 52: _t->on_SistemasDeControl_pushButton_clicked(); break;
+        case 53: _t->on_Advanced_pushButton_clicked(); break;
+        case 54: _t->on_Setpoint_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 55: _t->on_StartCalibratePushButton_clicked(); break;
+        case 56: _t->on_StopCalibratePushButton_clicked(); break;
+        case 57: _t->on_SP_yaw_pushButton_clicked(); break;
+        case 58: _t->on_Kd_yaw_pushButton_clicked(); break;
+        case 59: _t->on_Kp_yaw_pushButton_clicked(); break;
+        case 60: _t->on_ChangeModeIddlePushButton_clicked(); break;
+        case 61: _t->on_ChangeModeRCPushButton_clicked(); break;
+        case 62: _t->on_ChangeModeFLPushButton_clicked(); break;
+        case 63: _t->on_Setpoint_doubleSpinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 64: _t->on_Screen2PushButton_2_clicked(); break;
+        case 65: _t->on_Setpoint_FL_doubleSpinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 66: _t->on_Setpoint_FL_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 67: _t->on_Ajust_RC_Setpoint_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 68: _t->on_Limite_error_spinBox_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
         default: ;
         }
     }
@@ -474,14 +481,14 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 68)
+        if (_id < 69)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 68;
+        _id -= 69;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 68)
+        if (_id < 69)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 68;
+        _id -= 69;
     }
     return _id;
 }

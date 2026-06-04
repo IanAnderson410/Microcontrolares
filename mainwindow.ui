@@ -8837,6 +8837,16 @@ QComboBox{
             <item row="16" column="1">
              <widget class="QDoubleSpinBox" name="turnBiasSpin"/>
             </item>
+            <item row="17" column="0">
+             <widget class="QLabel" name="turnPreBiasDelayLabel">
+              <property name="text">
+               <string>Pre-bias delay</string>
+              </property>
+             </widget>
+            </item>
+            <item row="17" column="1">
+             <widget class="QDoubleSpinBox" name="turnPreBiasDelaySpin"/>
+            </item>
             <item row="8" column="1">
              <widget class="QDoubleSpinBox" name="flCfgBalanceMs"/>
             </item>

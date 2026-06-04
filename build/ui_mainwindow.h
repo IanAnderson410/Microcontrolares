@@ -317,6 +317,8 @@ public:
     QLabel *turnArcPercentLabel;
     QLabel *turnBiasLabel;
     QDoubleSpinBox *turnBiasSpin;
+    QLabel *turnPreBiasDelayLabel;
+    QDoubleSpinBox *turnPreBiasDelaySpin;
     QDoubleSpinBox *flCfgBalanceMs;
     QPushButton *yawCfgOled;
     QPushButton *obstacleFollowStartButton;
@@ -1514,7 +1516,7 @@ public:
         IR5_progressBar->setTextVisible(false);
         IR5_progressBar->setOrientation(Qt::Orientation::Vertical);
         stackedWidget->addWidget(page);
-        layoutWidget3->raise();
+        layoutWidget1->raise();
         PitchQuickWidget->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
@@ -2987,6 +2989,16 @@ public:
 
         yawConfigLayout->addWidget(turnBiasSpin, 16, 1, 1, 1);
 
+        turnPreBiasDelayLabel = new QLabel(yawConfigBox);
+        turnPreBiasDelayLabel->setObjectName("turnPreBiasDelayLabel");
+
+        yawConfigLayout->addWidget(turnPreBiasDelayLabel, 17, 0, 1, 1);
+
+        turnPreBiasDelaySpin = new QDoubleSpinBox(yawConfigBox);
+        turnPreBiasDelaySpin->setObjectName("turnPreBiasDelaySpin");
+
+        yawConfigLayout->addWidget(turnPreBiasDelaySpin, 17, 1, 1, 1);
+
         flCfgBalanceMs = new QDoubleSpinBox(yawConfigBox);
         flCfgBalanceMs->setObjectName("flCfgBalanceMs");
 
@@ -3365,6 +3377,7 @@ public:
         turnWheelLabel->setText(QCoreApplication::translate("MainWindow", "Wheel", nullptr));
         turnArcPercentLabel->setText(QCoreApplication::translate("MainWindow", "Inner %", nullptr));
         turnBiasLabel->setText(QCoreApplication::translate("MainWindow", "Turn bias", nullptr));
+        turnPreBiasDelayLabel->setText(QCoreApplication::translate("MainWindow", "Pre-bias delay", nullptr));
         yawCfgOled->setText(QCoreApplication::translate("MainWindow", "OLED", nullptr));
         obstacleFollowStartButton->setText(QCoreApplication::translate("MainWindow", "START FACE_FOLLOW", nullptr));
         Home_pushButton->setText(QCoreApplication::translate("MainWindow", "HOME", nullptr));

@@ -2785,7 +2785,9 @@ release/mainwindow.o: ../mainwindow.cpp ../mainwindow.h \
 		C:/Qt/6.10.2/mingw_64/include/QtQuickWidgets/qtquickwidgetsexports.h \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QApplication \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QComboBox \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QDoubleSpinBox \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QGridLayout \
+		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QGroupBox \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QHBoxLayout \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QLineEdit \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QMenuBar \
@@ -2795,8 +2797,6 @@ release/mainwindow.o: ../mainwindow.cpp ../mainwindow.h \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QStatusBar \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QToolBar \
 		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QVBoxLayout \
-		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QDoubleSpinBox \
-		C:/Qt/6.10.2/mingw_64/include/QtWidgets/QGroupBox \
 		C:/Qt/6.10.2/mingw_64/include/QtCore/QtEndian
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o release\mainwindow.o ..\mainwindow.cpp
 
