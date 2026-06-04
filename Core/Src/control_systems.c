@@ -12,6 +12,7 @@
 #define ARC_MANEUVER_FORWARD_RATIO   0.50f
 
 volatile uint8_t turn_maneuver_active = 0;
+volatile uint8_t turn_maneuver_state = TURN_MANEUVER_STATE_IDLE;
 volatile uint8_t turn_maneuver_mode = TURN_MANEUVER_MODE_TWO_WHEELS;
 volatile uint8_t turn_maneuver_wheel = TURN_MANEUVER_WHEEL_LEFT;
 volatile float turn_maneuver_setpoint = 0.0f;
@@ -29,6 +30,7 @@ volatile int16_t turn_debug_pivot_motor_cmd = 0;
 volatile uint8_t turn_debug_steering_clamped = 0;
 volatile uint8_t turn_debug_motor_saturated = 0;
 volatile uint8_t turn_debug_exit_reason = TURN_MANEUVER_EXIT_NONE;
+volatile uint16_t turn_debug_prepare_remaining_ms = 0;
 
 static float turn_maneuver_start_yaw_deg = 0.0f;
 static float turn_maneuver_target_delta_deg = 0.0f;
@@ -36,6 +38,7 @@ static float turn_maneuver_error_filtered = 0.0f;
 static float turn_maneuver_steering_slow = 0.0f;
 static float turn_maneuver_arc_inner_ratio = 0.0f;
 static uint32_t turn_maneuver_start_tick = 0;
+static uint32_t turn_maneuver_prepare_start_tick = 0;
 
 static float clamp_float(float value, float limit)
 {
@@ -338,11 +341,10 @@ static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
         return TURN_MANEUVER_STATUS_SENSOR;
     }
 
-    turn_maneuver_start_yaw_deg = angle_yaw;
     turn_maneuver_target_delta_deg = target_angle_deg;
     turn_maneuver_error_filtered = 0.0f;
     turn_maneuver_steering_slow = 0.0f;
-    turn_maneuver_start_tick = now;
+    turn_maneuver_prepare_start_tick = now;
     turn_maneuver_mode = wheel_mode;
     turn_maneuver_wheel = wheel_select;
     turn_maneuver_arc_inner_ratio = ((float)inner_wheel_percent) / 100.0f;
@@ -361,6 +363,14 @@ static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
     turn_debug_pivot_motor_cmd = 0;
     turn_debug_motor_saturated = 0;
     turn_debug_exit_reason = TURN_MANEUVER_EXIT_NONE;
+    turn_debug_prepare_remaining_ms = turn_maneuver_pre_bias_delay_ms;
+    if (turn_maneuver_pre_bias_delay_ms > 0U) {
+        turn_maneuver_state = TURN_MANEUVER_STATE_PREPARING;
+    } else {
+        turn_maneuver_state = TURN_MANEUVER_STATE_TURNING;
+        turn_maneuver_start_yaw_deg = angle_yaw;
+        turn_maneuver_start_tick = now;
+    }
     turn_maneuver_active = 1;
     flag_RC_active = 0;
     RC_setpoint = 0.0f;
@@ -386,6 +396,7 @@ void TurnManeuver_CancelWithReason(uint8_t reason)
 {
     turn_debug_exit_reason = reason;
     turn_maneuver_active = 0;
+    turn_maneuver_state = TURN_MANEUVER_STATE_IDLE;
     turn_maneuver_setpoint = 0.0f;
     turn_maneuver_steering = 0;
     turn_maneuver_steering_slow = 0.0f;
@@ -393,6 +404,7 @@ void TurnManeuver_CancelWithReason(uint8_t reason)
     turn_maneuver_arc_inner_ratio = 0.0f;
     turn_debug_target_steering = 0.0f;
     turn_debug_steering_ramp = 0.0f;
+    turn_debug_prepare_remaining_ms = 0U;
     integral = 0.0f;
     I = 0.0f;
     RC_setpoint = 0.0f;
@@ -425,6 +437,27 @@ void TurnManeuver_Task(void)
         Control_SetMotorsEnabled(0U);
         return;
     }
+
+    if (turn_maneuver_state == TURN_MANEUVER_STATE_PREPARING) {
+        uint32_t prepare_elapsed = now - turn_maneuver_prepare_start_tick;
+        turn_maneuver_setpoint = TurnManeuver_GetActiveSetpoint();
+        turn_maneuver_steering = 0;
+        turn_maneuver_steering_slow = 0.0f;
+        turn_debug_steering_ramp = 0.0f;
+
+        if (prepare_elapsed < turn_maneuver_pre_bias_delay_ms) {
+            turn_debug_prepare_remaining_ms =
+                (uint16_t)(turn_maneuver_pre_bias_delay_ms - prepare_elapsed);
+            return;
+        }
+
+        turn_debug_prepare_remaining_ms = 0U;
+        turn_maneuver_state = TURN_MANEUVER_STATE_TURNING;
+        turn_maneuver_start_yaw_deg = angle_yaw;
+        turn_maneuver_start_tick = now;
+        turn_maneuver_error_filtered = 0.0f;
+    }
+
     if ((uint32_t)(now - turn_maneuver_start_tick) > TURN_MANEUVER_TIMEOUT_MS) {
         TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_TIMEOUT);
         return;

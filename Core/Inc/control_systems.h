@@ -36,6 +36,9 @@ extern "C" {
 #define TURN_MANEUVER_EXIT_IMU_STALE       5U
 #define TURN_MANEUVER_EXIT_PITCH_SAFETY    6U
 #define TURN_MANEUVER_EXIT_EXTERNAL_CANCEL 7U
+#define TURN_MANEUVER_STATE_IDLE           0U
+#define TURN_MANEUVER_STATE_PREPARING      1U
+#define TURN_MANEUVER_STATE_TURNING        2U
 
 extern volatile uint8_t currentMode;
 extern volatile uint8_t flagMotorsAreOn;
@@ -91,7 +94,9 @@ extern float yaw_error_filter_alpha;
 extern float yaw_steering_step_max;
 extern float yaw_steering_limit;
 extern float turn_maneuver_forward_bias_deg;
+extern uint16_t turn_maneuver_pre_bias_delay_ms;
 extern volatile uint8_t turn_maneuver_active;
+extern volatile uint8_t turn_maneuver_state;
 extern volatile uint8_t turn_maneuver_mode;
 extern volatile uint8_t turn_maneuver_wheel;
 extern volatile float turn_maneuver_setpoint;
@@ -109,6 +114,7 @@ extern volatile int16_t turn_debug_pivot_motor_cmd;
 extern volatile uint8_t turn_debug_steering_clamped;
 extern volatile uint8_t turn_debug_motor_saturated;
 extern volatile uint8_t turn_debug_exit_reason;
+extern volatile uint16_t turn_debug_prepare_remaining_ms;
 
 void PID_PITCH(void);
 void PID_PITCH_ResetState(void);

@@ -224,6 +224,7 @@ volatile    float 		FL_setpoint = 4.4f;
 			float 		yaw_steering_step_max = 90.0f;
 			float 		yaw_steering_limit = 3600.0f;
 			float 		turn_maneuver_forward_bias_deg = 1.0f;
+			uint16_t 	turn_maneuver_pre_bias_delay_ms = 300U;
 			float 		last_state_linea = 0.0f;
 			float 		error_linea;
 volatile 	uint16_t 	adc_filtrado[8] = {2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000};
@@ -476,10 +477,16 @@ void screenScheduler(void){
 
     if (flagOLED == 10) {
         char wheel_label = (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) ? 'L' : 'R';
+        char state_label = 'I';
         const char *exit_label = "NON";
 
         if (turn_maneuver_mode == TURN_MANEUVER_MODE_TWO_WHEELS) {
             wheel_label = 'B';
+        }
+        if (turn_maneuver_state == TURN_MANEUVER_STATE_PREPARING) {
+            state_label = 'P';
+        } else if (turn_maneuver_state == TURN_MANEUVER_STATE_TURNING) {
+            state_label = 'T';
         }
 
         switch (turn_debug_exit_reason) {
@@ -494,8 +501,9 @@ void screenScheduler(void){
         }
 
         SSD1306_GotoXY(0, 10);
-        snprintf(msg, sizeof(msg), "A%cM%u W%c C%cS%c",
+        snprintf(msg, sizeof(msg), "A%cQ%cM%uW%c C%cS%c",
                  turn_maneuver_active ? '1' : '0',
+                 state_label,
                  turn_maneuver_mode,
                  wheel_label,
                  turn_debug_steering_clamped ? '1' : '0',
@@ -510,8 +518,14 @@ void screenScheduler(void){
                  turn_debug_pivot_motor_cmd);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 40);
-        snprintf(msg, sizeof(msg), "St%5d L%5.0f", turn_maneuver_steering,
-                 turn_debug_effective_limit);
+        if (turn_maneuver_state == TURN_MANEUVER_STATE_PREPARING) {
+            snprintf(msg, sizeof(msg), "PREP %4ums B%3.1f",
+                     turn_debug_prepare_remaining_ms,
+                     turn_maneuver_forward_bias_deg);
+        } else {
+            snprintf(msg, sizeof(msg), "St%5d L%5.0f", turn_maneuver_steering,
+                     turn_debug_effective_limit);
+        }
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 50);
         snprintf(msg, sizeof(msg), "P%4.0f B%3.1f X%s", output,
@@ -1167,12 +1181,16 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             float steering_step = UNER_ReadFloatLE(payload + 16);
             float steering_limit = yaw_steering_limit;
             float turn_bias = turn_maneuver_forward_bias_deg;
+            uint16_t pre_bias_delay_ms = turn_maneuver_pre_bias_delay_ms;
 
             if (payload_len >= 24) {
                 steering_limit = UNER_ReadFloatLE(payload + 20);
             }
             if (payload_len >= 28) {
                 turn_bias = UNER_ReadFloatLE(payload + 24);
+            }
+            if (payload_len >= 30) {
+                pre_bias_delay_ms = (uint16_t)payload[28] | ((uint16_t)payload[29] << 8);
             }
 
             if (kp >= 0.0f && kp <= 20000.0f &&
@@ -1181,7 +1199,8 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 filter_alpha >= 0.0f && filter_alpha <= 0.995f &&
                 steering_step >= 1.0f && steering_step <= 2000.0f &&
                 steering_limit >= 0.0f && steering_limit <= 5000.0f &&
-                turn_bias >= -10.0f && turn_bias <= 10.0f) {
+                turn_bias >= -10.0f && turn_bias <= 10.0f &&
+                pre_bias_delay_ms <= 5000U) {
                 Kp_yaw = kp;
                 Kd_yaw = kd;
                 multiplicadorYaw = curve_mul;
@@ -1189,6 +1208,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 yaw_steering_step_max = steering_step;
                 yaw_steering_limit = steering_limit;
                 turn_maneuver_forward_bias_deg = turn_bias;
+                turn_maneuver_pre_bias_delay_ms = pre_bias_delay_ms;
                 uner_ack_status = 0;
             } else {
                 uner_ack_status = 1;
@@ -1244,6 +1264,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uint8_t wheel_mode = payload[2];
             uint8_t wheel_select = payload[3];
             float turn_bias = turn_maneuver_forward_bias_deg;
+            uint16_t pre_bias_delay_ms = turn_maneuver_pre_bias_delay_ms;
             uint8_t turn_bias_valid = 1U;
 
             if (wheel_mode == TURN_MANEUVER_MODE_ARC) {
@@ -1251,9 +1272,14 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                     if (payload_len >= 9) {
                         turn_bias = UNER_ReadFloatLE(payload + 5);
                     }
-                    turn_bias_valid = (turn_bias >= -10.0f && turn_bias <= 10.0f) ? 1U : 0U;
+                    if (payload_len >= 11) {
+                        pre_bias_delay_ms = (uint16_t)payload[9] | ((uint16_t)payload[10] << 8);
+                    }
+                    turn_bias_valid = (turn_bias >= -10.0f && turn_bias <= 10.0f &&
+                                       pre_bias_delay_ms <= 5000U) ? 1U : 0U;
                     if (turn_bias_valid) {
                         turn_maneuver_forward_bias_deg = turn_bias;
+                        turn_maneuver_pre_bias_delay_ms = pre_bias_delay_ms;
                         uner_ack_status = TurnManeuver_StartArc(target_angle_deg, wheel_select, payload[4]);
                     } else {
                         uner_ack_status = TURN_MANEUVER_STATUS_RANGE;
@@ -1265,9 +1291,14 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 if (payload_len >= 8) {
                     turn_bias = UNER_ReadFloatLE(payload + 4);
                 }
-                turn_bias_valid = (turn_bias >= -10.0f && turn_bias <= 10.0f) ? 1U : 0U;
+                if (payload_len >= 10) {
+                    pre_bias_delay_ms = (uint16_t)payload[8] | ((uint16_t)payload[9] << 8);
+                }
+                turn_bias_valid = (turn_bias >= -10.0f && turn_bias <= 10.0f &&
+                                   pre_bias_delay_ms <= 5000U) ? 1U : 0U;
                 if (turn_bias_valid) {
                     turn_maneuver_forward_bias_deg = turn_bias;
+                    turn_maneuver_pre_bias_delay_ms = pre_bias_delay_ms;
                     uner_ack_status = TurnManeuver_Start(target_angle_deg, wheel_mode, wheel_select);
                 } else {
                     uner_ack_status = TURN_MANEUVER_STATUS_RANGE;
