@@ -121,9 +121,9 @@ private slots:
     void actualizarPitch3D(float pitch, float yaw, float roll);
     void enviarFloat(uint8_t cmd, float valor);
     void enviarInt16(uint8_t cmd, int16_t valor);
-    void enviarYawConfig(float kp, float kd, float curveMultiplier, float filterAlpha, float steeringStep, float steeringLimit);
+    void enviarYawConfig(float kp, float kd, float curveMultiplier, float filterAlpha, float steeringStep, float steeringLimit, float turnBiasDeg);
     void enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 balanceMs);
-    void enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect, quint8 innerWheelPercent = 0);
+    void enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect, quint8 innerWheelPercent = 0, float turnBiasDeg = 1.0f);
     QByteArray buildUnerV1(uint8_t cmd, uint8_t flags, const QByteArray &payloadData);
     uint16_t unerCrc16Ccitt(const QByteArray &data);
     bool isCriticalCommand(uint8_t cmd) const;

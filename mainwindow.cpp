@@ -233,6 +233,8 @@ MainWindow::MainWindow(QWidget *parent)
     configureSpin(ui->yawCfgAlpha, 0.70, 0.0, 0.995, 0.01, 3);
     configureSpin(ui->yawCfgStep, 90.0, 1.0, 2000.0, 10.0, 0);
     configureSpin(ui->yawCfgLimit, 500.0, 0.0, 4000.0, 25.0, 0);
+    configureSpin(ui->turnBiasSpin, 1.0, -10.0, 10.0, 0.1, 2);
+    ui->turnBiasSpin->setSuffix(" deg");
     configureSpin(ui->flCfgMotionMs, 200.0, 20.0, 2000.0, 10.0, 0);
     configureSpin(ui->flCfgBalanceMs, 400.0, 20.0, 5000.0, 10.0, 0);
     configureSpin(ui->turnAngleSpin, 90.0, -360.0, 360.0, 5.0, 1);
@@ -255,7 +257,8 @@ MainWindow::MainWindow(QWidget *parent)
                         static_cast<float>(ui->yawCfgMul->value()),
                         static_cast<float>(ui->yawCfgAlpha->value()),
                         static_cast<float>(ui->yawCfgStep->value()),
-                        static_cast<float>(ui->yawCfgLimit->value()));
+                        static_cast<float>(ui->yawCfgLimit->value()),
+                        static_cast<float>(ui->turnBiasSpin->value()));
     });
 
     connect(ui->flCfgSend, &QPushButton::clicked, this, [this]() {
@@ -284,7 +287,8 @@ MainWindow::MainWindow(QWidget *parent)
         enviarTurnManeuver(targetAngleDeg,
                            static_cast<quint8>(ui->turnModeCombo->currentData().toUInt()),
                            static_cast<quint8>(ui->turnWheelCombo->currentData().toUInt()),
-                           static_cast<quint8>(ui->turnArcPercentSpin->value()));
+                           static_cast<quint8>(ui->turnArcPercentSpin->value()),
+                           static_cast<float>(ui->turnBiasSpin->value()));
     });
 
     connect(ui->obstacleFollowStartButton, &QPushButton::clicked, this, [this]() {
@@ -1177,7 +1181,7 @@ void MainWindow::enviarFloat(uint8_t cmd, float valor) {
     buffer.append(reinterpret_cast<const char*>(&raw), sizeof(raw));
     enviarComando(cmd, buffer);
 }
-void MainWindow::enviarYawConfig(float kp, float kd, float curveMultiplier, float filterAlpha, float steeringStep, float steeringLimit) {
+void MainWindow::enviarYawConfig(float kp, float kd, float curveMultiplier, float filterAlpha, float steeringStep, float steeringLimit, float turnBiasDeg) {
     QByteArray payload;
 
     auto appendFloatLE = [&payload](float value) {
@@ -1193,15 +1197,17 @@ void MainWindow::enviarYawConfig(float kp, float kd, float curveMultiplier, floa
     appendFloatLE(filterAlpha);
     appendFloatLE(steeringStep);
     appendFloatLE(steeringLimit);
+    appendFloatLE(turnBiasDeg);
 
     enviarComando(CMD_SET_YAW_CONFIG, payload);
-    ui->TxTextEdit->append(QString("TX: YAW CONFIG Kp=%1 Kd=%2 SpeedRed=%3 Alpha=%4 Step=%5 Limit=%6")
+    ui->TxTextEdit->append(QString("TX: YAW CONFIG Kp=%1 Kd=%2 SpeedRed=%3 Alpha=%4 Step=%5 Limit=%6 TurnBias=%7deg")
                                .arg(kp, 0, 'f', 1)
                                .arg(kd, 0, 'f', 1)
                                .arg(curveMultiplier, 0, 'f', 4)
                                .arg(filterAlpha, 0, 'f', 2)
                                .arg(steeringStep, 0, 'f', 0)
-                               .arg(steeringLimit, 0, 'f', 0));
+                               .arg(steeringLimit, 0, 'f', 0)
+                               .arg(turnBiasDeg, 0, 'f', 2));
 }
 
 void MainWindow::enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 balanceMs) {
@@ -1225,7 +1231,7 @@ void MainWindow::enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 bala
                                .arg(balanceMs));
 }
 
-void MainWindow::enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect, quint8 innerWheelPercent) {
+void MainWindow::enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect, quint8 innerWheelPercent, float turnBiasDeg) {
     QByteArray payload;
 
     qint32 angleCdeg32 = qRound(targetAngleDeg * 100.0f);
@@ -1242,6 +1248,10 @@ void MainWindow::enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quin
     if (wheelMode == 2U) {
         payload.append(static_cast<char>(innerWheelPercent));
     }
+    quint32 biasRaw;
+    memcpy(&biasRaw, &turnBiasDeg, sizeof(biasRaw));
+    biasRaw = qToLittleEndian<quint32>(biasRaw);
+    payload.append(reinterpret_cast<const char*>(&biasRaw), sizeof(biasRaw));
 
     enviarComando(CMD_TURN_MANEUVER, payload);
     QString modeText = "2 wheels";
@@ -1251,11 +1261,12 @@ void MainWindow::enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quin
         modeText = "arc";
     }
 
-    ui->TxTextEdit->append(QString("TX: TURN angle=%1 deg mode=%2 wheel=%3 inner=%4%")
+    ui->TxTextEdit->append(QString("TX: TURN angle=%1 deg mode=%2 wheel=%3 inner=%4% bias=%5deg")
                                .arg(targetAngleDeg, 0, 'f', 1)
                                .arg(modeText)
                                .arg(wheelSelect == 0 ? "Left" : "Right")
-                               .arg(innerWheelPercent));
+                               .arg(innerWheelPercent)
+                               .arg(turnBiasDeg, 0, 'f', 2));
 }
 
 void MainWindow::enviarInt16(uint8_t cmd, int16_t valor) {
