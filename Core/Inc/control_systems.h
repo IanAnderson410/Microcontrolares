@@ -128,6 +128,13 @@ void FollowLine_Task(void);
 int16_t Calcular_PID_YAW(float error_linea);
 uint8_t TurnManeuver_Start(float target_angle_deg, uint8_t wheel_mode, uint8_t wheel_select);
 uint8_t TurnManeuver_StartArc(float target_angle_deg, uint8_t outer_wheel, uint8_t inner_wheel_percent);
+void TurnManeuver_StoreCornerConfig(float target_angle_deg,
+                                    uint8_t wheel_mode,
+                                    uint8_t wheel_select,
+                                    uint8_t inner_wheel_percent,
+                                    float turn_bias_deg,
+                                    uint16_t pre_bias_delay_ms);
+uint8_t TurnManeuver_StartStoredCorner(float corner_angle_deg);
 void TurnManeuver_Cancel(void);
 void TurnManeuver_CancelWithReason(uint8_t reason);
 void TurnManeuver_Task(void);

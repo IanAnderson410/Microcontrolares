@@ -191,7 +191,7 @@ ESP01_App_t ESP = {0};
 volatile	uint8_t			currentMode = MODO_IDDLE;
 // ================= [ Flags ] ================= //
 volatile	uint8_t			flagWIFI				=   0;
-volatile	uint8_t 		flagOLED 				= 	10;
+volatile	uint8_t 		flagOLED 				= 	1;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
@@ -216,14 +216,14 @@ volatile 	uint32_t 		control_slots_serviced = 0;
 			float			correccionRCSP = 0.98;
 			float 			limite_inclinacion = 3.0f;
 // =================[ Variables de Control PID YAW] ================= //
-			float 		Kp_yaw = 1500.0f;
+			float 		Kp_yaw = 1200.0f;
 			float 		Kd_yaw = 0.0f;
 			float 		last_error_yaw = 0;
 volatile    float 		FL_setpoint = 4.4f;
 			float 		yaw_error_filter_alpha = 0.70f;
 			float 		yaw_steering_step_max = 90.0f;
 			float 		yaw_steering_limit = 3600.0f;
-			float 		turn_maneuver_forward_bias_deg = 1.0f;
+			float 		turn_maneuver_forward_bias_deg = 5.0f;
 			uint16_t 	turn_maneuver_pre_bias_delay_ms = 300U;
 			float 		last_state_linea = 0.0f;
 			float 		error_linea;
@@ -276,6 +276,7 @@ volatile 	float 			imu_velocity_mps = 0.0f;
 volatile 	uint8_t 		oled_update_requested = 0;
 volatile 	uint8_t 		oled_current_page = 0;
 volatile 	uint8_t 		oled_is_busy = 0; // Para saber si el display está ocupado
+volatile 	uint8_t 		oled_updates_enabled = 1;
 volatile 	uint32_t 		oled_pages_sent = 0;
 volatile 	uint32_t 		oled_frames_done = 0;
 volatile 	uint32_t 		oled_i2c_errors = 0;
@@ -437,7 +438,7 @@ void Telemetry_UpdateMPU(void)
 }
 
 void screenScheduler(void){
-    if (!esp01_oled_ready) {
+    if (!esp01_oled_ready || !oled_updates_enabled) {
         return;
     }
 
@@ -714,22 +715,39 @@ void screenScheduler(void){
     }
 
     if (flagOLED == 8) {
+        const char *face_label = "LOST";
+        const char *fsm_label = "IDLE";
+
+        switch (obstacle_right_face_state) {
+        case OBSTACLE_RIGHT_FACE_TOO_FAR: face_label = "FAR"; break;
+        case OBSTACLE_RIGHT_FACE_OK: face_label = "OK"; break;
+        case OBSTACLE_RIGHT_FACE_TOO_CLOSE: face_label = "CLOSE"; break;
+        default: break;
+        }
+        switch (obstacle_follow_state) {
+        case OBSTACLE_FOLLOW_STATE_FACE_ALIGN: fsm_label = "ALIGN"; break;
+        case OBSTACLE_FOLLOW_STATE_FACE_FOLLOW: fsm_label = "FOLLOW"; break;
+        case OBSTACLE_FOLLOW_STATE_CORNER_TURN: fsm_label = "TURN"; break;
+        default: break;
+        }
+
         SSD1306_GotoXY(0, 10);
-        snprintf(msg, sizeof(msg), "A:%u S:%u F:%u", obstacle_follow_active,
-                 obstacle_follow_state, obstacle_right_face_state);
+        snprintf(msg, sizeof(msg), "RAW:%4u FIL:%4u", obstacle_right_ir_raw,
+                 obstacle_right_ir_filtered);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 20);
-        snprintf(msg, sizeof(msg), "R:%4u F:%4u", obstacle_right_ir_raw, obstacle_right_ir_filtered);
+        snprintf(msg, sizeof(msg), "FACE:%s", face_label);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 30);
-        snprintf(msg, sizeof(msg), "Fr:%4u %u", obstacle_ir_filtered, obstacle_detected);
+        snprintf(msg, sizeof(msg), "FSM:%s A:%u", fsm_label, obstacle_follow_active);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 40);
-        snprintf(msg, sizeof(msg), "T:%4u E:%5d", obstacle_follow_target_adc, obstacle_follow_adc_error);
+        snprintf(msg, sizeof(msg), "SD:%4d YW:%3d", obstacle_follow_side_steering,
+                 obstacle_follow_yaw_error_cdeg / 100);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         SSD1306_GotoXY(0, 50);
-        snprintf(msg, sizeof(msg), "St:%4d T%u S%u", obstacle_follow_steering,
-                 turn_maneuver_active, obstacle_follow_steering_saturated);
+        snprintf(msg, sizeof(msg), "OUT:%4d SAT:%u", obstacle_follow_steering,
+                 obstacle_follow_steering_saturated);
         SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
         OLED_RequestUpdate();
         return;
@@ -1122,7 +1140,7 @@ void OLED_RequestUpdate(void)
 
 void OLED_Service(void)
 {
-    if (!esp01_oled_ready || !oled_update_requested || oled_is_busy || flag10ms) {
+    if (!esp01_oled_ready || !oled_updates_enabled || !oled_update_requested || oled_is_busy || flag10ms) {
         return;
     }
 
@@ -1281,6 +1299,14 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                         turn_maneuver_forward_bias_deg = turn_bias;
                         turn_maneuver_pre_bias_delay_ms = pre_bias_delay_ms;
                         uner_ack_status = TurnManeuver_StartArc(target_angle_deg, wheel_select, payload[4]);
+                        if (uner_ack_status == TURN_MANEUVER_STATUS_OK) {
+                            TurnManeuver_StoreCornerConfig(target_angle_deg,
+                                                          wheel_mode,
+                                                          wheel_select,
+                                                          payload[4],
+                                                          turn_bias,
+                                                          pre_bias_delay_ms);
+                        }
                     } else {
                         uner_ack_status = TURN_MANEUVER_STATUS_RANGE;
                     }
@@ -1300,6 +1326,14 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                     turn_maneuver_forward_bias_deg = turn_bias;
                     turn_maneuver_pre_bias_delay_ms = pre_bias_delay_ms;
                     uner_ack_status = TurnManeuver_Start(target_angle_deg, wheel_mode, wheel_select);
+                    if (uner_ack_status == TURN_MANEUVER_STATUS_OK) {
+                        TurnManeuver_StoreCornerConfig(target_angle_deg,
+                                                      wheel_mode,
+                                                      wheel_select,
+                                                      0U,
+                                                      turn_bias,
+                                                      pre_bias_delay_ms);
+                    }
                 } else {
                     uner_ack_status = TURN_MANEUVER_STATUS_RANGE;
                 }
@@ -1508,8 +1542,13 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             if (payload_len >= 2) {
                 requested_page = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
             }
-            if (requested_page >= 1U && requested_page <= 10U) {
+            if (requested_page == 0U) {
+                oled_updates_enabled = 0U;
+                oled_update_requested = 0U;
+                uner_ack_status = 0;
+            } else if (requested_page <= 10U) {
                 flagOLED = (uint8_t)requested_page;
+                oled_updates_enabled = 1U;
                 uner_ack_status = 0;
             } else {
                 uner_ack_status = 1;

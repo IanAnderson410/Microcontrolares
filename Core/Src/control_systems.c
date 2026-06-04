@@ -39,6 +39,12 @@ static float turn_maneuver_steering_slow = 0.0f;
 static float turn_maneuver_arc_inner_ratio = 0.0f;
 static uint32_t turn_maneuver_start_tick = 0;
 static uint32_t turn_maneuver_prepare_start_tick = 0;
+static uint8_t corner_turn_mode = TURN_MANEUVER_MODE_ONE_WHEEL;
+static uint8_t corner_turn_wheel = TURN_MANEUVER_WHEEL_RIGHT;
+static uint8_t corner_turn_inner_wheel_percent = 0U;
+static int8_t corner_turn_direction = 1;
+static float corner_turn_bias_deg = 5.0f;
+static uint16_t corner_turn_pre_bias_delay_ms = 300U;
 
 static float clamp_float(float value, float limit)
 {
@@ -390,6 +396,33 @@ uint8_t TurnManeuver_StartArc(float target_angle_deg, uint8_t outer_wheel, uint8
                                       TURN_MANEUVER_MODE_ARC,
                                       outer_wheel,
                                       inner_wheel_percent);
+}
+
+void TurnManeuver_StoreCornerConfig(float target_angle_deg,
+                                    uint8_t wheel_mode,
+                                    uint8_t wheel_select,
+                                    uint8_t inner_wheel_percent,
+                                    float turn_bias_deg,
+                                    uint16_t pre_bias_delay_ms)
+{
+    corner_turn_mode = wheel_mode;
+    corner_turn_wheel = wheel_select;
+    corner_turn_inner_wheel_percent = inner_wheel_percent;
+    corner_turn_direction = (target_angle_deg < 0.0f) ? -1 : 1;
+    corner_turn_bias_deg = turn_bias_deg;
+    corner_turn_pre_bias_delay_ms = pre_bias_delay_ms;
+}
+
+uint8_t TurnManeuver_StartStoredCorner(float corner_angle_deg)
+{
+    float target_angle_deg = fabsf(corner_angle_deg) * (float)corner_turn_direction;
+
+    turn_maneuver_forward_bias_deg = corner_turn_bias_deg;
+    turn_maneuver_pre_bias_delay_ms = corner_turn_pre_bias_delay_ms;
+    return TurnManeuver_StartInternal(target_angle_deg,
+                                      corner_turn_mode,
+                                      corner_turn_wheel,
+                                      corner_turn_inner_wheel_percent);
 }
 
 void TurnManeuver_CancelWithReason(uint8_t reason)

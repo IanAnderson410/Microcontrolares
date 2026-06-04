@@ -16,7 +16,7 @@
 #define OBSTACLE_FOLLOW_YAW_LIMIT            260.0f
 #define OBSTACLE_FOLLOW_SIDE_CORRECTION      200.0f
 #define OBSTACLE_FOLLOW_CORNER_TURN_DEG      90.0f
-#define OBSTACLE_FOLLOW_RIGHT_STEER_SIGN     1.0f
+#define OBSTACLE_FOLLOW_RIGHT_STEER_SIGN     -1.0f
 
 volatile uint8_t obstacle_follow_active = 0;
 volatile uint8_t obstacle_follow_state = OBSTACLE_FOLLOW_STATE_IDLE;
@@ -192,8 +192,8 @@ void ObstacleFollow_Task(void){
             }
             if (obstacle_follow_lost_count >= OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
                 ObstacleFollow_ClearOutput();
-                if (TurnManeuver_Start(90, TURN_MANEUVER_MODE_ONE_WHEEL,
-                                       TURN_MANEUVER_WHEEL_RIGHT) == TURN_MANEUVER_STATUS_OK) {
+                if (TurnManeuver_StartStoredCorner(OBSTACLE_FOLLOW_CORNER_TURN_DEG) ==
+                    TURN_MANEUVER_STATUS_OK) {
                     ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_CORNER_TURN);
                 } else {
                     ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
