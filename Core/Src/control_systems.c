@@ -3,6 +3,8 @@
 #include <math.h>
 
 #define FL_RECOVERY_STEERING         700
+#define PITCH_RECOVERY_STALL_CYCLES  8U
+#define PITCH_RECOVERY_IMPROVE_EPS   0.05f
 #define TURN_MANEUVER_MIN_ANGLE_DEG  1.0f
 #define TURN_MANEUVER_MAX_ANGLE_DEG  360.0f
 #define TURN_MANEUVER_TOLERANCE_DEG  2.0f
@@ -45,6 +47,10 @@ static uint8_t corner_turn_inner_wheel_percent = 0U;
 static int8_t corner_turn_direction = 1;
 static float corner_turn_bias_deg = 5.0f;
 static uint16_t corner_turn_pre_bias_delay_ms = 300U;
+static float pitch_recovery_last_abs_error = 0.0f;
+static uint8_t pitch_recovery_stall_count = 0U;
+static uint8_t pitch_recovery_braking = 0U;
+static uint32_t pitch_recovery_brake_start_tick = 0U;
 
 static float clamp_float(float value, float limit)
 {
@@ -104,6 +110,10 @@ void PID_PITCH_ResetState(void)
     output = 0.0f;
     showoutput = 0.0f;
     error = 0.0f;
+    pitch_recovery_last_abs_error = 0.0f;
+    pitch_recovery_stall_count = 0U;
+    pitch_recovery_braking = 0U;
+    pitch_recovery_brake_start_tick = 0U;
     turn_debug_motor_left_cmd = 0;
     turn_debug_motor_right_cmd = 0;
     turn_debug_active_motor_cmd = 0;
@@ -220,6 +230,77 @@ void PID_PITCH(void)
         turn_maneuver_setpoint = TurnManeuver_GetActiveSetpoint();
         target_setpoint = setpoint + turn_maneuver_setpoint;
         steering = turn_maneuver_steering;
+    }
+
+    if (pitch_recovery_braking) {
+        target_setpoint = setpoint;
+        steering = 0;
+        rc_phase_tick = 0U;
+        rc_motion_phase = 1U;
+        fl_phase_tick = 0U;
+        fl_motion_phase = 1U;
+
+        if ((now - pitch_recovery_brake_start_tick) < (uint32_t)pitch_recovery_brake_ms) {
+            error = angle_y - target_setpoint;
+            integral = 0.0f;
+            last_error = error;
+            P = 0.0f;
+            I = 0.0f;
+            D = 0.0f;
+            output = 0.0f;
+            showoutput = 0.0f;
+            Robot_ShortBrake();
+            return;
+        }
+
+        pitch_recovery_braking = 0U;
+        pitch_recovery_stall_count = 0U;
+        pitch_recovery_last_abs_error = fabsf(angle_y - target_setpoint);
+    } else {
+        float supervisor_error = angle_y - target_setpoint;
+        float abs_error = fabsf(supervisor_error);
+        float threshold = pitch_recovery_error_threshold_deg;
+
+        if (threshold > 0.0f && abs_error > threshold) {
+            if (pitch_recovery_last_abs_error > 0.0f &&
+                abs_error >= (pitch_recovery_last_abs_error - PITCH_RECOVERY_IMPROVE_EPS)) {
+                if (pitch_recovery_stall_count < 255U) {
+                    pitch_recovery_stall_count++;
+                }
+            } else {
+                pitch_recovery_stall_count = 0U;
+            }
+
+            if (pitch_recovery_stall_count >= PITCH_RECOVERY_STALL_CYCLES) {
+                target_setpoint = setpoint;
+                steering = 0;
+                rc_phase_tick = 0U;
+                rc_motion_phase = 1U;
+                fl_phase_tick = 0U;
+                fl_motion_phase = 1U;
+                pitch_recovery_stall_count = 0U;
+                pitch_recovery_last_abs_error = 0.0f;
+
+                if (pitch_recovery_brake_ms > 0.0f) {
+                    pitch_recovery_braking = 1U;
+                    pitch_recovery_brake_start_tick = now;
+                    error = angle_y - target_setpoint;
+                    integral = 0.0f;
+                    last_error = error;
+                    P = 0.0f;
+                    I = 0.0f;
+                    D = 0.0f;
+                    output = 0.0f;
+                    showoutput = 0.0f;
+                    Robot_ShortBrake();
+                    return;
+                }
+            }
+        } else {
+            pitch_recovery_stall_count = 0U;
+        }
+
+        pitch_recovery_last_abs_error = abs_error;
     }
 
     error = angle_y - target_setpoint;

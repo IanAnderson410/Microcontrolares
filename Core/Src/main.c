@@ -140,8 +140,8 @@ enum {
        CMD_PID_ALPHA 				= 23, 		/*!< Ajustar  Alpha del del filtro complementario utilizado en el PID basado en grado de libertad Pitch*/
 
 
-       CMD_PID_PITCH_LIM_INCLI		= 24, 		/*!< Ajustar Término Proporcional del PID basado en grado de libertad Pitch*/
-       CMD_PID_PITCH_CORECCION_RCSP= 25, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
+       CMD_PID_PITCH_LIM_INCLI		= 24, 		/*!< Ajustar umbral de recuperacion del PID Pitch */
+       CMD_PID_PITCH_CORECCION_RCSP= 25, 		/*!< Ajustar duracion de short brake del PID Pitch */
        CMD_RC_MOVE_5_CM             = 30, 		/*!< Ajustar Término Integral del PID basado en grado de libertad Pitch*/
 
        //PID SISTEMA DE GIRO
@@ -205,7 +205,7 @@ volatile 	uint32_t 		control_slots_serviced = 0;
 			int16_t 		deadband_R = 75; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
 			float 			Kp = 190.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 1700.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Ki = 0.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
 			float 			Kd = 3.8f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float			integral_limit = 3600.0f;
 			float 			setpoint = 3.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
@@ -213,8 +213,8 @@ volatile 	uint32_t 		control_slots_serviced = 0;
 			float 			integral = 0;
 			float 			last_error = 0;
 			float           ALPHA_PID = 0.96f;
-			float			correccionRCSP = 0.98;
-			float 			limite_inclinacion = 3.0f;
+			float			pitch_recovery_brake_ms = 80.0f;
+			float 			pitch_recovery_error_threshold_deg = 3.0f;
 // =================[ Variables de Control PID YAW] ================= //
 			float 		Kp_yaw = 1200.0f;
 			float 		Kd_yaw = 0.0f;
@@ -1605,8 +1605,20 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             case CMD_PID_PITCH_KI: Ki = value; break;
             case CMD_PID_PITCH_KD: Kd = value; break;
             case CMD_PID_ALPHA: ALPHA_PID = value; break;
-            case CMD_PID_PITCH_LIM_INCLI: 		limite_inclinacion = value; break;
-            case CMD_PID_PITCH_CORECCION_RCSP: 	correccionRCSP = value; break;
+            case CMD_PID_PITCH_LIM_INCLI:
+                pitch_recovery_error_threshold_deg = value;
+                if (pitch_recovery_error_threshold_deg < 0.0f) {
+                    pitch_recovery_error_threshold_deg = 0.0f;
+                }
+                break;
+            case CMD_PID_PITCH_CORECCION_RCSP:
+                pitch_recovery_brake_ms = value;
+                if (pitch_recovery_brake_ms < 0.0f) {
+                    pitch_recovery_brake_ms = 0.0f;
+                } else if (pitch_recovery_brake_ms > 1000.0f) {
+                    pitch_recovery_brake_ms = 1000.0f;
+                }
+                break;
             case CMD_PID_YAW_KP: Kp_yaw = value; break;
             case CMD_PID_YAW_KD: Kd_yaw = value; break;
             case CMD_PID_YAW_SP: FL_setpoint = value; break;
@@ -1626,8 +1638,20 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             float value = (float)UNER_ReadInt16LE(payload);
             uint8_t status = 0;
             switch (cmd) {
-            case CMD_PID_PITCH_LIM_INCLI: limite_inclinacion = value; break;
-            case CMD_PID_PITCH_CORECCION_RCSP: correccionRCSP = value; break;
+            case CMD_PID_PITCH_LIM_INCLI:
+                pitch_recovery_error_threshold_deg = value;
+                if (pitch_recovery_error_threshold_deg < 0.0f) {
+                    pitch_recovery_error_threshold_deg = 0.0f;
+                }
+                break;
+            case CMD_PID_PITCH_CORECCION_RCSP:
+                pitch_recovery_brake_ms = value;
+                if (pitch_recovery_brake_ms < 0.0f) {
+                    pitch_recovery_brake_ms = 0.0f;
+                } else if (pitch_recovery_brake_ms > 1000.0f) {
+                    pitch_recovery_brake_ms = 1000.0f;
+                }
+                break;
             case CMD_PID_YAW_SP: FL_setpoint = value; break;
             default: status = 1; break;
             }
@@ -1736,6 +1760,19 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t)(-speed_R));
 		}
 	    }
+}
+void Robot_ShortBrake(void) {
+	    turn_debug_motor_left_cmd = 0;
+	    turn_debug_motor_right_cmd = 0;
+	    turn_debug_active_motor_cmd = 0;
+	    turn_debug_pivot_motor_cmd = 0;
+	    turn_debug_motor_saturated = 0U;
+	    __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 3599U);
+	    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 3599U);
+	    HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_SET);
+	    HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin, GPIO_PIN_SET);
+	    HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_SET);
+	    HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_SET);
 }
 void ESP01_Generic_Functions(uint32_t now){
 	if (uner_telemetry_enabled && !uner_ack_pending && ESP.udp_connected && !uner_tx_busy && ESP.uner_tx_count == 0 &&

@@ -74,8 +74,8 @@ extern float integral_limit;
 extern float setpoint;
 extern float integral;
 extern float last_error;
-extern float correccionRCSP;
-extern float limite_inclinacion;
+extern float pitch_recovery_brake_ms;
+extern float pitch_recovery_error_threshold_deg;
 extern float paso;
 extern float P;
 extern float I;
@@ -139,6 +139,7 @@ void TurnManeuver_Cancel(void);
 void TurnManeuver_CancelWithReason(uint8_t reason);
 void TurnManeuver_Task(void);
 void Robot_Drive(int16_t speed_L, int16_t speed_R);
+void Robot_ShortBrake(void);
 
 #ifdef __cplusplus
 }
