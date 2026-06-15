@@ -3,8 +3,8 @@
 #include <math.h>
 
 #define FL_RECOVERY_STEERING         700
-#define PITCH_RECOVERY_STALL_CYCLES  8U
-#define PITCH_RECOVERY_IMPROVE_EPS   0.05f
+#define ACCEL_RUNAWAY_WINDOW_CYCLES  10U
+#define ACCEL_RUNAWAY_SAFE_CENTER    550.0f
 #define TURN_MANEUVER_MIN_ANGLE_DEG  1.0f
 #define TURN_MANEUVER_MAX_ANGLE_DEG  360.0f
 #define TURN_MANEUVER_TOLERANCE_DEG  2.0f
@@ -47,10 +47,22 @@ static uint8_t corner_turn_inner_wheel_percent = 0U;
 static int8_t corner_turn_direction = 1;
 static float corner_turn_bias_deg = 5.0f;
 static uint16_t corner_turn_pre_bias_delay_ms = 300U;
-static float pitch_recovery_last_abs_error = 0.0f;
-static uint8_t pitch_recovery_stall_count = 0U;
 static uint8_t pitch_recovery_braking = 0U;
 static uint32_t pitch_recovery_brake_start_tick = 0U;
+float accel_runaway_delta_threshold = 120.0f;
+float accel_runaway_abs_threshold = 450.0f;
+float accel_runaway_trend_limit = 4.0f;
+float accel_runaway_abs_limit = 4.0f;
+volatile float accel_runaway_mean = 0.0f;
+volatile float accel_runaway_delta = 0.0f;
+volatile uint8_t accel_runaway_trend_counter = 0U;
+volatile uint8_t accel_runaway_abs_counter = 0U;
+volatile uint8_t accel_runaway_brake_reason = 0U;
+static int32_t accel_runaway_sum = 0;
+static uint8_t accel_runaway_cycle_count = 0U;
+static float accel_runaway_prev_mean = 0.0f;
+static int8_t accel_runaway_last_delta_sign = 0;
+static uint8_t accel_runaway_has_prev_mean = 0U;
 
 static float clamp_float(float value, float limit)
 {
@@ -110,10 +122,17 @@ void PID_PITCH_ResetState(void)
     output = 0.0f;
     showoutput = 0.0f;
     error = 0.0f;
-    pitch_recovery_last_abs_error = 0.0f;
-    pitch_recovery_stall_count = 0U;
     pitch_recovery_braking = 0U;
     pitch_recovery_brake_start_tick = 0U;
+    accel_runaway_sum = 0;
+    accel_runaway_cycle_count = 0U;
+    accel_runaway_prev_mean = 0.0f;
+    accel_runaway_has_prev_mean = 0U;
+    accel_runaway_delta = 0.0f;
+    accel_runaway_trend_counter = 0U;
+    accel_runaway_abs_counter = 0U;
+    accel_runaway_last_delta_sign = 0;
+    accel_runaway_brake_reason = 0U;
     turn_debug_motor_left_cmd = 0;
     turn_debug_motor_right_cmd = 0;
     turn_debug_active_motor_cmd = 0;
@@ -151,6 +170,7 @@ void PID_PITCH(void)
     static uint32_t fl_phase_tick = 0;
     static uint8_t fl_motion_phase = 1;
     uint32_t now = HAL_GetTick();
+    uint8_t accel_runaway_trigger = 0U;
 
     accelx = axRaw;
     accely = ayRaw;
@@ -232,6 +252,60 @@ void PID_PITCH(void)
         steering = turn_maneuver_steering;
     }
 
+    if (!pitch_recovery_braking) {
+        accel_runaway_sum += axRaw;
+        accel_runaway_cycle_count++;
+    }
+    if (!pitch_recovery_braking && accel_runaway_cycle_count >= ACCEL_RUNAWAY_WINDOW_CYCLES) {
+        float current_mean = (float)accel_runaway_sum / (float)ACCEL_RUNAWAY_WINDOW_CYCLES;
+        float delta = accel_runaway_has_prev_mean ? (current_mean - accel_runaway_prev_mean) : 0.0f;
+        float abs_delta = fabsf(delta);
+        float abs_offset = fabsf(current_mean - ACCEL_RUNAWAY_SAFE_CENTER);
+        int8_t delta_sign = (delta > 0.0f) ? 1 : ((delta < 0.0f) ? -1 : 0);
+        uint8_t trend_limit = (uint8_t)accel_runaway_trend_limit;
+        uint8_t abs_limit = (uint8_t)accel_runaway_abs_limit;
+
+        accel_runaway_mean = current_mean;
+        accel_runaway_delta = delta;
+        accel_runaway_sum = 0;
+        accel_runaway_cycle_count = 0U;
+
+        if (accel_runaway_has_prev_mean &&
+            accel_runaway_delta_threshold > 0.0f &&
+            abs_delta >= accel_runaway_delta_threshold &&
+            delta_sign != 0 &&
+            (accel_runaway_last_delta_sign == 0 || delta_sign == accel_runaway_last_delta_sign)) {
+            if (accel_runaway_trend_counter < 255U) {
+                accel_runaway_trend_counter++;
+            }
+        } else if (accel_runaway_trend_counter > 0U) {
+            accel_runaway_trend_counter--;
+        }
+
+        if (delta_sign != 0) {
+            accel_runaway_last_delta_sign = delta_sign;
+        }
+
+        if (accel_runaway_abs_threshold > 0.0f && abs_offset >= accel_runaway_abs_threshold) {
+            if (accel_runaway_abs_counter < 255U) {
+                accel_runaway_abs_counter++;
+            }
+        } else if (accel_runaway_abs_counter > 0U) {
+            accel_runaway_abs_counter--;
+        }
+
+        if (trend_limit > 0U && accel_runaway_trend_counter >= trend_limit) {
+            accel_runaway_trigger = 1U;
+            accel_runaway_brake_reason = 1U;
+        } else if (abs_limit > 0U && accel_runaway_abs_counter >= abs_limit) {
+            accel_runaway_trigger = 1U;
+            accel_runaway_brake_reason = 2U;
+        }
+
+        accel_runaway_prev_mean = current_mean;
+        accel_runaway_has_prev_mean = 1U;
+    }
+
     if (pitch_recovery_braking) {
         target_setpoint = setpoint;
         steering = 0;
@@ -254,53 +328,38 @@ void PID_PITCH(void)
         }
 
         pitch_recovery_braking = 0U;
-        pitch_recovery_stall_count = 0U;
-        pitch_recovery_last_abs_error = fabsf(angle_y - target_setpoint);
+        accel_runaway_sum = 0;
+        accel_runaway_cycle_count = 0U;
+        accel_runaway_trend_counter = 0U;
+        accel_runaway_abs_counter = 0U;
+        accel_runaway_last_delta_sign = 0;
     } else {
-        float supervisor_error = angle_y - target_setpoint;
-        float abs_error = fabsf(supervisor_error);
-        float threshold = pitch_recovery_error_threshold_deg;
+        if (accel_runaway_trigger) {
+            target_setpoint = setpoint;
+            steering = 0;
+            rc_phase_tick = 0U;
+            rc_motion_phase = 1U;
+            fl_phase_tick = 0U;
+            fl_motion_phase = 1U;
+            accel_runaway_trend_counter = 0U;
+            accel_runaway_abs_counter = 0U;
+            accel_runaway_last_delta_sign = 0;
 
-        if (threshold > 0.0f && abs_error > threshold) {
-            if (pitch_recovery_last_abs_error > 0.0f &&
-                abs_error >= (pitch_recovery_last_abs_error - PITCH_RECOVERY_IMPROVE_EPS)) {
-                if (pitch_recovery_stall_count < 255U) {
-                    pitch_recovery_stall_count++;
-                }
-            } else {
-                pitch_recovery_stall_count = 0U;
+            if (pitch_recovery_brake_ms > 0.0f) {
+                pitch_recovery_braking = 1U;
+                pitch_recovery_brake_start_tick = now;
+                error = angle_y - target_setpoint;
+                integral = 0.0f;
+                last_error = error;
+                P = 0.0f;
+                I = 0.0f;
+                D = 0.0f;
+                output = 0.0f;
+                showoutput = 0.0f;
+                Robot_ShortBrake();
+                return;
             }
-
-            if (pitch_recovery_stall_count >= PITCH_RECOVERY_STALL_CYCLES) {
-                target_setpoint = setpoint;
-                steering = 0;
-                rc_phase_tick = 0U;
-                rc_motion_phase = 1U;
-                fl_phase_tick = 0U;
-                fl_motion_phase = 1U;
-                pitch_recovery_stall_count = 0U;
-                pitch_recovery_last_abs_error = 0.0f;
-
-                if (pitch_recovery_brake_ms > 0.0f) {
-                    pitch_recovery_braking = 1U;
-                    pitch_recovery_brake_start_tick = now;
-                    error = angle_y - target_setpoint;
-                    integral = 0.0f;
-                    last_error = error;
-                    P = 0.0f;
-                    I = 0.0f;
-                    D = 0.0f;
-                    output = 0.0f;
-                    showoutput = 0.0f;
-                    Robot_ShortBrake();
-                    return;
-                }
-            }
-        } else {
-            pitch_recovery_stall_count = 0U;
         }
-
-        pitch_recovery_last_abs_error = abs_error;
     }
 
     error = angle_y - target_setpoint;

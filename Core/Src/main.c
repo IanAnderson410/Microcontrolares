@@ -166,7 +166,8 @@ enum {
        CMD_PID_INTEGRAL_LIMIT       = 68,
        CMD_ACCEL_LOG_START          = 69,
        CMD_ACCEL_LOG_CHUNK          = 70,
-       CMD_ACCEL_LOG_DONE           = 71
+       CMD_ACCEL_LOG_DONE           = 71,
+       CMD_ACCEL_RUNAWAY_CONFIG     = 72
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -967,11 +968,11 @@ void screenScheduler(void){
 				 (unsigned long)accel_log_tx_service_calls);
 		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 		SSD1306_GotoXY(0, 50);
-		snprintf(msg, sizeof(msg), "U:%u Q:%u Bu:%lu Bq:%lu",
-				 ESP.udp_connected,
-				 ESP.uner_tx_count,
-				 (unsigned long)accel_log_tx_block_udp,
-				 (unsigned long)accel_log_tx_block_queue);
+		snprintf(msg, sizeof(msg), "A:%ld D:%ld T:%u B:%u",
+				 (long)accel_runaway_mean,
+				 (long)accel_runaway_delta,
+				 accel_runaway_trend_counter,
+				 accel_runaway_abs_counter);
 		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 		OLED_RequestUpdate();
 		break;
@@ -1119,6 +1120,39 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_status = AccelLog_Start();
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_ACCEL_LOG_START;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+    case CMD_ACCEL_RUNAWAY_CONFIG:
+        if (payload_len >= 16) {
+            accel_runaway_delta_threshold = UNER_ReadFloatLE(payload);
+            accel_runaway_abs_threshold = UNER_ReadFloatLE(payload + 4);
+            accel_runaway_trend_limit = UNER_ReadFloatLE(payload + 8);
+            accel_runaway_abs_limit = UNER_ReadFloatLE(payload + 12);
+
+            if (accel_runaway_delta_threshold < 0.0f) {
+                accel_runaway_delta_threshold = 0.0f;
+            }
+            if (accel_runaway_abs_threshold < 0.0f) {
+                accel_runaway_abs_threshold = 0.0f;
+            }
+            if (accel_runaway_trend_limit < 1.0f) {
+                accel_runaway_trend_limit = 1.0f;
+            } else if (accel_runaway_trend_limit > 255.0f) {
+                accel_runaway_trend_limit = 255.0f;
+            }
+            if (accel_runaway_abs_limit < 1.0f) {
+                accel_runaway_abs_limit = 1.0f;
+            } else if (accel_runaway_abs_limit > 255.0f) {
+                accel_runaway_abs_limit = 255.0f;
+            }
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_ACCEL_RUNAWAY_CONFIG;
             uner_ack_seq = seq;
             uner_ack_pending = 1;
         }
