@@ -19,6 +19,7 @@ typedef struct __attribute__((packed)) {
     uint8_t     modo;
     uint16_t    IR[8];
     uint8_t     infoAdicional;
+    uint8_t     accelFlags;
 } PayloadDataV1_t;
 
 extern volatile float giro_z;
@@ -199,6 +200,7 @@ uint8_t UNER_SendTelemetryV1(void)
                                       ((estado_sensores[3] & 0x01) << 5) |
                                       ((turn_maneuver_active & 0x01) << 6) |
                                       ((obstacle_follow_active & 0x01) << 7));
+    payload.accelFlags = (uint8_t)(accel_runaway_enabled & 0x01U);
 
     for (uint8_t i = 0; i < 8; i++) {
         payload.IR[i] = adc_filtrado[i];

@@ -11,6 +11,7 @@
 #define TURN_MANEUVER_TIMEOUT_MS     6000U
 #define TURN_MANEUVER_IMU_STALE_MS   100U
 #define TURN_MANEUVER_YAW_BOOST      1000.0f
+#define TURN_MANEUVER_SETTLE_MS      300U
 #define ARC_MANEUVER_FORWARD_RATIO   0.50f
 
 volatile uint8_t turn_maneuver_active = 0;
@@ -39,25 +40,33 @@ static float turn_maneuver_target_delta_deg = 0.0f;
 static float turn_maneuver_error_filtered = 0.0f;
 static float turn_maneuver_steering_slow = 0.0f;
 static float turn_maneuver_arc_inner_ratio = 0.0f;
+static float turn_maneuver_settle_setpoint = 0.0f;
+static float turn_maneuver_settle_steering = 0.0f;
 static uint32_t turn_maneuver_start_tick = 0;
 static uint32_t turn_maneuver_prepare_start_tick = 0;
+static uint32_t turn_maneuver_settle_start_tick = 0;
 static uint8_t corner_turn_mode = TURN_MANEUVER_MODE_ONE_WHEEL;
 static uint8_t corner_turn_wheel = TURN_MANEUVER_WHEEL_RIGHT;
 static uint8_t corner_turn_inner_wheel_percent = 0U;
 static int8_t corner_turn_direction = 1;
 static float corner_turn_bias_deg = 5.0f;
 static uint16_t corner_turn_pre_bias_delay_ms = 300U;
-static uint8_t pitch_recovery_braking = 0U;
-static uint32_t pitch_recovery_brake_start_tick = 0U;
+volatile uint8_t accel_runaway_enabled = 1U;
 float accel_runaway_delta_threshold = 120.0f;
 float accel_runaway_abs_threshold = 450.0f;
 float accel_runaway_trend_limit = 4.0f;
 float accel_runaway_abs_limit = 4.0f;
+float accel_adaptive_offset_step_deg = 0.10f;
+float accel_adaptive_offset_limit_deg = 10.0f;
+float accel_adaptive_reset_abs_threshold = 120.0f;
+float accel_adaptive_reset_count_limit = 5.0f;
 volatile float accel_runaway_mean = 0.0f;
 volatile float accel_runaway_delta = 0.0f;
+volatile float accel_adaptive_equilibrium_offset_deg = 0.0f;
 volatile uint8_t accel_runaway_trend_counter = 0U;
 volatile uint8_t accel_runaway_abs_counter = 0U;
 volatile uint8_t accel_runaway_brake_reason = 0U;
+volatile uint8_t accel_adaptive_reset_counter = 0U;
 static int32_t accel_runaway_sum = 0;
 static uint8_t accel_runaway_cycle_count = 0U;
 static float accel_runaway_prev_mean = 0.0f;
@@ -122,15 +131,15 @@ void PID_PITCH_ResetState(void)
     output = 0.0f;
     showoutput = 0.0f;
     error = 0.0f;
-    pitch_recovery_braking = 0U;
-    pitch_recovery_brake_start_tick = 0U;
     accel_runaway_sum = 0;
     accel_runaway_cycle_count = 0U;
     accel_runaway_prev_mean = 0.0f;
     accel_runaway_has_prev_mean = 0U;
     accel_runaway_delta = 0.0f;
+    accel_adaptive_equilibrium_offset_deg = 0.0f;
     accel_runaway_trend_counter = 0U;
     accel_runaway_abs_counter = 0U;
+    accel_adaptive_reset_counter = 0U;
     accel_runaway_last_delta_sign = 0;
     accel_runaway_brake_reason = 0U;
     turn_debug_motor_left_cmd = 0;
@@ -171,6 +180,7 @@ void PID_PITCH(void)
     static uint8_t fl_motion_phase = 1;
     uint32_t now = HAL_GetTick();
     uint8_t accel_runaway_trigger = 0U;
+    int8_t accel_adaptive_direction = 0;
 
     accelx = axRaw;
     accely = ayRaw;
@@ -247,23 +257,40 @@ void PID_PITCH(void)
     }
 
     if (turn_maneuver_active) {
-        turn_maneuver_setpoint = TurnManeuver_GetActiveSetpoint();
+        if (turn_maneuver_state != TURN_MANEUVER_STATE_SETTLING) {
+            turn_maneuver_setpoint = TurnManeuver_GetActiveSetpoint();
+        }
         target_setpoint = setpoint + turn_maneuver_setpoint;
         steering = turn_maneuver_steering;
     }
 
-    if (!pitch_recovery_braking) {
+    if (!accel_runaway_enabled) {
+        accel_runaway_sum = 0;
+        accel_runaway_cycle_count = 0U;
+        accel_runaway_prev_mean = 0.0f;
+        accel_runaway_has_prev_mean = 0U;
+        accel_runaway_delta = 0.0f;
+        accel_runaway_trend_counter = 0U;
+        accel_runaway_abs_counter = 0U;
+        accel_adaptive_reset_counter = 0U;
+        accel_runaway_last_delta_sign = 0;
+        accel_runaway_brake_reason = 0U;
+        accel_adaptive_equilibrium_offset_deg = 0.0f;
+    } else {
         accel_runaway_sum += axRaw;
         accel_runaway_cycle_count++;
     }
-    if (!pitch_recovery_braking && accel_runaway_cycle_count >= ACCEL_RUNAWAY_WINDOW_CYCLES) {
+
+    if (accel_runaway_enabled && accel_runaway_cycle_count >= ACCEL_RUNAWAY_WINDOW_CYCLES) {
         float current_mean = (float)accel_runaway_sum / (float)ACCEL_RUNAWAY_WINDOW_CYCLES;
         float delta = accel_runaway_has_prev_mean ? (current_mean - accel_runaway_prev_mean) : 0.0f;
         float abs_delta = fabsf(delta);
         float abs_offset = fabsf(current_mean - ACCEL_RUNAWAY_SAFE_CENTER);
         int8_t delta_sign = (delta > 0.0f) ? 1 : ((delta < 0.0f) ? -1 : 0);
+        int8_t mean_sign = (current_mean > ACCEL_RUNAWAY_SAFE_CENTER) ? 1 : -1;
         uint8_t trend_limit = (uint8_t)accel_runaway_trend_limit;
         uint8_t abs_limit = (uint8_t)accel_runaway_abs_limit;
+        uint8_t reset_limit = (uint8_t)accel_adaptive_reset_count_limit;
 
         accel_runaway_mean = current_mean;
         accel_runaway_delta = delta;
@@ -296,71 +323,49 @@ void PID_PITCH(void)
 
         if (trend_limit > 0U && accel_runaway_trend_counter >= trend_limit) {
             accel_runaway_trigger = 1U;
+            accel_adaptive_direction = (delta_sign != 0) ? delta_sign : mean_sign;
             accel_runaway_brake_reason = 1U;
         } else if (abs_limit > 0U && accel_runaway_abs_counter >= abs_limit) {
             accel_runaway_trigger = 1U;
+            accel_adaptive_direction = mean_sign;
             accel_runaway_brake_reason = 2U;
+        }
+
+        if (!accel_runaway_trigger &&
+            fabsf(accel_runaway_delta) < accel_runaway_delta_threshold &&
+            abs_offset < accel_adaptive_reset_abs_threshold) {
+            if (accel_adaptive_reset_counter < 255U) {
+                accel_adaptive_reset_counter++;
+            }
+        } else {
+            accel_adaptive_reset_counter = 0U;
+        }
+
+        if (reset_limit > 0U && accel_adaptive_reset_counter >= reset_limit) {
+            accel_adaptive_equilibrium_offset_deg = 0.0f;
+            accel_adaptive_reset_counter = 0U;
         }
 
         accel_runaway_prev_mean = current_mean;
         accel_runaway_has_prev_mean = 1U;
     }
 
-    if (pitch_recovery_braking) {
-        target_setpoint = setpoint;
-        steering = 0;
-        rc_phase_tick = 0U;
-        rc_motion_phase = 1U;
-        fl_phase_tick = 0U;
-        fl_motion_phase = 1U;
-
-        if ((now - pitch_recovery_brake_start_tick) < (uint32_t)pitch_recovery_brake_ms) {
-            error = angle_y - target_setpoint;
-            integral = 0.0f;
-            last_error = error;
-            P = 0.0f;
-            I = 0.0f;
-            D = 0.0f;
-            output = 0.0f;
-            showoutput = 0.0f;
-            Robot_ShortBrake();
-            return;
+    if (accel_runaway_trigger && accel_adaptive_direction != 0) {
+        float limit = fabsf(accel_adaptive_offset_limit_deg);
+        if (limit > ACCEL_ADAPTIVE_OFFSET_MAX_DEG) {
+            limit = ACCEL_ADAPTIVE_OFFSET_MAX_DEG;
         }
-
-        pitch_recovery_braking = 0U;
-        accel_runaway_sum = 0;
-        accel_runaway_cycle_count = 0U;
-        accel_runaway_trend_counter = 0U;
-        accel_runaway_abs_counter = 0U;
-        accel_runaway_last_delta_sign = 0;
-    } else {
-        if (accel_runaway_trigger) {
-            target_setpoint = setpoint;
-            steering = 0;
-            rc_phase_tick = 0U;
-            rc_motion_phase = 1U;
-            fl_phase_tick = 0U;
-            fl_motion_phase = 1U;
-            accel_runaway_trend_counter = 0U;
-            accel_runaway_abs_counter = 0U;
-            accel_runaway_last_delta_sign = 0;
-
-            if (pitch_recovery_brake_ms > 0.0f) {
-                pitch_recovery_braking = 1U;
-                pitch_recovery_brake_start_tick = now;
-                error = angle_y - target_setpoint;
-                integral = 0.0f;
-                last_error = error;
-                P = 0.0f;
-                I = 0.0f;
-                D = 0.0f;
-                output = 0.0f;
-                showoutput = 0.0f;
-                Robot_ShortBrake();
-                return;
-            }
+        if (limit > 0.0f) {
+            accel_adaptive_equilibrium_offset_deg +=
+                ((float)accel_adaptive_direction * accel_adaptive_offset_step_deg);
+            accel_adaptive_equilibrium_offset_deg =
+                clamp_float(accel_adaptive_equilibrium_offset_deg, limit);
+        } else {
+            accel_adaptive_equilibrium_offset_deg = 0.0f;
         }
     }
+
+    target_setpoint -= accel_adaptive_equilibrium_offset_deg;
 
     error = angle_y - target_setpoint;
     integral += error * CONTROL_DT_PID;
@@ -575,6 +580,9 @@ void TurnManeuver_CancelWithReason(uint8_t reason)
     turn_maneuver_steering_slow = 0.0f;
     turn_maneuver_error_filtered = 0.0f;
     turn_maneuver_arc_inner_ratio = 0.0f;
+    turn_maneuver_settle_setpoint = 0.0f;
+    turn_maneuver_settle_steering = 0.0f;
+    turn_maneuver_settle_start_tick = 0U;
     turn_debug_target_steering = 0.0f;
     turn_debug_steering_ramp = 0.0f;
     turn_debug_prepare_remaining_ms = 0U;
@@ -636,6 +644,22 @@ void TurnManeuver_Task(void)
         return;
     }
 
+    if (turn_maneuver_state == TURN_MANEUVER_STATE_SETTLING) {
+        uint32_t settle_elapsed = now - turn_maneuver_settle_start_tick;
+        if (settle_elapsed >= TURN_MANEUVER_SETTLE_MS) {
+            TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_TARGET_REACHED);
+            return;
+        }
+
+        float scale = 1.0f - ((float)settle_elapsed / (float)TURN_MANEUVER_SETTLE_MS);
+        turn_maneuver_setpoint = turn_maneuver_settle_setpoint * scale;
+        turn_maneuver_steering_slow = turn_maneuver_settle_steering * scale;
+        turn_maneuver_steering = (int16_t)turn_maneuver_steering_slow;
+        turn_debug_steering_ramp = turn_maneuver_steering_slow;
+        turn_debug_target_steering = 0.0f;
+        return;
+    }
+
     float turned_deg = angle_yaw - turn_maneuver_start_yaw_deg;
     float remaining_deg = turn_maneuver_target_delta_deg - turned_deg;
     turn_debug_target_deg = turn_maneuver_target_delta_deg;
@@ -643,7 +667,12 @@ void TurnManeuver_Task(void)
     turn_debug_remaining_deg = remaining_deg;
 
     if (fabsf(remaining_deg) <= TURN_MANEUVER_TOLERANCE_DEG) {
-        TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_TARGET_REACHED);
+        turn_debug_exit_reason = TURN_MANEUVER_EXIT_TARGET_REACHED;
+        turn_maneuver_state = TURN_MANEUVER_STATE_SETTLING;
+        turn_maneuver_settle_start_tick = now;
+        turn_maneuver_settle_setpoint = TurnManeuver_GetActiveSetpoint();
+        turn_maneuver_settle_steering = turn_maneuver_steering_slow;
+        turn_maneuver_setpoint = turn_maneuver_settle_setpoint;
         return;
     }
 

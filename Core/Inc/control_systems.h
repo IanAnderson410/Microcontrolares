@@ -39,6 +39,8 @@ extern "C" {
 #define TURN_MANEUVER_STATE_IDLE           0U
 #define TURN_MANEUVER_STATE_PREPARING      1U
 #define TURN_MANEUVER_STATE_TURNING        2U
+#define TURN_MANEUVER_STATE_SETTLING       3U
+#define ACCEL_ADAPTIVE_OFFSET_MAX_DEG      100.0f
 
 extern volatile uint8_t currentMode;
 extern volatile uint8_t flagMotorsAreOn;
@@ -76,15 +78,22 @@ extern float integral;
 extern float last_error;
 extern float pitch_recovery_brake_ms;
 extern float pitch_recovery_error_threshold_deg;
+extern volatile uint8_t accel_runaway_enabled;
 extern float accel_runaway_delta_threshold;
 extern float accel_runaway_abs_threshold;
 extern float accel_runaway_trend_limit;
 extern float accel_runaway_abs_limit;
+extern float accel_adaptive_offset_step_deg;
+extern float accel_adaptive_offset_limit_deg;
+extern float accel_adaptive_reset_abs_threshold;
+extern float accel_adaptive_reset_count_limit;
 extern volatile float accel_runaway_mean;
 extern volatile float accel_runaway_delta;
+extern volatile float accel_adaptive_equilibrium_offset_deg;
 extern volatile uint8_t accel_runaway_trend_counter;
 extern volatile uint8_t accel_runaway_abs_counter;
 extern volatile uint8_t accel_runaway_brake_reason;
+extern volatile uint8_t accel_adaptive_reset_counter;
 extern float paso;
 extern float P;
 extern float I;

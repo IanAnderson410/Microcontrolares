@@ -211,7 +211,7 @@ enum {
 volatile	uint8_t			currentMode = MODO_IDDLE;
 // ================= [ Flags ] ================= //
 volatile	uint8_t			flagWIFI				=   0;
-volatile	uint8_t 		flagOLED 				= 	11;
+volatile	uint8_t 		flagOLED 				= 	1;
 volatile	uint8_t			flagMotorsAreOn 		=	0;
 volatile	uint8_t 		flagCalibrationIsReady 	= 	0; // Bandera para no activar el PID antes de tiempo
 volatile	uint8_t			flag_RC_active			=	0;
@@ -237,11 +237,11 @@ static volatile uint32_t accel_log_tx_send_fail = 0U;
 			int16_t 		deadband_L = 130;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 75; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
-			float 			Kp = 190.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Kp = 155.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Ki = 0.8f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
 			float 			Kd = 3.8f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
-			float			integral_limit = 3600.0f;
-			float 			setpoint = 3.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
+			float			integral_limit = 1600.0f;
+			float 			setpoint = 0.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 			float 			setpointDeEquilibrio = 0.1f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
 			float 			integral = 0;
 			float 			last_error = 0;
@@ -256,7 +256,7 @@ volatile    float 		FL_setpoint = 4.4f;
 			float 		yaw_error_filter_alpha = 0.70f;
 			float 		yaw_steering_step_max = 90.0f;
 			float 		yaw_steering_limit = 3600.0f;
-			float 		turn_maneuver_forward_bias_deg = 5.0f;
+			float 		turn_maneuver_forward_bias_deg = 100.0f;
 			uint16_t 	turn_maneuver_pre_bias_delay_ms = 300U;
 			float 		last_state_linea = 0.0f;
 			float 		error_linea;
@@ -968,11 +968,15 @@ void screenScheduler(void){
 				 (unsigned long)accel_log_tx_service_calls);
 		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 		SSD1306_GotoXY(0, 50);
-		snprintf(msg, sizeof(msg), "A:%ld D:%ld T:%u B:%u",
-				 (long)accel_runaway_mean,
-				 (long)accel_runaway_delta,
+		snprintf(msg, sizeof(msg), "O%+.1f T%u B%u",
+				 accel_adaptive_equilibrium_offset_deg,
 				 accel_runaway_trend_counter,
 				 accel_runaway_abs_counter);
+		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+		SSD1306_GotoXY(70, 40);
+		snprintf(msg, sizeof(msg), "A:%ld D:%ld",
+				 (long)accel_runaway_mean,
+				 (long)accel_runaway_delta);
 		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 		OLED_RequestUpdate();
 		break;
@@ -1130,6 +1134,15 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             accel_runaway_abs_threshold = UNER_ReadFloatLE(payload + 4);
             accel_runaway_trend_limit = UNER_ReadFloatLE(payload + 8);
             accel_runaway_abs_limit = UNER_ReadFloatLE(payload + 12);
+            if (payload_len >= 32) {
+                accel_adaptive_offset_step_deg = UNER_ReadFloatLE(payload + 16);
+                accel_adaptive_offset_limit_deg = UNER_ReadFloatLE(payload + 20);
+                accel_adaptive_reset_abs_threshold = UNER_ReadFloatLE(payload + 24);
+                accel_adaptive_reset_count_limit = UNER_ReadFloatLE(payload + 28);
+            }
+            if (payload_len >= 33) {
+                accel_runaway_enabled = payload[32] ? 1U : 0U;
+            }
 
             if (accel_runaway_delta_threshold < 0.0f) {
                 accel_runaway_delta_threshold = 0.0f;
@@ -1146,6 +1159,24 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 accel_runaway_abs_limit = 1.0f;
             } else if (accel_runaway_abs_limit > 255.0f) {
                 accel_runaway_abs_limit = 255.0f;
+            }
+            if (accel_adaptive_offset_step_deg < 0.0f) {
+                accel_adaptive_offset_step_deg = 0.0f;
+            } else if (accel_adaptive_offset_step_deg > 10.0f) {
+                accel_adaptive_offset_step_deg = 10.0f;
+            }
+            if (accel_adaptive_offset_limit_deg < 0.0f) {
+                accel_adaptive_offset_limit_deg = 0.0f;
+            } else if (accel_adaptive_offset_limit_deg > ACCEL_ADAPTIVE_OFFSET_MAX_DEG) {
+                accel_adaptive_offset_limit_deg = ACCEL_ADAPTIVE_OFFSET_MAX_DEG;
+            }
+            if (accel_adaptive_reset_abs_threshold < 0.0f) {
+                accel_adaptive_reset_abs_threshold = 0.0f;
+            }
+            if (accel_adaptive_reset_count_limit < 1.0f) {
+                accel_adaptive_reset_count_limit = 1.0f;
+            } else if (accel_adaptive_reset_count_limit > 255.0f) {
+                accel_adaptive_reset_count_limit = 255.0f;
             }
             uner_ack_status = 0;
         } else {
