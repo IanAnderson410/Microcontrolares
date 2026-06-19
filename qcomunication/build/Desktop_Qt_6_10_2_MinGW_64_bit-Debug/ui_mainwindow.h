@@ -1565,7 +1565,7 @@ public:
         IR5_progressBar->setTextVisible(false);
         IR5_progressBar->setOrientation(Qt::Orientation::Vertical);
         stackedWidget->addWidget(page);
-        layoutWidget4->raise();
+        layoutWidget7->raise();
         PitchQuickWidget->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
@@ -3544,7 +3544,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        stackedWidget->setCurrentIndex(4);
+        stackedWidget->setCurrentIndex(3);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
@@ -3719,7 +3719,7 @@ public:
         wallKpLabel->setText(QCoreApplication::translate("MainWindow", "Kp Wall", nullptr));
         wallTargetMmLabel->setText(QCoreApplication::translate("MainWindow", "Target", nullptr));
         wallConfigSendButton->setText(QCoreApplication::translate("MainWindow", "APPLY WALL", nullptr));
-        irRightLogBox->setTitle(QCoreApplication::translate("MainWindow", "IR derecho - caracterizacion", nullptr));
+        irRightLogBox->setTitle(QCoreApplication::translate("MainWindow", "IR sensor 4 - caracterizacion", nullptr));
         irRightDistanceLabel->setText(QCoreApplication::translate("MainWindow", "Dist mm", nullptr));
         irRightCaptureButton->setText(QCoreApplication::translate("MainWindow", "CAPTURAR 50", nullptr));
         irRightTransmitButton->setText(QCoreApplication::translate("MainWindow", "DESCARGAR", nullptr));

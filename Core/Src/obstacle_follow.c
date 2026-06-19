@@ -234,12 +234,15 @@ void ObstacleFollow_Task(void){
             }
             if (obstacle_follow_lost_count >= OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
                 ObstacleFollow_ClearOutput();
+                /*
                 if (TurnManeuver_StartStoredCorner(OBSTACLE_FOLLOW_CORNER_TURN_DEG) ==
                     TURN_MANEUVER_STATUS_OK) {
                     ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_CORNER_TURN);
                 } else {
                     ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
                 }
+                */
+                ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
             }
             break;
         }

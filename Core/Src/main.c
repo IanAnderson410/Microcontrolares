@@ -221,6 +221,7 @@ enum {
 #define     IR_RIGHT_LOG_SAMPLE_COUNT  50U
 #define     IR_RIGHT_LOG_CHUNK_SAMPLES 9U
 #define     IR_RIGHT_LOG_DONE_REPEATS  5U
+#define     IR_RIGHT_LOG_ADC_INDEX     4U
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		        64
 #define     ESP01_RX_DMA_SIZE          256
@@ -677,7 +678,7 @@ static void IrRightLog_RecordSample(void)
     }
 
     ir_right_log_samples[ir_right_log_active_capture][ir_right_log_write_index] =
-        obstacle_right_ir_filtered;
+        adc_filtrado[IR_RIGHT_LOG_ADC_INDEX];
 
     ir_right_log_write_index++;
     if (ir_right_log_write_index >= IR_RIGHT_LOG_SAMPLE_COUNT) {

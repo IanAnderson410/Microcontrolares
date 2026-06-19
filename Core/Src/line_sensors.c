@@ -2,7 +2,7 @@
 
 void Filtrar_Sensores_IR(void)
 {
-    for (int i = 0; i < FL_LINE_SENSOR_COUNT; i++) {
+    for (int i = 0; i < 8; i++) {
         uint16_t adc_sample = adc_buffer[i];
         adc_filtrado[i] = (adc_filtrado[i] * 7 + adc_sample * 3) / 10;
     }
