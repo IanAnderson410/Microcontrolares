@@ -3860,7 +3860,7 @@ QComboBox{
              <x>10</x>
              <y>0</y>
              <width>1121</width>
-             <height>586</height>
+             <height>602</height>
             </rect>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_28">
@@ -4108,7 +4108,7 @@ QComboBox{
                              </palette>
                             </property>
                             <property name="text">
-                             <string>192.168.1.41</string>
+                             <string>192.168.1.10</string>
                             </property>
                             <property name="placeholderText">
                              <string>192.168.1.XX</string>
@@ -4354,9 +4354,23 @@ QComboBox{
                           </property>
                          </widget>
                         </item>
+                        <item>
+                         <widget class="QPushButton" name="aliveUdpButton">
+                          <property name="text">
+                           <string>ALIVE UDP</string>
+                          </property>
+                         </widget>
+                        </item>
                        </layout>
                       </item>
                      </layout>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="httpSoftApButton">
+                      <property name="text">
+                       <string>HTTP AP</string>
+                      </property>
+                     </widget>
                     </item>
                     <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_14"/>
@@ -4743,13 +4757,6 @@ QComboBox{
                     <item>
                      <widget class="QTextEdit" name="InfoTextEdit"/>
                     </item>
-                    <item>
-                     <widget class="QPushButton" name="cleanInfoPushButton">
-                      <property name="text">
-                       <string>CLEAN Info</string>
-                      </property>
-                     </widget>
-                    </item>
                    </layout>
                   </item>
                   <item>
@@ -4763,13 +4770,6 @@ QComboBox{
                     </item>
                     <item>
                      <widget class="QTextEdit" name="InfoTextEdit_2"/>
-                    </item>
-                    <item>
-                     <widget class="QPushButton" name="cleanInfoPushButton_2">
-                      <property name="text">
-                       <string>CLEAN Info</string>
-                      </property>
-                     </widget>
                     </item>
                    </layout>
                   </item>
@@ -4789,13 +4789,6 @@ QComboBox{
                     <item>
                      <widget class="QTextEdit" name="RxTextEdit"/>
                     </item>
-                    <item>
-                     <widget class="QPushButton" name="cleanRxPushButton">
-                      <property name="text">
-                       <string>CLEAN Rx</string>
-                      </property>
-                     </widget>
-                    </item>
                    </layout>
                   </item>
                   <item>
@@ -4810,18 +4803,18 @@ QComboBox{
                     <item>
                      <widget class="QTextEdit" name="TxTextEdit"/>
                     </item>
-                    <item>
-                     <widget class="QPushButton" name="cleanTxPushButton">
-                      <property name="text">
-                       <string>CLEAN Tx</string>
-                      </property>
-                     </widget>
-                    </item>
                    </layout>
                   </item>
                  </layout>
                 </item>
                </layout>
+              </item>
+              <item>
+               <widget class="QPushButton" name="cleanInfoPushButton">
+                <property name="text">
+                 <string>CLEAN Info</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
@@ -8521,9 +8514,9 @@ QComboBox{
            <property name="geometry">
             <rect>
              <x>20</x>
-             <y>20</y>
+             <y>0</y>
              <width>1110</width>
-             <height>40</height>
+             <height>21</height>
             </rect>
            </property>
            <property name="text">
@@ -8533,49 +8526,13 @@ QComboBox{
             <set>Qt::AlignmentFlag::AlignCenter</set>
            </property>
           </widget>
-          <widget class="QGroupBox" name="networkCommandBox">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>80</y>
-             <width>270</width>
-             <height>220</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>Red / UDP</string>
-           </property>
-           <layout class="QVBoxLayout" name="networkCommandLayout">
-            <item>
-             <widget class="QPushButton" name="aliveUdpButton">
-              <property name="text">
-               <string>ALIVE UDP</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="telemetryUdpButton">
-              <property name="text">
-               <string>START TEL</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="httpSoftApButton">
-              <property name="text">
-               <string>HTTP AP</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
           <widget class="QGroupBox" name="yawPdQuickBox">
            <property name="geometry">
             <rect>
-             <x>320</x>
-             <y>80</y>
-             <width>270</width>
-             <height>180</height>
+             <x>20</x>
+             <y>310</y>
+             <width>181</width>
+             <height>91</height>
             </rect>
            </property>
            <property name="title">
@@ -8622,10 +8579,10 @@ QComboBox{
           <widget class="QGroupBox" name="yawConfigBox">
            <property name="geometry">
             <rect>
-             <x>640</x>
-             <y>60</y>
-             <width>371</width>
-             <height>491</height>
+             <x>230</x>
+             <y>100</y>
+             <width>361</width>
+             <height>451</height>
             </rect>
            </property>
            <property name="title">
@@ -8836,12 +8793,12 @@ QComboBox{
           <widget class="QGroupBox" name="accelRunawayBox">
            <property name="geometry">
             <rect>
-              <x>20</x>
-              <y>270</y>
-              <width>230</width>
-              <height>330</height>
-             </rect>
-            </property>
+             <x>10</x>
+             <y>20</y>
+             <width>230</width>
+             <height>291</height>
+            </rect>
+           </property>
            <property name="title">
             <string>Accel runaway</string>
            </property>
@@ -8932,14 +8889,14 @@ QComboBox{
             </item>
             <item row="8" column="0" colspan="2">
              <widget class="QPushButton" name="accelRunawayModeButton">
+              <property name="text">
+               <string>Detection OFF</string>
+              </property>
               <property name="checkable">
                <bool>true</bool>
               </property>
               <property name="checked">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string>Detection ON</string>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -8955,10 +8912,10 @@ QComboBox{
           <widget class="QWidget" name="pitchRecoveryWidget">
            <property name="geometry">
             <rect>
-             <x>270</x>
-             <y>270</y>
-             <width>230</width>
-             <height>130</height>
+             <x>240</x>
+             <y>20</y>
+             <width>301</width>
+             <height>107</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="pitchRecoveryLayout">
@@ -9002,10 +8959,10 @@ QComboBox{
           <widget class="QGroupBox" name="accelLogBox">
            <property name="geometry">
             <rect>
-             <x>270</x>
-             <y>450</y>
-             <width>353</width>
-             <height>100</height>
+             <x>600</x>
+             <y>20</y>
+             <width>541</width>
+             <height>121</height>
             </rect>
            </property>
            <property name="title">
@@ -9056,14 +9013,134 @@ QComboBox{
           <widget class="QPushButton" name="obstacleFollowStartButton">
            <property name="geometry">
             <rect>
-             <x>270</x>
-             <y>320</y>
-             <width>353</width>
-             <height>121</height>
+             <x>10</x>
+             <y>410</y>
+             <width>181</width>
+             <height>71</height>
             </rect>
            </property>
            <property name="text">
             <string>START FACE_FOLLOW</string>
+           </property>
+          </widget>
+          <widget class="QGroupBox" name="irRightLogBox">
+           <property name="geometry">
+            <rect>
+             <x>570</x>
+             <y>140</y>
+             <width>571</width>
+             <height>441</height>
+            </rect>
+           </property>
+           <property name="title">
+            <string>IR derecho - caracterizacion</string>
+           </property>
+           <layout class="QVBoxLayout" name="irRightLogLayout">
+            <item>
+             <layout class="QHBoxLayout" name="irRightLogControlsLayout">
+              <item>
+               <widget class="QLabel" name="irRightDistanceLabel">
+                <property name="text">
+                 <string>Dist mm</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="verticalLayout_40">
+                <item>
+                 <widget class="QSpinBox" name="irRightDistanceSpin">
+                  <property name="maximum">
+                   <number>100</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>10</number>
+                  </property>
+                  <property name="value">
+                   <number>10</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="irRightCaptureButton">
+                  <property name="text">
+                   <string>CAPTURAR 50</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="verticalLayout_39">
+                <item>
+                 <widget class="QPushButton" name="irRightTransmitButton">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>25</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>DESCARGAR</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="irRightClearButton">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>25</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>LIMPIAR</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="irRightSaveButton">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>22</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>CSV</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QLabel" name="irRightLogStatusLabel">
+              <property name="text">
+               <string>Idle</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QTextEdit" name="irRightLogTextEdit">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QPushButton" name="Screen2PushButton_3">
+           <property name="geometry">
+            <rect>
+             <x>580</x>
+             <y>560</y>
+             <width>29</width>
+             <height>29</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>2</string>
            </property>
           </widget>
          </widget>
@@ -9278,6 +9355,13 @@ QComboBox{
             </widget>
            </item>
            <item>
+            <widget class="QPushButton" name="telemetryUdpButton">
+             <property name="text">
+              <string>START TEL</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QLabel" name="ModeLabel_4">
              <property name="maximumSize">
               <size>
@@ -9439,31 +9523,57 @@ QComboBox{
      </item>
     </layout>
    </widget>
-   <widget class="QWidget" name="layoutWidget">
+   <widget class="QPushButton" name="Screen2PushButton">
     <property name="geometry">
      <rect>
-      <x>730</x>
-      <y>710</y>
-      <width>66</width>
-      <height>31</height>
+      <x>766</x>
+      <y>711</y>
+      <width>29</width>
+      <height>29</height>
      </rect>
     </property>
-    <layout class="QHBoxLayout" name="horizontalLayout_41">
-     <item>
-      <widget class="QPushButton" name="Screen2PushButton_3">
-       <property name="text">
-        <string>2</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="Screen2PushButton">
-       <property name="text">
-        <string>2</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <property name="text">
+     <string>2</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="cleanRxPushButton">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>740</y>
+      <width>498</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>CLEAN Rx</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="cleanInfoPushButton_2">
+    <property name="geometry">
+     <rect>
+      <x>640</x>
+      <y>810</y>
+      <width>497</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>CLEAN Info</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="cleanTxPushButton">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>810</y>
+      <width>497</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>CLEAN Tx</string>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">

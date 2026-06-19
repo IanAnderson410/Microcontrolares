@@ -25,6 +25,7 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QVector3D>
+#include <QSpinBox>
 #include <QtCharts>
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
@@ -134,6 +135,8 @@ private slots:
     void updateAccelRunawayModeButton(bool enabled);
     QString buildAccelLogCsv() const;
     void updateAccelLogPreview();
+    QString buildIrRightLogCsv() const;
+    void updateIrRightLogPreview();
     void processPendingAckRetry();
     void on_PID_Alpha_pushButton_clicked();
 
@@ -216,6 +219,9 @@ private:
     bool            accelLogReceiving = false;
     quint8          accelLogCaptureId = 0;
     quint16         accelLogExpectedSamples = 0;
+    bool            irRightLogReceiving = false;
+    quint8          irRightLogSessionId = 0;
+    quint16         irRightLogExpectedSamples = 0;
 
     QByteArray      m_buffer;
 
@@ -318,6 +324,14 @@ private:
         qint16 pitchCdeg;
     } AccelLogRow;
     QVector<AccelLogRow> accelLogRows;
+
+    typedef struct {
+        quint8 captureIndex;
+        quint16 distanceMm;
+        quint8 sampleIndex;
+        quint16 adcFiltered;
+    } IrRightLogRow;
+    QVector<IrRightLogRow> irRightLogRows;
 
     float accel_angle_filtrado = 0.0f;
     float accelLineal = 0.0f;
@@ -499,7 +513,12 @@ private:
         CMD_ACCEL_LOG_START         = 69,
         CMD_ACCEL_LOG_CHUNK         = 70,
         CMD_ACCEL_LOG_DONE          = 71,
-        CMD_ACCEL_RUNAWAY_CONFIG    = 72
+        CMD_ACCEL_RUNAWAY_CONFIG    = 72,
+        CMD_IR_RIGHT_LOG_CAPTURE    = 73,
+        CMD_IR_RIGHT_LOG_CHUNK      = 74,
+        CMD_IR_RIGHT_LOG_DONE       = 75,
+        CMD_IR_RIGHT_LOG_CLEAR      = 76,
+        CMD_IR_RIGHT_LOG_TRANSMIT   = 77
         // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
         // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
     };

@@ -1549,7 +1549,7 @@ public:
         IR5_progressBar->setTextVisible(false);
         IR5_progressBar->setOrientation(Qt::Orientation::Vertical);
         stackedWidget->addWidget(page);
-        layoutWidget6->raise();
+        layoutWidget4->raise();
         PitchQuickWidget->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
@@ -3131,7 +3131,7 @@ public:
         accelRunawayModeButton = new QPushButton(accelRunawayBox);
         accelRunawayModeButton->setObjectName("accelRunawayModeButton");
         accelRunawayModeButton->setCheckable(true);
-        accelRunawayModeButton->setChecked(true);
+        accelRunawayModeButton->setChecked(false);
 
         accelRunawayLayout->addWidget(accelRunawayModeButton, 8, 0, 1, 2);
 
@@ -3610,7 +3610,7 @@ public:
         accelAdaptiveLimitLabel->setText(QCoreApplication::translate("MainWindow", "Offset lim", nullptr));
         accelAdaptiveResetAbsLabel->setText(QCoreApplication::translate("MainWindow", "Reset abs", nullptr));
         accelAdaptiveResetCountLabel->setText(QCoreApplication::translate("MainWindow", "Reset cnt", nullptr));
-        accelRunawayModeButton->setText(QCoreApplication::translate("MainWindow", "Detection ON", nullptr));
+        accelRunawayModeButton->setText(QCoreApplication::translate("MainWindow", "Detection OFF", nullptr));
         accelRunawayApplyButton->setText(QCoreApplication::translate("MainWindow", "APPLY", nullptr));
         pitchRecoveryThresholdLabel->setText(QCoreApplication::translate("MainWindow", "Recovery deg", nullptr));
         pitchRecoveryBrakeMsLabel->setText(QCoreApplication::translate("MainWindow", "Brake ms", nullptr));

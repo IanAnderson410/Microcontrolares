@@ -31,6 +31,9 @@
 #include <QDoubleSpinBox>
 #include <QGroupBox>
 #include <QGridLayout>
+#include <QHBoxLayout>
+#include <QSpinBox>
+#include <QVBoxLayout>
 #include <QClipboard>
 #include <QFile>
 #include <QFileDialog>
@@ -91,10 +94,10 @@ MainWindow::MainWindow(QWidget *parent)
     currentDegrees=0;
 
     //===================[ Modelos 3D ]===================//
-    ui->quickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20/qcomunication/3dmodels/main.qml"));
+    ui->quickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20_qt_interfazqt/3dmodels/main.qml"));
     ui->quickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
 
-    ui->PitchQuickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20/qcomunication/3dmodels/main.qml"));
+    ui->PitchQuickWidget->setSource(QUrl::fromLocalFile("C:/Users/ianan/STM32CubeIDE/workspace_2.0.0/N20_qt_interfazqt/3dmodels/main.qml"));
     ui->PitchQuickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
 
 // este qquickwidget me crashea la interfaZ
@@ -261,7 +264,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->accelAdaptiveLimitSpin->setSuffix(" deg");
     configureSpin(ui->accelAdaptiveResetAbsSpin, 120.0, 0.0, 5000.0, 10.0, 0);
     configureSpin(ui->accelAdaptiveResetCountSpin, 5.0, 1.0, 255.0, 1.0, 0);
-    updateAccelRunawayModeButton(true);
+    updateAccelRunawayModeButton(false);
     ui->turnArcPercentSpin->setSuffix("%");
     ui->turnArcPercentSpin->setEnabled(false);
 
@@ -395,6 +398,63 @@ MainWindow::MainWindow(QWidget *parent)
         QTextStream out(&file);
         out << buildAccelLogCsv();
         ui->InfoTextEdit->append("Accel log CSV saved: " + path);
+    });
+
+    connect(ui->irRightCaptureButton, &QPushButton::clicked, this, [this]() {
+        quint16 distanceMm = qToLittleEndian<quint16>(static_cast<quint16>(ui->irRightDistanceSpin->value()));
+        QByteArray payload;
+        payload.append(reinterpret_cast<const char*>(&distanceMm), sizeof(distanceMm));
+        if (enviarComando(CMD_IR_RIGHT_LOG_CAPTURE, payload)) {
+            ui->irRightLogStatusLabel->setText("Capturando...");
+            ui->TxTextEdit->append("TX: IR RIGHT CAPTURE " + QString::number(ui->irRightDistanceSpin->value()) + " mm");
+            QTimer::singleShot(800, this, [this]() {
+                if (!irRightLogReceiving) {
+                    ui->irRightLogStatusLabel->setText("Captura lista");
+                }
+            });
+        }
+    });
+
+    connect(ui->irRightTransmitButton, &QPushButton::clicked, this, [this]() {
+        if (enviarComando(CMD_IR_RIGHT_LOG_TRANSMIT, QByteArray())) {
+            irRightLogRows.clear();
+            irRightLogReceiving = true;
+            irRightLogExpectedSamples = 0;
+            ui->irRightLogStatusLabel->setText("Descargando...");
+            ui->irRightLogTextEdit->clear();
+            ui->TxTextEdit->append("TX: IR RIGHT TRANSMIT");
+        }
+    });
+
+    connect(ui->irRightClearButton, &QPushButton::clicked, this, [this]() {
+        if (enviarComando(CMD_IR_RIGHT_LOG_CLEAR, QByteArray())) {
+            irRightLogRows.clear();
+            irRightLogReceiving = false;
+            irRightLogExpectedSamples = 0;
+            updateIrRightLogPreview();
+            ui->irRightLogStatusLabel->setText("Idle");
+            ui->TxTextEdit->append("TX: IR RIGHT CLEAR");
+        }
+    });
+
+    connect(ui->irRightSaveButton, &QPushButton::clicked, this, [this]() {
+        const QString path = QFileDialog::getSaveFileName(this,
+                                                          "Save IR right log CSV",
+                                                          "ir_right_log.csv",
+                                                          "CSV files (*.csv)");
+        if (path.isEmpty()) {
+            return;
+        }
+
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            ui->InfoTextEdit->append("Could not save CSV: " + file.errorString());
+            return;
+        }
+
+        QTextStream out(&file);
+        out << buildIrRightLogCsv();
+        ui->InfoTextEdit->append("IR right CSV saved: " + path);
     });
 }
 MainWindow::~MainWindow()
@@ -533,7 +593,13 @@ void MainWindow::decodeData(uint8_t *datosRx){
 }
 void MainWindow::on_cleanTxPushButton_clicked(){        ui->TxTextEdit->clear();    }
 void MainWindow::on_cleanRxPushButton_clicked(){        ui->RxTextEdit->clear();    }
-void MainWindow::on_cleanInfoPushButton_clicked(){      ui->InfoTextEdit->clear();  }
+void MainWindow::on_cleanInfoPushButton_clicked(){
+    ui->InfoTextEdit_2->clear();
+     ui->InfoTextEdit->clear();
+    ui->RxTextEdit->clear();
+    ui->TxTextEdit->clear();
+
+}
 void MainWindow::on_ModePushButton_clicked(){
     char mode[30];
     if(QSerialPort1->isOpen()){
@@ -899,6 +965,9 @@ bool MainWindow::isCriticalCommand(uint8_t cmd) const
     case CMD_OBSTACLE_FOLLOW:
     case CMD_ACCEL_LOG_START:
     case CMD_ACCEL_RUNAWAY_CONFIG:
+    case CMD_IR_RIGHT_LOG_CAPTURE:
+    case CMD_IR_RIGHT_LOG_CLEAR:
+    case CMD_IR_RIGHT_LOG_TRANSMIT:
         return true;
     default:
         return false;
@@ -994,6 +1063,28 @@ QString MainWindow::buildAccelLogCsv() const
 void MainWindow::updateAccelLogPreview()
 {
     ui->accelLogTextEdit->setPlainText(buildAccelLogCsv());
+}
+
+QString MainWindow::buildIrRightLogCsv() const
+{
+    QString csv;
+    QTextStream out(&csv);
+    out << "capture_index,distance_mm,distance_cm,sample_index,adc_right_filtered\n";
+
+    for (const IrRightLogRow &row : irRightLogRows) {
+        out << row.captureIndex << ','
+            << row.distanceMm << ','
+            << QString::number(row.distanceMm / 10.0, 'f', 1) << ','
+            << row.sampleIndex << ','
+            << row.adcFiltered << '\n';
+    }
+
+    return csv;
+}
+
+void MainWindow::updateIrRightLogPreview()
+{
+    ui->irRightLogTextEdit->setPlainText(buildIrRightLogCsv());
 }
 
 void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, const QByteArray &payload)
@@ -1197,7 +1288,7 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
         }
 
         datos.infoAdicional = static_cast<uint8_t>(payload.at(43));
-        datos.accelFlags = (payload.size() > 44) ? static_cast<uint8_t>(payload.at(44)) : 0x01U;
+        datos.accelFlags = (payload.size() > 44) ? static_cast<uint8_t>(payload.at(44)) : 0x00U;
         bool turnActive = (datos.infoAdicional & 0x40) != 0;
         if (turnActive != turnManeuverTelemetryActive) {
             turnManeuverTelemetryActive = turnActive;
@@ -1321,6 +1412,82 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
         updateAccelLogPreview();
         ui->accelLogStatusLabel->setText(QString("Complete: %1 samples").arg(accelLogRows.size()));
         ui->InfoTextEdit->append("Accel log receive complete.");
+        break;
+    }
+
+    case CMD_IR_RIGHT_LOG_CHUNK:
+    {
+        if (payload.size() < 8) {
+            ui->RxTextEdit->append("IR RIGHT LOG chunk too short");
+            break;
+        }
+
+        const uchar *p = reinterpret_cast<const uchar *>(payload.constData());
+        const quint8 sessionId = static_cast<quint8>(payload.at(0));
+        const quint16 totalSamples = qFromLittleEndian<quint16>(p + 3);
+        const quint16 firstIndex = qFromLittleEndian<quint16>(p + 5);
+        const quint8 sampleCount = static_cast<quint8>(payload.at(7));
+        const int expectedSize = 8 + (sampleCount * 6);
+
+        if (payload.size() < expectedSize) {
+            ui->RxTextEdit->append("IR RIGHT LOG chunk payload mismatch");
+            break;
+        }
+
+        if (!irRightLogReceiving || sessionId != irRightLogSessionId) {
+            irRightLogRows.clear();
+            irRightLogReceiving = true;
+            irRightLogSessionId = sessionId;
+            irRightLogExpectedSamples = totalSamples;
+            irRightLogRows.resize(totalSamples);
+            ui->irRightLogStatusLabel->setText("Receiving...");
+        } else if (irRightLogRows.size() < totalSamples) {
+            irRightLogRows.resize(totalSamples);
+            irRightLogExpectedSamples = totalSamples;
+        }
+
+        for (quint8 i = 0; i < sampleCount; i++) {
+            const int offset = 8 + (i * 6);
+            const quint16 globalIndex = firstIndex + i;
+            if (globalIndex >= static_cast<quint16>(irRightLogRows.size())) {
+                continue;
+            }
+
+            IrRightLogRow row;
+            row.captureIndex = static_cast<quint8>(payload.at(offset));
+            row.distanceMm = qFromLittleEndian<quint16>(p + offset + 1);
+            row.sampleIndex = static_cast<quint8>(payload.at(offset + 3));
+            row.adcFiltered = qFromLittleEndian<quint16>(p + offset + 4);
+            irRightLogRows[globalIndex] = row;
+        }
+
+        const quint16 receivedCount = static_cast<quint16>(
+            qMin<quint32>(static_cast<quint32>(firstIndex) + sampleCount,
+                          static_cast<quint32>(totalSamples)));
+        if (receivedCount >= totalSamples && totalSamples > 0) {
+            irRightLogReceiving = false;
+            updateIrRightLogPreview();
+            ui->irRightLogStatusLabel->setText(QString("Complete: %1").arg(irRightLogRows.size()));
+        } else {
+            ui->irRightLogStatusLabel->setText(QString("Receiving %1/%2")
+                                                   .arg(receivedCount)
+                                                   .arg(totalSamples));
+        }
+        break;
+    }
+
+    case CMD_IR_RIGHT_LOG_DONE:
+    {
+        if (payload.size() >= 5) {
+            const uchar *p = reinterpret_cast<const uchar *>(payload.constData());
+            irRightLogSessionId = static_cast<quint8>(payload.at(0));
+            irRightLogExpectedSamples = qFromLittleEndian<quint16>(p + 3);
+        }
+
+        irRightLogReceiving = false;
+        updateIrRightLogPreview();
+        ui->irRightLogStatusLabel->setText(QString("Complete: %1").arg(irRightLogRows.size()));
+        ui->InfoTextEdit->append("IR right log receive complete.");
         break;
     }
 
