@@ -167,7 +167,12 @@ enum {
        CMD_ACCEL_LOG_START          = 69,
        CMD_ACCEL_LOG_CHUNK          = 70,
        CMD_ACCEL_LOG_DONE           = 71,
-       CMD_ACCEL_RUNAWAY_CONFIG     = 72
+       CMD_ACCEL_RUNAWAY_CONFIG     = 72,
+       CMD_IR_RIGHT_LOG_CAPTURE     = 73,
+       CMD_IR_RIGHT_LOG_CHUNK       = 74,
+       CMD_IR_RIGHT_LOG_DONE        = 75,
+       CMD_IR_RIGHT_LOG_CLEAR       = 76,
+       CMD_IR_RIGHT_LOG_TRANSMIT    = 77
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -180,11 +185,25 @@ typedef struct __attribute__((packed)) {
     int16_t pitch_cdeg;
 } AccelLogSample_t;
 
+typedef struct __attribute__((packed)) {
+    uint8_t capture_index;
+    uint16_t distance_mm;
+    uint8_t sample_index;
+    uint16_t adc_filtered;
+} IrRightLogTxSample_t;
+
 enum {
     ACCEL_LOG_IDLE = 0,
     ACCEL_LOG_RECORDING,
     ACCEL_LOG_TX_PENDING,
     ACCEL_LOG_TRANSMITTING
+};
+
+enum {
+    IR_RIGHT_LOG_IDLE = 0,
+    IR_RIGHT_LOG_RECORDING,
+    IR_RIGHT_LOG_TX_PENDING,
+    IR_RIGHT_LOG_TRANSMITTING
 };
 /* USER CODE END PTD */
 
@@ -197,6 +216,10 @@ enum {
 #define     ACCEL_LOG_SAMPLE_COUNT     500U
 #define     ACCEL_LOG_CHUNK_SAMPLES    9U
 #define     ACCEL_LOG_DONE_REPEATS     5U
+#define     IR_RIGHT_LOG_MAX_CAPTURES  9U
+#define     IR_RIGHT_LOG_SAMPLE_COUNT  50U
+#define     IR_RIGHT_LOG_CHUNK_SAMPLES 9U
+#define     IR_RIGHT_LOG_DONE_REPEATS  5U
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		        64
 #define     ESP01_RX_DMA_SIZE          256
@@ -233,12 +256,21 @@ static volatile uint32_t accel_log_done_queued = 0U;
 static volatile uint32_t accel_log_tx_block_udp = 0U;
 static volatile uint32_t accel_log_tx_block_queue = 0U;
 static volatile uint32_t accel_log_tx_send_fail = 0U;
+static uint16_t ir_right_log_distances_mm[IR_RIGHT_LOG_MAX_CAPTURES];
+static uint16_t ir_right_log_samples[IR_RIGHT_LOG_MAX_CAPTURES][IR_RIGHT_LOG_SAMPLE_COUNT];
+static volatile uint8_t ir_right_log_state = IR_RIGHT_LOG_IDLE;
+static uint8_t ir_right_log_capture_count = 0U;
+static uint8_t ir_right_log_active_capture = 0U;
+static uint8_t ir_right_log_write_index = 0U;
+static uint16_t ir_right_log_tx_index = 0U;
+static uint8_t ir_right_log_done_repeats = 0U;
+static uint8_t ir_right_log_session_id = 0U;
 // Nuevas variables para compensar la diferencia entre motores
 			int16_t 		deadband_L = 130;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 75; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
 			float 			Kp = 155.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
-			float 			Ki = 0.8f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
+			float 			Ki = 800.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
 			float 			Kd = 3.8f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float			integral_limit = 1600.0f;
 			float 			setpoint = 0.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
@@ -593,6 +625,154 @@ static void AccelLog_ServiceTx(void)
         accel_log_tx_index = (uint16_t)(accel_log_tx_index + samples_in_chunk);
     } else {
         accel_log_tx_send_fail++;
+    }
+}
+
+static void IrRightLog_Clear(void)
+{
+    ir_right_log_state = IR_RIGHT_LOG_IDLE;
+    ir_right_log_capture_count = 0U;
+    ir_right_log_active_capture = 0U;
+    ir_right_log_write_index = 0U;
+    ir_right_log_tx_index = 0U;
+    ir_right_log_done_repeats = 0U;
+    ir_right_log_session_id++;
+    if (ir_right_log_session_id == 0U) {
+        ir_right_log_session_id = 1U;
+    }
+}
+
+static uint8_t IrRightLog_StartCapture(uint16_t distance_mm)
+{
+    if (ir_right_log_state != IR_RIGHT_LOG_IDLE) {
+        return 1U;
+    }
+
+    if (ir_right_log_capture_count >= IR_RIGHT_LOG_MAX_CAPTURES) {
+        return 2U;
+    }
+
+    if (ir_right_log_session_id == 0U) {
+        ir_right_log_session_id = 1U;
+    }
+
+    ir_right_log_active_capture = ir_right_log_capture_count;
+    ir_right_log_distances_mm[ir_right_log_active_capture] = distance_mm;
+    ir_right_log_write_index = 0U;
+    ir_right_log_state = IR_RIGHT_LOG_RECORDING;
+    return 0U;
+}
+
+static void IrRightLog_RecordSample(void)
+{
+    if (ir_right_log_state != IR_RIGHT_LOG_RECORDING) {
+        return;
+    }
+
+    if (ir_right_log_write_index >= IR_RIGHT_LOG_SAMPLE_COUNT) {
+        ir_right_log_capture_count++;
+        ir_right_log_state = IR_RIGHT_LOG_IDLE;
+        return;
+    }
+
+    ir_right_log_samples[ir_right_log_active_capture][ir_right_log_write_index] =
+        obstacle_right_ir_filtered;
+
+    ir_right_log_write_index++;
+    if (ir_right_log_write_index >= IR_RIGHT_LOG_SAMPLE_COUNT) {
+        ir_right_log_capture_count++;
+        ir_right_log_state = IR_RIGHT_LOG_IDLE;
+    }
+}
+
+static uint8_t IrRightLog_StartTransmit(void)
+{
+    if (ir_right_log_state != IR_RIGHT_LOG_IDLE) {
+        return 1U;
+    }
+
+    if (ir_right_log_capture_count == 0U) {
+        return 2U;
+    }
+
+    ir_right_log_tx_index = 0U;
+    ir_right_log_done_repeats = 0U;
+    ir_right_log_state = IR_RIGHT_LOG_TX_PENDING;
+    return 0U;
+}
+
+static void IrRightLog_ServiceTx(void)
+{
+    uint8_t payload[8U + (IR_RIGHT_LOG_CHUNK_SAMPLES * sizeof(IrRightLogTxSample_t))];
+    uint16_t total_samples = (uint16_t)ir_right_log_capture_count * IR_RIGHT_LOG_SAMPLE_COUNT;
+    uint16_t remaining;
+    uint8_t samples_in_chunk;
+
+    if (ir_right_log_state != IR_RIGHT_LOG_TX_PENDING &&
+        ir_right_log_state != IR_RIGHT_LOG_TRANSMITTING) {
+        return;
+    }
+
+    if (!ESP.udp_connected || ESP.uner_tx_count >= UNER_TX_QUEUE_DEPTH) {
+        return;
+    }
+
+    ir_right_log_state = IR_RIGHT_LOG_TRANSMITTING;
+
+    if (ir_right_log_tx_index >= total_samples) {
+        uint8_t done_payload[5];
+        if (ir_right_log_done_repeats >= IR_RIGHT_LOG_DONE_REPEATS) {
+            ir_right_log_state = IR_RIGHT_LOG_IDLE;
+            return;
+        }
+
+        done_payload[0] = ir_right_log_session_id;
+        done_payload[1] = ir_right_log_capture_count;
+        done_payload[2] = IR_RIGHT_LOG_SAMPLE_COUNT;
+        done_payload[3] = (uint8_t)(total_samples & 0xFFU);
+        done_payload[4] = (uint8_t)(total_samples >> 8);
+        if (UNER_SendV1(CMD_IR_RIGHT_LOG_DONE, 0, done_payload, sizeof(done_payload))) {
+            ir_right_log_done_repeats++;
+            if (ir_right_log_done_repeats >= IR_RIGHT_LOG_DONE_REPEATS) {
+                ir_right_log_state = IR_RIGHT_LOG_IDLE;
+            }
+        }
+        return;
+    }
+
+    remaining = (uint16_t)(total_samples - ir_right_log_tx_index);
+    samples_in_chunk = (remaining > IR_RIGHT_LOG_CHUNK_SAMPLES) ?
+                       IR_RIGHT_LOG_CHUNK_SAMPLES : (uint8_t)remaining;
+
+    payload[0] = ir_right_log_session_id;
+    payload[1] = ir_right_log_capture_count;
+    payload[2] = IR_RIGHT_LOG_SAMPLE_COUNT;
+    payload[3] = (uint8_t)(total_samples & 0xFFU);
+    payload[4] = (uint8_t)(total_samples >> 8);
+    payload[5] = (uint8_t)(ir_right_log_tx_index & 0xFFU);
+    payload[6] = (uint8_t)(ir_right_log_tx_index >> 8);
+    payload[7] = samples_in_chunk;
+
+    for (uint8_t i = 0; i < samples_in_chunk; i++) {
+        uint16_t global_index = (uint16_t)(ir_right_log_tx_index + i);
+        uint8_t capture_index = (uint8_t)(global_index / IR_RIGHT_LOG_SAMPLE_COUNT);
+        uint8_t sample_index = (uint8_t)(global_index % IR_RIGHT_LOG_SAMPLE_COUNT);
+        IrRightLogTxSample_t tx_sample;
+
+        tx_sample.capture_index = capture_index;
+        tx_sample.distance_mm = ir_right_log_distances_mm[capture_index];
+        tx_sample.sample_index = sample_index;
+        tx_sample.adc_filtered = ir_right_log_samples[capture_index][sample_index];
+        memcpy(&payload[8U + ((uint16_t)i * sizeof(IrRightLogTxSample_t))],
+               &tx_sample,
+               sizeof(tx_sample));
+    }
+
+    if (UNER_SendV1(CMD_IR_RIGHT_LOG_CHUNK,
+                    0,
+                    payload,
+                    (uint8_t)(8U + ((uint16_t)samples_in_chunk * sizeof(IrRightLogTxSample_t))))) {
+        ir_right_log_tx_index = (uint16_t)(ir_right_log_tx_index + samples_in_chunk);
     }
 }
 
@@ -1124,6 +1304,36 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_status = AccelLog_Start();
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_ACCEL_LOG_START;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+    case CMD_IR_RIGHT_LOG_CAPTURE:
+        if (payload_len >= 2) {
+            uint16_t distance_mm = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
+            uner_ack_status = IrRightLog_StartCapture(distance_mm);
+        } else {
+            uner_ack_status = 3U;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_IR_RIGHT_LOG_CAPTURE;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+    case CMD_IR_RIGHT_LOG_CLEAR:
+        IrRightLog_Clear();
+        uner_ack_status = 0U;
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_IR_RIGHT_LOG_CLEAR;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+    case CMD_IR_RIGHT_LOG_TRANSMIT:
+        uner_ack_status = IrRightLog_StartTransmit();
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_IR_RIGHT_LOG_TRANSMIT;
             uner_ack_seq = seq;
             uner_ack_pending = 1;
         }
@@ -1962,6 +2172,7 @@ int main(void)
 			Telemetry_UpdateMPU();
 			if (!flag_calibrando_linea) {
 				ObstacleFollow_Task();
+				IrRightLog_RecordSample();
 				FollowLine_Task();
 				if (currentMode == MODO_RC && flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
 					flag_RC_active = 0;
@@ -1981,6 +2192,7 @@ int main(void)
 		UNER_Rx_Task();
 		UNER_Tx_Task();
 		AccelLog_ServiceTx();
+		IrRightLog_ServiceTx();
 		if((now - last_oled_update)>=500){last_oled_update = now;screenScheduler();	}
 		ESP01_Generic_Functions(now);
 		ESP01_Task();
