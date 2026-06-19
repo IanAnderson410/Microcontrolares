@@ -794,8 +794,8 @@ void screenScheduler(void){
     uint8_t line_s2 = estado_sensores[2] ? 1U : 0U;
     uint8_t line_s3 = estado_sensores[3] ? 1U : 0U;
 
-    if(flagOLED < 0 )      flagOLED = 11;
-    if( flagOLED > 11)		flagOLED =0;
+    if(flagOLED < 0 )      flagOLED = 12;
+    if( flagOLED > 12)		flagOLED =0;
 
     snprintf(msg, sizeof(msg), "M:%d ", flagOLED);
     SSD1306_GotoXY(0, 0);
@@ -1114,54 +1114,76 @@ void screenScheduler(void){
     	        return;
 		break;
     case 11:
-    	const char *log_state_label = "UNK";
-		switch (accel_log_state) {
-		case ACCEL_LOG_IDLE:
-			log_state_label = (accel_log_write_index >= ACCEL_LOG_SAMPLE_COUNT &&
-							   accel_log_tx_index >= ACCEL_LOG_SAMPLE_COUNT) ? "DONE" : "IDLE";
-			break;
-		case ACCEL_LOG_RECORDING:
-			log_state_label = "REC";
-			break;
-		case ACCEL_LOG_TX_PENDING:
-			log_state_label = "PEND";
-			break;
-		case ACCEL_LOG_TRANSMITTING:
-			log_state_label = "TX";
-			break;
-		default:
-			break;
-		}
-
-		SSD1306_GotoXY(0, 10);
-		snprintf(msg, sizeof(msg), "St:%s ID:%u", log_state_label, accel_log_capture_id);
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		SSD1306_GotoXY(0, 20);
-		snprintf(msg, sizeof(msg), "W:%u/%u", accel_log_write_index, ACCEL_LOG_SAMPLE_COUNT);
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		SSD1306_GotoXY(0, 30);
-		snprintf(msg, sizeof(msg), "TX:%u C:%lu D:%lu", accel_log_tx_index,
-				 (unsigned long)accel_log_chunks_queued,
-				 (unsigned long)accel_log_done_queued);
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		SSD1306_GotoXY(0, 40);
-		snprintf(msg, sizeof(msg), "Call:%lu Svc:%lu",
-				 (unsigned long)accel_log_record_calls,
-				 (unsigned long)accel_log_tx_service_calls);
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		SSD1306_GotoXY(0, 50);
-		snprintf(msg, sizeof(msg), "O%+.1f T%u B%u",
-				 accel_adaptive_equilibrium_offset_deg,
-				 accel_runaway_trend_counter,
-				 accel_runaway_abs_counter);
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		SSD1306_GotoXY(70, 40);
-		snprintf(msg, sizeof(msg), "A:%ld D:%ld",
-				 (long)accel_runaway_mean,
-				 (long)accel_runaway_delta);
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		OLED_RequestUpdate();
+    	SSD1306_GotoXY(0, 10);
+    	        snprintf(msg, sizeof(msg), "R4:%4u F6:%4u", obstacle_rear_ir_raw, obstacle_front_ir_raw);
+    	        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+    	        SSD1306_GotoXY(0, 20);
+    	        snprintf(msg, sizeof(msg), "r:%4u f:%4u", obstacle_rear_ir_filtered, obstacle_front_ir_filtered);
+    	        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+    	        SSD1306_GotoXY(0, 30);
+    	        snprintf(msg, sizeof(msg), "E:%+d", obstacle_follow_parallel_error_mm);
+    	        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+    	        SSD1306_GotoXY(0, 40);
+    	        snprintf(msg, sizeof(msg), "K:%3.1f C:%+4d", obstacle_follow_wall_kp,
+    	                 obstacle_follow_wall_steering);
+    	        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+    	        SSD1306_GotoXY(0, 50);
+    	        snprintf(msg, sizeof(msg), "S%+4d Y%+3d A%u", obstacle_follow_steering,
+    	                 obstacle_follow_yaw_error_cdeg / 100, obstacle_follow_active);
+    	        SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+    	        OLED_RequestUpdate();
 		break;
+    case 12:
+
+
+        const char *log_state_label = "UNK";
+        		switch (accel_log_state) {
+        		case ACCEL_LOG_IDLE:
+        			log_state_label = (accel_log_write_index >= ACCEL_LOG_SAMPLE_COUNT &&
+        							   accel_log_tx_index >= ACCEL_LOG_SAMPLE_COUNT) ? "DONE" : "IDLE";
+        			break;
+        		case ACCEL_LOG_RECORDING:
+        			log_state_label = "REC";
+        			break;
+        		case ACCEL_LOG_TX_PENDING:
+        			log_state_label = "PEND";
+        			break;
+        		case ACCEL_LOG_TRANSMITTING:
+        			log_state_label = "TX";
+        			break;
+        		default:
+        			break;
+        		}
+
+        		SSD1306_GotoXY(0, 10);
+        		snprintf(msg, sizeof(msg), "St:%s ID:%u", log_state_label, accel_log_capture_id);
+        		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        		SSD1306_GotoXY(0, 20);
+        		snprintf(msg, sizeof(msg), "W:%u/%u", accel_log_write_index, ACCEL_LOG_SAMPLE_COUNT);
+        		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        		SSD1306_GotoXY(0, 30);
+        		snprintf(msg, sizeof(msg), "TX:%u C:%lu D:%lu", accel_log_tx_index,
+        				 (unsigned long)accel_log_chunks_queued,
+        				 (unsigned long)accel_log_done_queued);
+        		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        		SSD1306_GotoXY(0, 40);
+        		snprintf(msg, sizeof(msg), "Call:%lu Svc:%lu",
+        				 (unsigned long)accel_log_record_calls,
+        				 (unsigned long)accel_log_tx_service_calls);
+        		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        		SSD1306_GotoXY(0, 50);
+        		snprintf(msg, sizeof(msg), "O%+.1f T%u B%u",
+        				 accel_adaptive_equilibrium_offset_deg,
+        				 accel_runaway_trend_counter,
+        				 accel_runaway_abs_counter);
+        		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        		SSD1306_GotoXY(70, 40);
+        		snprintf(msg, sizeof(msg), "A:%ld D:%ld",
+        				 (long)accel_runaway_mean,
+        				 (long)accel_runaway_delta);
+        		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+        		OLED_RequestUpdate();
+        break;
     }
 
 

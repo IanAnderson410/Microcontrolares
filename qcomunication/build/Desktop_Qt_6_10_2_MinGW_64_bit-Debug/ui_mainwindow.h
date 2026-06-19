@@ -39,7 +39,6 @@ class Ui_MainWindow
 public:
     QWidget *centralwidget;
     QPushButton *obstacleOledButton;
-    QPushButton *Screen2PushButton_2;
     QPushButton *Screen1PushButton;
     QWidget *layoutWidget;
     QHBoxLayout *horizontalLayout_40;
@@ -266,6 +265,7 @@ public:
     QLineEdit *HB_FRECUENCY_LineEdit;
     QPushButton *SET_FRECUENCY_HB_BUTTON;
     QTextEdit *textEdit;
+    QPushButton *Screen2PushButton;
     QWidget *PaginaComandosAvanzados;
     QLabel *advancedTitleLabel;
     QGroupBox *yawPdQuickBox;
@@ -401,10 +401,10 @@ public:
     QPushButton *OledPrevScreenButton;
     QPushButton *OledNextScreenButton;
     QLabel *SerialPort_Label_8;
-    QPushButton *Screen2PushButton;
     QPushButton *cleanRxPushButton;
     QPushButton *cleanInfoPushButton_2;
     QPushButton *cleanTxPushButton;
+    QPushButton *Screen2PushButton_2;
     QMenuBar *menubar;
     QStatusBar *statusbar;
     QToolBar *toolBar;
@@ -551,10 +551,6 @@ public:
         obstacleOledButton->setObjectName("obstacleOledButton");
         obstacleOledButton->setGeometry(QRect(570, 800, 127, 29));
         obstacleOledButton->setMinimumSize(QSize(0, 10));
-        Screen2PushButton_2 = new QPushButton(centralwidget);
-        Screen2PushButton_2->setObjectName("Screen2PushButton_2");
-        Screen2PushButton_2->setGeometry(QRect(1280, 760, 127, 29));
-        Screen2PushButton_2->setMinimumSize(QSize(0, 10));
         Screen1PushButton = new QPushButton(centralwidget);
         Screen1PushButton->setObjectName("Screen1PushButton");
         Screen1PushButton->setGeometry(QRect(990, 800, 127, 29));
@@ -1565,7 +1561,7 @@ public:
         IR5_progressBar->setTextVisible(false);
         IR5_progressBar->setOrientation(Qt::Orientation::Vertical);
         stackedWidget->addWidget(page);
-        layoutWidget7->raise();
+        layoutWidget2->raise();
         PitchQuickWidget->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
@@ -2808,6 +2804,9 @@ public:
         textEdit = new QTextEdit(PaginaCalibracin);
         textEdit->setObjectName("textEdit");
         textEdit->setGeometry(QRect(610, 30, 481, 521));
+        Screen2PushButton = new QPushButton(PaginaCalibracin);
+        Screen2PushButton->setObjectName("Screen2PushButton");
+        Screen2PushButton->setGeometry(QRect(590, 560, 29, 29));
         stackedWidget->addWidget(PaginaCalibracin);
         PaginaComandosAvanzados = new QWidget();
         PaginaComandosAvanzados->setObjectName("PaginaComandosAvanzados");
@@ -3225,7 +3224,7 @@ public:
         wallKpSpin->setObjectName("wallKpSpin");
         wallKpSpin->setDecimals(2);
         wallKpSpin->setMaximum(100.000000000000000);
-        wallKpSpin->setSingleStep(0.500000000000000);
+        wallKpSpin->setSingleStep(0.100000000000000);
         wallKpSpin->setValue(8.000000000000000);
 
         wallFollowConfigLayout->addWidget(wallKpSpin, 0, 1, 1, 1);
@@ -3317,7 +3316,7 @@ public:
 
         Screen2PushButton_3 = new QPushButton(PaginaComandosAvanzados);
         Screen2PushButton_3->setObjectName("Screen2PushButton_3");
-        Screen2PushButton_3->setGeometry(QRect(580, 560, 29, 29));
+        Screen2PushButton_3->setGeometry(QRect(370, 550, 29, 29));
         stackedWidget->addWidget(PaginaComandosAvanzados);
 
         verticalLayout_35->addWidget(stackedWidget);
@@ -3518,9 +3517,6 @@ public:
 
         horizontalLayout_40->addLayout(verticalLayout_38);
 
-        Screen2PushButton = new QPushButton(centralwidget);
-        Screen2PushButton->setObjectName("Screen2PushButton");
-        Screen2PushButton->setGeometry(QRect(766, 711, 29, 29));
         cleanRxPushButton = new QPushButton(centralwidget);
         cleanRxPushButton->setObjectName("cleanRxPushButton");
         cleanRxPushButton->setGeometry(QRect(150, 740, 498, 29));
@@ -3530,6 +3526,10 @@ public:
         cleanTxPushButton = new QPushButton(centralwidget);
         cleanTxPushButton->setObjectName("cleanTxPushButton");
         cleanTxPushButton->setGeometry(QRect(200, 810, 497, 29));
+        Screen2PushButton_2 = new QPushButton(centralwidget);
+        Screen2PushButton_2->setObjectName("Screen2PushButton_2");
+        Screen2PushButton_2->setGeometry(QRect(510, 690, 127, 29));
+        Screen2PushButton_2->setMinimumSize(QSize(0, 10));
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
@@ -3544,7 +3544,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        stackedWidget->setCurrentIndex(3);
+        stackedWidget->setCurrentIndex(4);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
@@ -3554,7 +3554,6 @@ public:
     {
         MainWindow->setWindowTitle(QCoreApplication::translate("MainWindow", "MainWindow", nullptr));
         obstacleOledButton->setText(QCoreApplication::translate("MainWindow", "8", nullptr));
-        Screen2PushButton_2->setText(QCoreApplication::translate("MainWindow", "3", nullptr));
         Screen1PushButton->setText(QCoreApplication::translate("MainWindow", "1", nullptr));
         IR_1_label_20->setText(QCoreApplication::translate("MainWindow", "Sistema de Giro: Control Basado en el Yaw", nullptr));
         IR_1_label_21->setText(QCoreApplication::translate("MainWindow", "Setpoint de Seguimiento", nullptr));
@@ -3667,6 +3666,7 @@ public:
         IR_1_label_16->setText(QCoreApplication::translate("MainWindow", "INFORMATION", nullptr));
         HB_LABEL->setText(QCoreApplication::translate("MainWindow", "Heart Bit", nullptr));
         SET_FRECUENCY_HB_BUTTON->setText(QCoreApplication::translate("MainWindow", "Set HeartBit Frecuency", nullptr));
+        Screen2PushButton->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
         advancedTitleLabel->setText(QCoreApplication::translate("MainWindow", "Comandos avanzados de red, yaw y maniobras", nullptr));
         yawPdQuickBox->setTitle(QCoreApplication::translate("MainWindow", "Yaw PD rapido", nullptr));
         yawKpLabel->setText(QCoreApplication::translate("MainWindow", "KpY", nullptr));
@@ -3747,10 +3747,10 @@ public:
         OledPrevScreenButton->setText(QCoreApplication::translate("MainWindow", "Previous Screen", nullptr));
         OledNextScreenButton->setText(QCoreApplication::translate("MainWindow", "Next Screen", nullptr));
         SerialPort_Label_8->setText(QCoreApplication::translate("MainWindow", "CLICK AC\303\201 PARA USAR EL MODO RC", nullptr));
-        Screen2PushButton->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
         cleanRxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Rx", nullptr));
         cleanInfoPushButton_2->setText(QCoreApplication::translate("MainWindow", "CLEAN Info", nullptr));
         cleanTxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Tx", nullptr));
+        Screen2PushButton_2->setText(QCoreApplication::translate("MainWindow", "3", nullptr));
         toolBar->setWindowTitle(QCoreApplication::translate("MainWindow", "toolBar", nullptr));
     } // retranslateUi
 
