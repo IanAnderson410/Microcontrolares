@@ -191,6 +191,8 @@ private slots:
 
     void on_accelLogStartButton_clicked();
 
+    void on_Screen2PushButton_3_clicked();
+
 protected:
     void closeEvent(QCloseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;

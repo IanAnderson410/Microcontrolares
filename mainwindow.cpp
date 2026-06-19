@@ -1720,7 +1720,7 @@ void MainWindow::enviarInt16(uint8_t cmd, int16_t valor) {
 
 void MainWindow::cambiarPantallaOled(int16_t pantalla) {
     enviarInt16(CMD_CHANGE_OLED_SCREEN, pantalla);
-    if (pantalla >= 0 && pantalla <= 11) {
+    if (pantalla >= 0 && pantalla <= 12) {
         oledCurrentScreen = pantalla;
     }
 }
@@ -1832,14 +1832,14 @@ void MainWindow::on_Screen2PushButton_clicked(){
 }
 
 void MainWindow::on_OledPrevScreenButton_clicked(){
-    int16_t pantalla = oledCurrentScreen <= 1 ? 11 : oledCurrentScreen - 1;
+    int16_t pantalla = oledCurrentScreen <= 1 ? 12 : oledCurrentScreen - 1;
     cambiarPantallaOled(pantalla);
     ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
     ui->InfoTextEdit->append("PC: Screen " + QString::number(pantalla));
 }
 
 void MainWindow::on_OledNextScreenButton_clicked(){
-    int16_t pantalla = oledCurrentScreen >= 11 ? 1 : oledCurrentScreen + 1;
+    int16_t pantalla = oledCurrentScreen >= 12 ? 1 : oledCurrentScreen + 1;
     cambiarPantallaOled(pantalla);
     ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
     ui->InfoTextEdit->append("PC: Screen " + QString::number(pantalla));
@@ -2053,9 +2053,9 @@ void MainWindow::on_Setpoint_doubleSpinBox_textChanged(const QString &arg1)
 
 void MainWindow::on_Screen2PushButton_2_clicked()
 {
-    cambiarPantallaOled(3);
+    cambiarPantallaOled(12);
     ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
-    ui->InfoTextEdit->append("PC: Screen 3");
+    ui->InfoTextEdit->append("PC: Screen 12");
 }
 
 
@@ -2097,6 +2097,12 @@ void MainWindow::on_accelAdaptiveLimitSpin_textChanged(const QString &arg1)
 
 
 void MainWindow::on_accelLogStartButton_clicked()
+{
+
+}
+
+
+void MainWindow::on_Screen2PushButton_3_clicked()
 {
 
 }
