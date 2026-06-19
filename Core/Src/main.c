@@ -172,7 +172,8 @@ enum {
        CMD_IR_RIGHT_LOG_CHUNK       = 74,
        CMD_IR_RIGHT_LOG_DONE        = 75,
        CMD_IR_RIGHT_LOG_CLEAR       = 76,
-       CMD_IR_RIGHT_LOG_TRANSMIT    = 77
+       CMD_IR_RIGHT_LOG_TRANSMIT    = 77,
+       CMD_SET_WALL_FOLLOW_CONFIG   = 78
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -1334,6 +1335,28 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         uner_ack_status = IrRightLog_StartTransmit();
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_IR_RIGHT_LOG_TRANSMIT;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+    case CMD_SET_WALL_FOLLOW_CONFIG:
+        if (payload_len >= 6) {
+            float wall_kp = UNER_ReadFloatLE(payload);
+            uint16_t target_mm = (uint16_t)payload[4] | ((uint16_t)payload[5] << 8);
+
+            if (wall_kp >= 0.0f && wall_kp <= 100.0f &&
+                target_mm >= 30U && target_mm <= 60U) {
+                obstacle_follow_wall_kp = wall_kp;
+                obstacle_follow_target_mm = target_mm;
+                uner_ack_status = 0U;
+            } else {
+                uner_ack_status = 1U;
+            }
+        } else {
+            uner_ack_status = 2U;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_SET_WALL_FOLLOW_CONFIG;
             uner_ack_seq = seq;
             uner_ack_pending = 1;
         }

@@ -351,6 +351,13 @@ public:
     QLabel *accelLogStatusLabel;
     QTextEdit *accelLogTextEdit;
     QPushButton *obstacleFollowStartButton;
+    QGroupBox *wallFollowConfigBox;
+    QGridLayout *wallFollowConfigLayout;
+    QLabel *wallKpLabel;
+    QDoubleSpinBox *wallKpSpin;
+    QLabel *wallTargetMmLabel;
+    QSpinBox *wallTargetMmSpin;
+    QPushButton *wallConfigSendButton;
     QGroupBox *irRightLogBox;
     QVBoxLayout *irRightLogLayout;
     QHBoxLayout *irRightLogControlsLayout;
@@ -3204,6 +3211,43 @@ public:
         obstacleFollowStartButton = new QPushButton(PaginaComandosAvanzados);
         obstacleFollowStartButton->setObjectName("obstacleFollowStartButton");
         obstacleFollowStartButton->setGeometry(QRect(10, 410, 181, 71));
+        wallFollowConfigBox = new QGroupBox(PaginaComandosAvanzados);
+        wallFollowConfigBox->setObjectName("wallFollowConfigBox");
+        wallFollowConfigBox->setGeometry(QRect(10, 485, 181, 96));
+        wallFollowConfigLayout = new QGridLayout(wallFollowConfigBox);
+        wallFollowConfigLayout->setObjectName("wallFollowConfigLayout");
+        wallKpLabel = new QLabel(wallFollowConfigBox);
+        wallKpLabel->setObjectName("wallKpLabel");
+
+        wallFollowConfigLayout->addWidget(wallKpLabel, 0, 0, 1, 1);
+
+        wallKpSpin = new QDoubleSpinBox(wallFollowConfigBox);
+        wallKpSpin->setObjectName("wallKpSpin");
+        wallKpSpin->setDecimals(2);
+        wallKpSpin->setMaximum(100.000000000000000);
+        wallKpSpin->setSingleStep(0.500000000000000);
+        wallKpSpin->setValue(8.000000000000000);
+
+        wallFollowConfigLayout->addWidget(wallKpSpin, 0, 1, 1, 1);
+
+        wallTargetMmLabel = new QLabel(wallFollowConfigBox);
+        wallTargetMmLabel->setObjectName("wallTargetMmLabel");
+
+        wallFollowConfigLayout->addWidget(wallTargetMmLabel, 1, 0, 1, 1);
+
+        wallTargetMmSpin = new QSpinBox(wallFollowConfigBox);
+        wallTargetMmSpin->setObjectName("wallTargetMmSpin");
+        wallTargetMmSpin->setMinimum(30);
+        wallTargetMmSpin->setMaximum(60);
+        wallTargetMmSpin->setValue(40);
+
+        wallFollowConfigLayout->addWidget(wallTargetMmSpin, 1, 1, 1, 1);
+
+        wallConfigSendButton = new QPushButton(wallFollowConfigBox);
+        wallConfigSendButton->setObjectName("wallConfigSendButton");
+
+        wallFollowConfigLayout->addWidget(wallConfigSendButton, 2, 0, 1, 2);
+
         irRightLogBox = new QGroupBox(PaginaComandosAvanzados);
         irRightLogBox->setObjectName("irRightLogBox");
         irRightLogBox->setGeometry(QRect(570, 140, 571, 441));
@@ -3671,6 +3715,10 @@ public:
         accelLogSaveButton->setText(QCoreApplication::translate("MainWindow", "SAVE CSV", nullptr));
         accelLogStatusLabel->setText(QCoreApplication::translate("MainWindow", "Idle", nullptr));
         obstacleFollowStartButton->setText(QCoreApplication::translate("MainWindow", "START FACE_FOLLOW", nullptr));
+        wallFollowConfigBox->setTitle(QCoreApplication::translate("MainWindow", "Wall follow", nullptr));
+        wallKpLabel->setText(QCoreApplication::translate("MainWindow", "Kp Wall", nullptr));
+        wallTargetMmLabel->setText(QCoreApplication::translate("MainWindow", "Target", nullptr));
+        wallConfigSendButton->setText(QCoreApplication::translate("MainWindow", "APPLY WALL", nullptr));
         irRightLogBox->setTitle(QCoreApplication::translate("MainWindow", "IR derecho - caracterizacion", nullptr));
         irRightDistanceLabel->setText(QCoreApplication::translate("MainWindow", "Dist mm", nullptr));
         irRightCaptureButton->setText(QCoreApplication::translate("MainWindow", "CAPTURAR 50", nullptr));

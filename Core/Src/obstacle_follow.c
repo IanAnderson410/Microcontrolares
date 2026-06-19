@@ -4,19 +4,27 @@
 #include <math.h>
 
 #define OBSTACLE_RIGHT_ADC_INDEX             6U
-#define OBSTACLE_RIGHT_TOO_CLOSE_THRESHOLD   600U
-#define OBSTACLE_RIGHT_OK_LOW_THRESHOLD      600U
-#define OBSTACLE_RIGHT_OK_HIGH_THRESHOLD     2700U
-#define OBSTACLE_RIGHT_TOO_FAR_THRESHOLD     2700U
-#define OBSTACLE_RIGHT_LOST_THRESHOLD        3900U
-#define OBSTACLE_RIGHT_TARGET_ADC            1650U
+#define OBSTACLE_RIGHT_TABLE_POINTS          6U
+#define OBSTACLE_RIGHT_TOO_CLOSE_MM          30U
+#define OBSTACLE_RIGHT_TOO_FAR_MM            55U
+#define OBSTACLE_RIGHT_LOST_THRESHOLD        3600U
+#define OBSTACLE_RIGHT_TARGET_ADC            2431U
+#define OBSTACLE_RIGHT_TARGET_MM_DEFAULT     40U
 #define OBSTACLE_FOLLOW_ALIGN_CONFIRM_TICKS  10U
 #define OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS   8U
 #define OBSTACLE_FOLLOW_IMU_STALE_MS         100U
 #define OBSTACLE_FOLLOW_YAW_LIMIT            260.0f
-#define OBSTACLE_FOLLOW_SIDE_CORRECTION      200.0f
+#define OBSTACLE_FOLLOW_WALL_KP_DEFAULT      8.0f
+#define OBSTACLE_FOLLOW_WALL_STEER_LIMIT     180.0f
 #define OBSTACLE_FOLLOW_CORNER_TURN_DEG      90.0f
 #define OBSTACLE_FOLLOW_RIGHT_STEER_SIGN     -1.0f
+
+static const uint16_t obstacle_right_table_adc[OBSTACLE_RIGHT_TABLE_POINTS] = {
+    185U, 263U, 1410U, 2431U, 3016U, 3277U
+};
+static const uint16_t obstacle_right_table_mm[OBSTACLE_RIGHT_TABLE_POINTS] = {
+    10U, 20U, 30U, 40U, 50U, 60U
+};
 
 volatile uint8_t obstacle_follow_active = 0;
 volatile uint8_t obstacle_follow_state = OBSTACLE_FOLLOW_STATE_IDLE;
@@ -27,6 +35,11 @@ volatile uint16_t obstacle_right_ir_filtered = 0;
 volatile uint16_t obstacle_right_ir_baseline = 0;
 volatile uint16_t obstacle_follow_target_adc = OBSTACLE_RIGHT_TARGET_ADC;
 volatile int16_t obstacle_follow_adc_error = 0;
+volatile uint16_t obstacle_follow_target_mm = OBSTACLE_RIGHT_TARGET_MM_DEFAULT;
+volatile uint16_t obstacle_right_distance_mm = OBSTACLE_RIGHT_TARGET_MM_DEFAULT;
+volatile int16_t obstacle_follow_distance_error_mm = 0;
+volatile float obstacle_follow_wall_kp = OBSTACLE_FOLLOW_WALL_KP_DEFAULT;
+volatile int16_t obstacle_follow_wall_steering = 0;
 volatile int16_t obstacle_follow_yaw_error_cdeg = 0;
 volatile float obstacle_follow_setpoint = 0.0f;
 volatile int16_t obstacle_follow_steering = 0;
@@ -56,6 +69,31 @@ static float ObstacleFollow_ClampFloat(float value, float limit)
     return value;
 }
 
+static uint16_t ObstacleFollow_EstimateRightDistanceMm(uint16_t adc)
+{
+    if (adc <= obstacle_right_table_adc[0]) {
+        return obstacle_right_table_mm[0];
+    }
+
+    for (uint8_t i = 1U; i < OBSTACLE_RIGHT_TABLE_POINTS; i++) {
+        if (adc <= obstacle_right_table_adc[i]) {
+            uint32_t adc_low = obstacle_right_table_adc[i - 1U];
+            uint32_t adc_high = obstacle_right_table_adc[i];
+            uint32_t mm_low = obstacle_right_table_mm[i - 1U];
+            uint32_t mm_high = obstacle_right_table_mm[i];
+            uint32_t adc_span = adc_high - adc_low;
+
+            if (adc_span == 0U) {
+                return (uint16_t)mm_low;
+            }
+
+            return (uint16_t)(mm_low + (((uint32_t)adc - adc_low) * (mm_high - mm_low)) / adc_span);
+        }
+    }
+
+    return obstacle_right_table_mm[OBSTACLE_RIGHT_TABLE_POINTS - 1U];
+}
+
 static void ObstacleFollow_UpdateRightSensor(void)
 {
     obstacle_right_ir_raw = adc_buffer[OBSTACLE_RIGHT_ADC_INDEX];
@@ -75,12 +113,13 @@ static void ObstacleFollow_UpdateRightSensor(void)
     }
 
     adc_filtrado[OBSTACLE_RIGHT_ADC_INDEX] = obstacle_right_ir_filtered;
+    obstacle_right_distance_mm = ObstacleFollow_EstimateRightDistanceMm(obstacle_right_ir_filtered);
 
     if (obstacle_right_ir_filtered >= OBSTACLE_RIGHT_LOST_THRESHOLD) {
         obstacle_right_face_state = OBSTACLE_RIGHT_FACE_LOST;
-    } else if (obstacle_right_ir_filtered > OBSTACLE_RIGHT_TOO_FAR_THRESHOLD) {
+    } else if (obstacle_right_distance_mm > OBSTACLE_RIGHT_TOO_FAR_MM) {
         obstacle_right_face_state = OBSTACLE_RIGHT_FACE_TOO_FAR;
-    } else if (obstacle_right_ir_filtered < OBSTACLE_RIGHT_TOO_CLOSE_THRESHOLD) {
+    } else if (obstacle_right_distance_mm < OBSTACLE_RIGHT_TOO_CLOSE_MM) {
         obstacle_right_face_state = OBSTACLE_RIGHT_FACE_TOO_CLOSE;
     } else {
         obstacle_right_face_state = OBSTACLE_RIGHT_FACE_OK;
@@ -99,6 +138,8 @@ static void ObstacleFollow_ClearOutput(void)
     obstacle_follow_steering = 0;
     obstacle_follow_side_steering = 0;
     obstacle_follow_adc_error = 0;
+    obstacle_follow_distance_error_mm = 0;
+    obstacle_follow_wall_steering = 0;
     obstacle_follow_yaw_error_cdeg = 0;
     obstacle_follow_setpoint = 0.0f;
     obstacle_follow_steering_saturated = 0;
@@ -153,6 +194,7 @@ void ObstacleFollow_Task(void){
 
     ObstacleFollow_UpdateRightSensor();
     obstacle_follow_adc_error = (int16_t)obstacle_right_ir_filtered - (int16_t)OBSTACLE_RIGHT_TARGET_ADC;
+    obstacle_follow_distance_error_mm = (int16_t)obstacle_follow_target_mm - (int16_t)obstacle_right_distance_mm;
     if (!obstacle_follow_active)   return;
 
     if (currentMode != CONTROL_MODE_OBSTACLE_FOLLOW ||
@@ -203,11 +245,10 @@ void ObstacleFollow_Task(void){
         }
         obstacle_follow_lost_count = 0;
 
-        if (obstacle_right_face_state == OBSTACLE_RIGHT_FACE_TOO_CLOSE) {
-            side_steering = -OBSTACLE_FOLLOW_RIGHT_STEER_SIGN * OBSTACLE_FOLLOW_SIDE_CORRECTION;
-        } else if (obstacle_right_face_state == OBSTACLE_RIGHT_FACE_TOO_FAR) {
-            side_steering = OBSTACLE_FOLLOW_RIGHT_STEER_SIGN * OBSTACLE_FOLLOW_SIDE_CORRECTION;
-        }
+        side_steering = -OBSTACLE_FOLLOW_RIGHT_STEER_SIGN *
+                        obstacle_follow_wall_kp *
+                        (float)obstacle_follow_distance_error_mm;
+        side_steering = ObstacleFollow_ClampFloat(side_steering, OBSTACLE_FOLLOW_WALL_STEER_LIMIT);
         target_steering += side_steering;
         break;
 
@@ -241,6 +282,7 @@ void ObstacleFollow_Task(void){
     }
 
     obstacle_follow_side_steering = (int16_t)side_steering;
+    obstacle_follow_wall_steering = obstacle_follow_side_steering;
     obstacle_follow_steering_saturated =
         (target_steering > OBSTACLE_FOLLOW_YAW_LIMIT || target_steering < -OBSTACLE_FOLLOW_YAW_LIMIT) ? 1U : 0U;
     target_steering = ObstacleFollow_ClampFloat(target_steering, OBSTACLE_FOLLOW_YAW_LIMIT);
