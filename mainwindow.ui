@@ -317,7 +317,7 @@ QComboBox{
 </string>
          </property>
          <property name="currentIndex">
-          <number>4</number>
+          <number>3</number>
          </property>
          <widget class="QWidget" name="PaginaControl">
           <widget class="QChartView" name="graphicsView">
@@ -9098,7 +9098,7 @@ QComboBox{
             </rect>
            </property>
            <property name="title">
-            <string>IR derecho - caracterizacion</string>
+            <string>IR sensor 4 - caracterizacion</string>
            </property>
            <layout class="QVBoxLayout" name="irRightLogLayout">
             <item>

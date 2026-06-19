@@ -154,6 +154,8 @@ public:
     QLineEdit *TypePORT_lineEdit;
     QVBoxLayout *verticalLayout_24;
     QPushButton *connect_pushButton;
+    QPushButton *aliveUdpButton;
+    QPushButton *httpSoftApButton;
     QHBoxLayout *horizontalLayout_14;
     QLabel *SerialPort_Label;
     QHBoxLayout *horizontalLayout_24;
@@ -172,20 +174,17 @@ public:
     QVBoxLayout *verticalLayout_10;
     QLabel *SerialPort_Label_2;
     QTextEdit *InfoTextEdit;
-    QPushButton *cleanInfoPushButton;
     QVBoxLayout *verticalLayout_27;
     QLabel *SerialPort_Label_5;
     QTextEdit *InfoTextEdit_2;
-    QPushButton *cleanInfoPushButton_2;
     QHBoxLayout *horizontalLayout;
     QVBoxLayout *verticalLayout_4;
     QLabel *SerialPort_Label_7;
     QTextEdit *RxTextEdit;
-    QPushButton *cleanRxPushButton;
     QVBoxLayout *verticalLayout_17;
     QLabel *SerialPort_Label_6;
     QTextEdit *TxTextEdit;
-    QPushButton *cleanTxPushButton;
+    QPushButton *cleanInfoPushButton;
     QWidget *PaginaCalibracin;
     QWidget *layoutWidget7;
     QVBoxLayout *verticalLayout_22;
@@ -269,11 +268,6 @@ public:
     QTextEdit *textEdit;
     QWidget *PaginaComandosAvanzados;
     QLabel *advancedTitleLabel;
-    QGroupBox *networkCommandBox;
-    QVBoxLayout *networkCommandLayout;
-    QPushButton *aliveUdpButton;
-    QPushButton *telemetryUdpButton;
-    QPushButton *httpSoftApButton;
     QGroupBox *yawPdQuickBox;
     QGridLayout *yawPdQuickLayout;
     QLabel *yawKpLabel;
@@ -357,6 +351,27 @@ public:
     QLabel *accelLogStatusLabel;
     QTextEdit *accelLogTextEdit;
     QPushButton *obstacleFollowStartButton;
+    QGroupBox *wallFollowConfigBox;
+    QGridLayout *wallFollowConfigLayout;
+    QLabel *wallKpLabel;
+    QDoubleSpinBox *wallKpSpin;
+    QLabel *wallTargetMmLabel;
+    QSpinBox *wallTargetMmSpin;
+    QPushButton *wallConfigSendButton;
+    QGroupBox *irRightLogBox;
+    QVBoxLayout *irRightLogLayout;
+    QHBoxLayout *irRightLogControlsLayout;
+    QLabel *irRightDistanceLabel;
+    QVBoxLayout *verticalLayout_40;
+    QSpinBox *irRightDistanceSpin;
+    QPushButton *irRightCaptureButton;
+    QVBoxLayout *verticalLayout_39;
+    QPushButton *irRightTransmitButton;
+    QPushButton *irRightClearButton;
+    QPushButton *irRightSaveButton;
+    QLabel *irRightLogStatusLabel;
+    QTextEdit *irRightLogTextEdit;
+    QPushButton *Screen2PushButton_3;
     QHBoxLayout *horizontalLayout_30;
     QHBoxLayout *horizontalLayout_29;
     QPushButton *Home_pushButton;
@@ -375,6 +390,7 @@ public:
     QVBoxLayout *verticalLayout_37;
     QVBoxLayout *verticalLayout_28;
     QPushButton *pushButton;
+    QPushButton *telemetryUdpButton;
     QLabel *ModeLabel_4;
     QPushButton *ChangeModeIddlePushButton;
     QPushButton *ChangeModeRCPushButton;
@@ -385,10 +401,10 @@ public:
     QPushButton *OledPrevScreenButton;
     QPushButton *OledNextScreenButton;
     QLabel *SerialPort_Label_8;
-    QWidget *layoutWidget8;
-    QHBoxLayout *horizontalLayout_41;
-    QPushButton *Screen2PushButton_3;
     QPushButton *Screen2PushButton;
+    QPushButton *cleanRxPushButton;
+    QPushButton *cleanInfoPushButton_2;
+    QPushButton *cleanTxPushButton;
     QMenuBar *menubar;
     QStatusBar *statusbar;
     QToolBar *toolBar;
@@ -1549,7 +1565,7 @@ public:
         IR5_progressBar->setTextVisible(false);
         IR5_progressBar->setOrientation(Qt::Orientation::Vertical);
         stackedWidget->addWidget(page);
-        layoutWidget4->raise();
+        layoutWidget->raise();
         PitchQuickWidget->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
@@ -1560,7 +1576,7 @@ public:
         PaginaPrincipal->setObjectName("PaginaPrincipal");
         layoutWidget6 = new QWidget(PaginaPrincipal);
         layoutWidget6->setObjectName("layoutWidget6");
-        layoutWidget6->setGeometry(QRect(10, 0, 1121, 586));
+        layoutWidget6->setGeometry(QRect(10, 0, 1121, 602));
         horizontalLayout_28 = new QHBoxLayout(layoutWidget6);
         horizontalLayout_28->setObjectName("horizontalLayout_28");
         horizontalLayout_28->setContentsMargins(0, 0, 0, 0);
@@ -1692,11 +1708,21 @@ public:
 
         verticalLayout_24->addWidget(connect_pushButton);
 
+        aliveUdpButton = new QPushButton(layoutWidget6);
+        aliveUdpButton->setObjectName("aliveUdpButton");
+
+        verticalLayout_24->addWidget(aliveUdpButton);
+
 
         horizontalLayout_11->addLayout(verticalLayout_24);
 
 
         verticalLayout_8->addLayout(horizontalLayout_11);
+
+        httpSoftApButton = new QPushButton(layoutWidget6);
+        httpSoftApButton->setObjectName("httpSoftApButton");
+
+        verticalLayout_8->addWidget(httpSoftApButton);
 
         horizontalLayout_14 = new QHBoxLayout();
         horizontalLayout_14->setObjectName("horizontalLayout_14");
@@ -1838,11 +1864,6 @@ public:
 
         verticalLayout_10->addWidget(InfoTextEdit);
 
-        cleanInfoPushButton = new QPushButton(layoutWidget6);
-        cleanInfoPushButton->setObjectName("cleanInfoPushButton");
-
-        verticalLayout_10->addWidget(cleanInfoPushButton);
-
 
         horizontalLayout_22->addLayout(verticalLayout_10);
 
@@ -1857,11 +1878,6 @@ public:
         InfoTextEdit_2->setObjectName("InfoTextEdit_2");
 
         verticalLayout_27->addWidget(InfoTextEdit_2);
-
-        cleanInfoPushButton_2 = new QPushButton(layoutWidget6);
-        cleanInfoPushButton_2->setObjectName("cleanInfoPushButton_2");
-
-        verticalLayout_27->addWidget(cleanInfoPushButton_2);
 
 
         horizontalLayout_22->addLayout(verticalLayout_27);
@@ -1883,11 +1899,6 @@ public:
 
         verticalLayout_4->addWidget(RxTextEdit);
 
-        cleanRxPushButton = new QPushButton(layoutWidget6);
-        cleanRxPushButton->setObjectName("cleanRxPushButton");
-
-        verticalLayout_4->addWidget(cleanRxPushButton);
-
 
         horizontalLayout->addLayout(verticalLayout_4);
 
@@ -1903,11 +1914,6 @@ public:
 
         verticalLayout_17->addWidget(TxTextEdit);
 
-        cleanTxPushButton = new QPushButton(layoutWidget6);
-        cleanTxPushButton->setObjectName("cleanTxPushButton");
-
-        verticalLayout_17->addWidget(cleanTxPushButton);
-
 
         horizontalLayout->addLayout(verticalLayout_17);
 
@@ -1916,6 +1922,11 @@ public:
 
 
         verticalLayout_12->addLayout(verticalLayout_5);
+
+        cleanInfoPushButton = new QPushButton(layoutWidget6);
+        cleanInfoPushButton->setObjectName("cleanInfoPushButton");
+
+        verticalLayout_12->addWidget(cleanInfoPushButton);
 
 
         horizontalLayout_28->addLayout(verticalLayout_12);
@@ -2802,31 +2813,11 @@ public:
         PaginaComandosAvanzados->setObjectName("PaginaComandosAvanzados");
         advancedTitleLabel = new QLabel(PaginaComandosAvanzados);
         advancedTitleLabel->setObjectName("advancedTitleLabel");
-        advancedTitleLabel->setGeometry(QRect(20, 20, 1110, 40));
+        advancedTitleLabel->setGeometry(QRect(20, 0, 1110, 21));
         advancedTitleLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
-        networkCommandBox = new QGroupBox(PaginaComandosAvanzados);
-        networkCommandBox->setObjectName("networkCommandBox");
-        networkCommandBox->setGeometry(QRect(20, 80, 270, 220));
-        networkCommandLayout = new QVBoxLayout(networkCommandBox);
-        networkCommandLayout->setObjectName("networkCommandLayout");
-        aliveUdpButton = new QPushButton(networkCommandBox);
-        aliveUdpButton->setObjectName("aliveUdpButton");
-
-        networkCommandLayout->addWidget(aliveUdpButton);
-
-        telemetryUdpButton = new QPushButton(networkCommandBox);
-        telemetryUdpButton->setObjectName("telemetryUdpButton");
-
-        networkCommandLayout->addWidget(telemetryUdpButton);
-
-        httpSoftApButton = new QPushButton(networkCommandBox);
-        httpSoftApButton->setObjectName("httpSoftApButton");
-
-        networkCommandLayout->addWidget(httpSoftApButton);
-
         yawPdQuickBox = new QGroupBox(PaginaComandosAvanzados);
         yawPdQuickBox->setObjectName("yawPdQuickBox");
-        yawPdQuickBox->setGeometry(QRect(320, 80, 270, 180));
+        yawPdQuickBox->setGeometry(QRect(20, 310, 181, 91));
         yawPdQuickLayout = new QGridLayout(yawPdQuickBox);
         yawPdQuickLayout->setObjectName("yawPdQuickLayout");
         yawKpLabel = new QLabel(yawPdQuickBox);
@@ -2856,7 +2847,7 @@ public:
 
         yawConfigBox = new QGroupBox(PaginaComandosAvanzados);
         yawConfigBox->setObjectName("yawConfigBox");
-        yawConfigBox->setGeometry(QRect(640, 60, 371, 491));
+        yawConfigBox->setGeometry(QRect(230, 100, 361, 451));
         yawConfigLayout = new QGridLayout(yawConfigBox);
         yawConfigLayout->setObjectName("yawConfigLayout");
         yawCfgMulLabel = new QLabel(yawConfigBox);
@@ -3044,7 +3035,7 @@ public:
 
         accelRunawayBox = new QGroupBox(PaginaComandosAvanzados);
         accelRunawayBox->setObjectName("accelRunawayBox");
-        accelRunawayBox->setGeometry(QRect(20, 270, 230, 330));
+        accelRunawayBox->setGeometry(QRect(10, 20, 230, 291));
         accelRunawayLayout = new QGridLayout(accelRunawayBox);
         accelRunawayLayout->setObjectName("accelRunawayLayout");
         accelRunawayDeltaLabel = new QLabel(accelRunawayBox);
@@ -3142,7 +3133,7 @@ public:
 
         pitchRecoveryWidget = new QWidget(PaginaComandosAvanzados);
         pitchRecoveryWidget->setObjectName("pitchRecoveryWidget");
-        pitchRecoveryWidget->setGeometry(QRect(270, 270, 230, 130));
+        pitchRecoveryWidget->setGeometry(QRect(240, 20, 301, 107));
         pitchRecoveryLayout = new QVBoxLayout(pitchRecoveryWidget);
         pitchRecoveryLayout->setObjectName("pitchRecoveryLayout");
         pitchRecoveryLayout->setContentsMargins(0, 0, 0, 0);
@@ -3183,7 +3174,7 @@ public:
 
         accelLogBox = new QGroupBox(PaginaComandosAvanzados);
         accelLogBox->setObjectName("accelLogBox");
-        accelLogBox->setGeometry(QRect(270, 450, 353, 100));
+        accelLogBox->setGeometry(QRect(600, 20, 541, 121));
         accelLogLayout = new QVBoxLayout(accelLogBox);
         accelLogLayout->setObjectName("accelLogLayout");
         accelLogButtonsLayout = new QHBoxLayout();
@@ -3219,7 +3210,114 @@ public:
 
         obstacleFollowStartButton = new QPushButton(PaginaComandosAvanzados);
         obstacleFollowStartButton->setObjectName("obstacleFollowStartButton");
-        obstacleFollowStartButton->setGeometry(QRect(270, 320, 353, 121));
+        obstacleFollowStartButton->setGeometry(QRect(10, 410, 181, 71));
+        wallFollowConfigBox = new QGroupBox(PaginaComandosAvanzados);
+        wallFollowConfigBox->setObjectName("wallFollowConfigBox");
+        wallFollowConfigBox->setGeometry(QRect(10, 485, 181, 96));
+        wallFollowConfigLayout = new QGridLayout(wallFollowConfigBox);
+        wallFollowConfigLayout->setObjectName("wallFollowConfigLayout");
+        wallKpLabel = new QLabel(wallFollowConfigBox);
+        wallKpLabel->setObjectName("wallKpLabel");
+
+        wallFollowConfigLayout->addWidget(wallKpLabel, 0, 0, 1, 1);
+
+        wallKpSpin = new QDoubleSpinBox(wallFollowConfigBox);
+        wallKpSpin->setObjectName("wallKpSpin");
+        wallKpSpin->setDecimals(2);
+        wallKpSpin->setMaximum(100.000000000000000);
+        wallKpSpin->setSingleStep(0.500000000000000);
+        wallKpSpin->setValue(8.000000000000000);
+
+        wallFollowConfigLayout->addWidget(wallKpSpin, 0, 1, 1, 1);
+
+        wallTargetMmLabel = new QLabel(wallFollowConfigBox);
+        wallTargetMmLabel->setObjectName("wallTargetMmLabel");
+
+        wallFollowConfigLayout->addWidget(wallTargetMmLabel, 1, 0, 1, 1);
+
+        wallTargetMmSpin = new QSpinBox(wallFollowConfigBox);
+        wallTargetMmSpin->setObjectName("wallTargetMmSpin");
+        wallTargetMmSpin->setMinimum(30);
+        wallTargetMmSpin->setMaximum(60);
+        wallTargetMmSpin->setValue(40);
+
+        wallFollowConfigLayout->addWidget(wallTargetMmSpin, 1, 1, 1, 1);
+
+        wallConfigSendButton = new QPushButton(wallFollowConfigBox);
+        wallConfigSendButton->setObjectName("wallConfigSendButton");
+
+        wallFollowConfigLayout->addWidget(wallConfigSendButton, 2, 0, 1, 2);
+
+        irRightLogBox = new QGroupBox(PaginaComandosAvanzados);
+        irRightLogBox->setObjectName("irRightLogBox");
+        irRightLogBox->setGeometry(QRect(570, 140, 571, 441));
+        irRightLogLayout = new QVBoxLayout(irRightLogBox);
+        irRightLogLayout->setObjectName("irRightLogLayout");
+        irRightLogControlsLayout = new QHBoxLayout();
+        irRightLogControlsLayout->setObjectName("irRightLogControlsLayout");
+        irRightDistanceLabel = new QLabel(irRightLogBox);
+        irRightDistanceLabel->setObjectName("irRightDistanceLabel");
+
+        irRightLogControlsLayout->addWidget(irRightDistanceLabel);
+
+        verticalLayout_40 = new QVBoxLayout();
+        verticalLayout_40->setObjectName("verticalLayout_40");
+        irRightDistanceSpin = new QSpinBox(irRightLogBox);
+        irRightDistanceSpin->setObjectName("irRightDistanceSpin");
+        irRightDistanceSpin->setMaximum(100);
+        irRightDistanceSpin->setSingleStep(10);
+        irRightDistanceSpin->setValue(10);
+
+        verticalLayout_40->addWidget(irRightDistanceSpin);
+
+        irRightCaptureButton = new QPushButton(irRightLogBox);
+        irRightCaptureButton->setObjectName("irRightCaptureButton");
+
+        verticalLayout_40->addWidget(irRightCaptureButton);
+
+
+        irRightLogControlsLayout->addLayout(verticalLayout_40);
+
+        verticalLayout_39 = new QVBoxLayout();
+        verticalLayout_39->setObjectName("verticalLayout_39");
+        irRightTransmitButton = new QPushButton(irRightLogBox);
+        irRightTransmitButton->setObjectName("irRightTransmitButton");
+        irRightTransmitButton->setMinimumSize(QSize(0, 25));
+
+        verticalLayout_39->addWidget(irRightTransmitButton);
+
+        irRightClearButton = new QPushButton(irRightLogBox);
+        irRightClearButton->setObjectName("irRightClearButton");
+        irRightClearButton->setMinimumSize(QSize(0, 25));
+
+        verticalLayout_39->addWidget(irRightClearButton);
+
+        irRightSaveButton = new QPushButton(irRightLogBox);
+        irRightSaveButton->setObjectName("irRightSaveButton");
+        irRightSaveButton->setMinimumSize(QSize(0, 22));
+
+        verticalLayout_39->addWidget(irRightSaveButton);
+
+
+        irRightLogControlsLayout->addLayout(verticalLayout_39);
+
+
+        irRightLogLayout->addLayout(irRightLogControlsLayout);
+
+        irRightLogStatusLabel = new QLabel(irRightLogBox);
+        irRightLogStatusLabel->setObjectName("irRightLogStatusLabel");
+
+        irRightLogLayout->addWidget(irRightLogStatusLabel);
+
+        irRightLogTextEdit = new QTextEdit(irRightLogBox);
+        irRightLogTextEdit->setObjectName("irRightLogTextEdit");
+        irRightLogTextEdit->setReadOnly(true);
+
+        irRightLogLayout->addWidget(irRightLogTextEdit);
+
+        Screen2PushButton_3 = new QPushButton(PaginaComandosAvanzados);
+        Screen2PushButton_3->setObjectName("Screen2PushButton_3");
+        Screen2PushButton_3->setGeometry(QRect(580, 560, 29, 29));
         stackedWidget->addWidget(PaginaComandosAvanzados);
 
         verticalLayout_35->addWidget(stackedWidget);
@@ -3339,6 +3437,11 @@ public:
 
         verticalLayout_28->addWidget(pushButton);
 
+        telemetryUdpButton = new QPushButton(layoutWidget);
+        telemetryUdpButton->setObjectName("telemetryUdpButton");
+
+        verticalLayout_28->addWidget(telemetryUdpButton);
+
         ModeLabel_4 = new QLabel(layoutWidget);
         ModeLabel_4->setObjectName("ModeLabel_4");
         ModeLabel_4->setMaximumSize(QSize(16777215, 25));
@@ -3415,22 +3518,18 @@ public:
 
         horizontalLayout_40->addLayout(verticalLayout_38);
 
-        layoutWidget8 = new QWidget(centralwidget);
-        layoutWidget8->setObjectName("layoutWidget8");
-        layoutWidget8->setGeometry(QRect(730, 710, 66, 31));
-        horizontalLayout_41 = new QHBoxLayout(layoutWidget8);
-        horizontalLayout_41->setObjectName("horizontalLayout_41");
-        horizontalLayout_41->setContentsMargins(0, 0, 0, 0);
-        Screen2PushButton_3 = new QPushButton(layoutWidget8);
-        Screen2PushButton_3->setObjectName("Screen2PushButton_3");
-
-        horizontalLayout_41->addWidget(Screen2PushButton_3);
-
-        Screen2PushButton = new QPushButton(layoutWidget8);
+        Screen2PushButton = new QPushButton(centralwidget);
         Screen2PushButton->setObjectName("Screen2PushButton");
-
-        horizontalLayout_41->addWidget(Screen2PushButton);
-
+        Screen2PushButton->setGeometry(QRect(766, 711, 29, 29));
+        cleanRxPushButton = new QPushButton(centralwidget);
+        cleanRxPushButton->setObjectName("cleanRxPushButton");
+        cleanRxPushButton->setGeometry(QRect(150, 740, 498, 29));
+        cleanInfoPushButton_2 = new QPushButton(centralwidget);
+        cleanInfoPushButton_2->setObjectName("cleanInfoPushButton_2");
+        cleanInfoPushButton_2->setGeometry(QRect(640, 810, 497, 29));
+        cleanTxPushButton = new QPushButton(centralwidget);
+        cleanTxPushButton->setObjectName("cleanTxPushButton");
+        cleanTxPushButton->setGeometry(QRect(200, 810, 497, 29));
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
@@ -3445,7 +3544,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        stackedWidget->setCurrentIndex(4);
+        stackedWidget->setCurrentIndex(3);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
@@ -3501,12 +3600,14 @@ public:
         IR_1_label_33->setText(QCoreApplication::translate("MainWindow", "Cambiar el Limite de Inclinaci\303\263n para mover el robot", nullptr));
         WifiPortLabel->setText(QCoreApplication::translate("MainWindow", "Conexi\303\263n Inalambrica ", nullptr));
         label_8->setText(QCoreApplication::translate("MainWindow", "Type   IP", nullptr));
-        TypeIP_lineEdit->setText(QCoreApplication::translate("MainWindow", "192.168.1.41", nullptr));
+        TypeIP_lineEdit->setText(QCoreApplication::translate("MainWindow", "192.168.1.10", nullptr));
         TypeIP_lineEdit->setPlaceholderText(QCoreApplication::translate("MainWindow", "192.168.1.XX", nullptr));
         label_9->setText(QCoreApplication::translate("MainWindow", "Type PORT", nullptr));
         TypePORT_lineEdit->setInputMask(QString());
         TypePORT_lineEdit->setText(QCoreApplication::translate("MainWindow", "8888", nullptr));
         connect_pushButton->setText(QCoreApplication::translate("MainWindow", "Connect To STM32", nullptr));
+        aliveUdpButton->setText(QCoreApplication::translate("MainWindow", "ALIVE UDP", nullptr));
+        httpSoftApButton->setText(QCoreApplication::translate("MainWindow", "HTTP AP", nullptr));
         SerialPort_Label->setText(QCoreApplication::translate("MainWindow", "Conexi\303\263n Serial", nullptr));
         SerialPort_Label_3->setText(QCoreApplication::translate("MainWindow", "Selecciona el COM", nullptr));
         OpenPortcomboBox->setItemText(0, QCoreApplication::translate("MainWindow", "COM11", nullptr));
@@ -3527,13 +3628,10 @@ public:
         REDpushButton->setText(QCoreApplication::translate("MainWindow", "Conectar v\303\255a USB", nullptr));
         SerialPort_Label_4->setText(QCoreApplication::translate("MainWindow", "Informaci\303\263n de la Comunicaci\303\263n", nullptr));
         SerialPort_Label_2->setText(QCoreApplication::translate("MainWindow", "Rx USB", nullptr));
-        cleanInfoPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Info", nullptr));
         SerialPort_Label_5->setText(QCoreApplication::translate("MainWindow", "Tx USB", nullptr));
-        cleanInfoPushButton_2->setText(QCoreApplication::translate("MainWindow", "CLEAN Info", nullptr));
         SerialPort_Label_7->setText(QCoreApplication::translate("MainWindow", "Rx Inalambrico", nullptr));
-        cleanRxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Rx", nullptr));
         SerialPort_Label_6->setText(QCoreApplication::translate("MainWindow", "Tx Inalambrico", nullptr));
-        cleanTxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Tx", nullptr));
+        cleanInfoPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Info", nullptr));
         label_6->setText(QCoreApplication::translate("MainWindow", "SENSOR IR SELECTED TO SET ", nullptr));
         IR_ComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "1", nullptr));
         IR_ComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "2", nullptr));
@@ -3570,10 +3668,6 @@ public:
         HB_LABEL->setText(QCoreApplication::translate("MainWindow", "Heart Bit", nullptr));
         SET_FRECUENCY_HB_BUTTON->setText(QCoreApplication::translate("MainWindow", "Set HeartBit Frecuency", nullptr));
         advancedTitleLabel->setText(QCoreApplication::translate("MainWindow", "Comandos avanzados de red, yaw y maniobras", nullptr));
-        networkCommandBox->setTitle(QCoreApplication::translate("MainWindow", "Red / UDP", nullptr));
-        aliveUdpButton->setText(QCoreApplication::translate("MainWindow", "ALIVE UDP", nullptr));
-        telemetryUdpButton->setText(QCoreApplication::translate("MainWindow", "START TEL", nullptr));
-        httpSoftApButton->setText(QCoreApplication::translate("MainWindow", "HTTP AP", nullptr));
         yawPdQuickBox->setTitle(QCoreApplication::translate("MainWindow", "Yaw PD rapido", nullptr));
         yawKpLabel->setText(QCoreApplication::translate("MainWindow", "KpY", nullptr));
         yawKpEdit->setText(QCoreApplication::translate("MainWindow", "100.0", nullptr));
@@ -3621,6 +3715,18 @@ public:
         accelLogSaveButton->setText(QCoreApplication::translate("MainWindow", "SAVE CSV", nullptr));
         accelLogStatusLabel->setText(QCoreApplication::translate("MainWindow", "Idle", nullptr));
         obstacleFollowStartButton->setText(QCoreApplication::translate("MainWindow", "START FACE_FOLLOW", nullptr));
+        wallFollowConfigBox->setTitle(QCoreApplication::translate("MainWindow", "Wall follow", nullptr));
+        wallKpLabel->setText(QCoreApplication::translate("MainWindow", "Kp Wall", nullptr));
+        wallTargetMmLabel->setText(QCoreApplication::translate("MainWindow", "Target", nullptr));
+        wallConfigSendButton->setText(QCoreApplication::translate("MainWindow", "APPLY WALL", nullptr));
+        irRightLogBox->setTitle(QCoreApplication::translate("MainWindow", "IR derecho - caracterizacion", nullptr));
+        irRightDistanceLabel->setText(QCoreApplication::translate("MainWindow", "Dist mm", nullptr));
+        irRightCaptureButton->setText(QCoreApplication::translate("MainWindow", "CAPTURAR 50", nullptr));
+        irRightTransmitButton->setText(QCoreApplication::translate("MainWindow", "DESCARGAR", nullptr));
+        irRightClearButton->setText(QCoreApplication::translate("MainWindow", "LIMPIAR", nullptr));
+        irRightSaveButton->setText(QCoreApplication::translate("MainWindow", "CSV", nullptr));
+        irRightLogStatusLabel->setText(QCoreApplication::translate("MainWindow", "Idle", nullptr));
+        Screen2PushButton_3->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
         Home_pushButton->setText(QCoreApplication::translate("MainWindow", "HOME", nullptr));
         Ejecucion_pushButton->setText(QCoreApplication::translate("MainWindow", "EJECUCION", nullptr));
         ScreenCalibrar_pushbutton->setText(QCoreApplication::translate("MainWindow", "Calibraci\303\263n ", nullptr));
@@ -3631,6 +3737,7 @@ public:
         TPCCONECTED_2->setText(QString());
         MODO_LABEL->setText(QCoreApplication::translate("MainWindow", "Modo: IDDLE", nullptr));
         pushButton->setText(QCoreApplication::translate("MainWindow", "MotorIsOn", nullptr));
+        telemetryUdpButton->setText(QCoreApplication::translate("MainWindow", "START TEL", nullptr));
         ModeLabel_4->setText(QCoreApplication::translate("MainWindow", "Mode", nullptr));
         ChangeModeIddlePushButton->setText(QCoreApplication::translate("MainWindow", "Cambiar a IDDLE", nullptr));
         ChangeModeRCPushButton->setText(QCoreApplication::translate("MainWindow", "Cambiar a RC", nullptr));
@@ -3640,8 +3747,10 @@ public:
         OledPrevScreenButton->setText(QCoreApplication::translate("MainWindow", "Previous Screen", nullptr));
         OledNextScreenButton->setText(QCoreApplication::translate("MainWindow", "Next Screen", nullptr));
         SerialPort_Label_8->setText(QCoreApplication::translate("MainWindow", "CLICK AC\303\201 PARA USAR EL MODO RC", nullptr));
-        Screen2PushButton_3->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
         Screen2PushButton->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
+        cleanRxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Rx", nullptr));
+        cleanInfoPushButton_2->setText(QCoreApplication::translate("MainWindow", "CLEAN Info", nullptr));
+        cleanTxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Tx", nullptr));
         toolBar->setWindowTitle(QCoreApplication::translate("MainWindow", "toolBar", nullptr));
     } // retranslateUi
 

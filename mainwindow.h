@@ -110,6 +110,8 @@ private slots:
     void on_OffPushButton_clicked();
     void on_Screen1PushButton_clicked();
     void on_Screen2PushButton_clicked();
+    void on_OledPrevScreenButton_clicked();
+    void on_OledNextScreenButton_clicked();
     void on_LDL_pushButton_clicked();
     void on_RDL_pushButton_clicked();
     void sendWifiConfig(QString ssid, QString pass);
@@ -122,6 +124,7 @@ private slots:
     void actualizarPitch3D(float pitch, float yaw, float roll);
     void enviarFloat(uint8_t cmd, float valor);
     void enviarInt16(uint8_t cmd, int16_t valor);
+    void cambiarPantallaOled(int16_t pantalla);
     void enviarYawConfig(float kp, float kd, float curveMultiplier, float filterAlpha, float steeringStep, float steeringLimit, float turnBiasDeg, quint16 preBiasDelayMs);
     void enviarFlConfig(float flSetpoint, quint16 motionMs, quint16 balanceMs);
     void enviarTurnManeuver(float targetAngleDeg, quint8 wheelMode, quint8 wheelSelect, quint8 innerWheelPercent = 0, float turnBiasDeg = 1.0f, quint16 preBiasDelayMs = 300U);
@@ -222,6 +225,7 @@ private:
     bool            irRightLogReceiving = false;
     quint8          irRightLogSessionId = 0;
     quint16         irRightLogExpectedSamples = 0;
+    int16_t         oledCurrentScreen = 1;
 
     QByteArray      m_buffer;
 

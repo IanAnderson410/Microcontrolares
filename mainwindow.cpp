@@ -203,7 +203,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->obstacleOledButton, &QPushButton::clicked, this, [this]() {
-        enviarInt16(CMD_CHANGE_OLED_SCREEN, 4);
+        cambiarPantallaOled(4);
         ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN OBS");
     });
 
@@ -320,7 +320,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->yawCfgOled, &QPushButton::clicked, this, [this]() {
-        enviarInt16(CMD_CHANGE_OLED_SCREEN, 1);
+        cambiarPantallaOled(1);
     });
 
     connect(ui->turnModeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) {
@@ -430,7 +430,7 @@ MainWindow::MainWindow(QWidget *parent)
         payload.append(reinterpret_cast<const char*>(&distanceMm), sizeof(distanceMm));
         if (enviarComando(CMD_IR_RIGHT_LOG_CAPTURE, payload)) {
             ui->irRightLogStatusLabel->setText("Capturando...");
-            ui->TxTextEdit->append("TX: IR RIGHT CAPTURE " + QString::number(ui->irRightDistanceSpin->value()) + " mm");
+            ui->TxTextEdit->append("TX: IR SENSOR 4 CAPTURE " + QString::number(ui->irRightDistanceSpin->value()) + " mm");
             QTimer::singleShot(800, this, [this]() {
                 if (!irRightLogReceiving) {
                     ui->irRightLogStatusLabel->setText("Captura lista");
@@ -463,8 +463,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->irRightSaveButton, &QPushButton::clicked, this, [this]() {
         const QString path = QFileDialog::getSaveFileName(this,
-                                                          "Save IR right log CSV",
-                                                          "ir_right_log.csv",
+                                                          "Save IR sensor 4 log CSV",
+                                                          "ir_sensor_4_log.csv",
                                                           "CSV files (*.csv)");
         if (path.isEmpty()) {
             return;
@@ -478,7 +478,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         QTextStream out(&file);
         out << buildIrRightLogCsv();
-        ui->InfoTextEdit->append("IR right CSV saved: " + path);
+        ui->InfoTextEdit->append("IR sensor 4 CSV saved: " + path);
     });
 }
 MainWindow::~MainWindow()
@@ -1094,10 +1094,11 @@ QString MainWindow::buildIrRightLogCsv() const
 {
     QString csv;
     QTextStream out(&csv);
-    out << "capture_index,distance_mm,distance_cm,sample_index,adc_right_filtered\n";
+    out << "sensor_index,capture_index,distance_mm,distance_cm,sample_index,adc_filtered\n";
 
     for (const IrRightLogRow &row : irRightLogRows) {
-        out << row.captureIndex << ','
+        out << 4 << ','
+            << row.captureIndex << ','
             << row.distanceMm << ','
             << QString::number(row.distanceMm / 10.0, 'f', 1) << ','
             << row.sampleIndex << ','
@@ -1443,7 +1444,7 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
     case CMD_IR_RIGHT_LOG_CHUNK:
     {
         if (payload.size() < 8) {
-            ui->RxTextEdit->append("IR RIGHT LOG chunk too short");
+            ui->RxTextEdit->append("IR SENSOR 4 LOG chunk too short");
             break;
         }
 
@@ -1455,7 +1456,7 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
         const int expectedSize = 8 + (sampleCount * 6);
 
         if (payload.size() < expectedSize) {
-            ui->RxTextEdit->append("IR RIGHT LOG chunk payload mismatch");
+            ui->RxTextEdit->append("IR SENSOR 4 LOG chunk payload mismatch");
             break;
         }
 
@@ -1512,7 +1513,7 @@ void MainWindow::handleUnerV1Packet(uint8_t cmd, uint8_t flags, uint8_t seq, con
         irRightLogReceiving = false;
         updateIrRightLogPreview();
         ui->irRightLogStatusLabel->setText(QString("Complete: %1").arg(irRightLogRows.size()));
-        ui->InfoTextEdit->append("IR right log receive complete.");
+        ui->InfoTextEdit->append("IR sensor 4 log receive complete.");
         break;
     }
 
@@ -1716,6 +1717,14 @@ void MainWindow::enviarInt16(uint8_t cmd, int16_t valor) {
     buffer.append(reinterpret_cast<const char*>(&littleEndianValue), sizeof(littleEndianValue));
     enviarComando(cmd, buffer);
 }
+
+void MainWindow::cambiarPantallaOled(int16_t pantalla) {
+    enviarInt16(CMD_CHANGE_OLED_SCREEN, pantalla);
+    if (pantalla >= 0 && pantalla <= 11) {
+        oledCurrentScreen = pantalla;
+    }
+}
+
 void MainWindow::on_pushButton_clicked()
 {
     if(udpReady || socket->state() == QAbstractSocket::ConnectedState){
@@ -1807,19 +1816,33 @@ void MainWindow::on_PID_Alpha_pushButton_clicked(){
     }
 }
 void MainWindow::on_OffPushButton_clicked(){
-    enviarInt16(CMD_CHANGE_OLED_SCREEN, 0);
+    cambiarPantallaOled(0);
     ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
     ui->InfoTextEdit->append("PC: Screen 2");
 }
 void MainWindow::on_Screen1PushButton_clicked(){
-    enviarInt16(CMD_CHANGE_OLED_SCREEN, 1);
+    cambiarPantallaOled(1);
     ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
     ui->InfoTextEdit->append("PC: Screen 2");
 }
 void MainWindow::on_Screen2PushButton_clicked(){
-    enviarInt16(CMD_CHANGE_OLED_SCREEN, 2);
+    cambiarPantallaOled(2);
     ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
     ui->InfoTextEdit->append("PC: Screen 2");
+}
+
+void MainWindow::on_OledPrevScreenButton_clicked(){
+    int16_t pantalla = oledCurrentScreen <= 1 ? 11 : oledCurrentScreen - 1;
+    cambiarPantallaOled(pantalla);
+    ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
+    ui->InfoTextEdit->append("PC: Screen " + QString::number(pantalla));
+}
+
+void MainWindow::on_OledNextScreenButton_clicked(){
+    int16_t pantalla = oledCurrentScreen >= 11 ? 1 : oledCurrentScreen + 1;
+    cambiarPantallaOled(pantalla);
+    ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
+    ui->InfoTextEdit->append("PC: Screen " + QString::number(pantalla));
 }
 
 void MainWindow::on_LDL_pushButton_clicked(){
@@ -2030,7 +2053,7 @@ void MainWindow::on_Setpoint_doubleSpinBox_textChanged(const QString &arg1)
 
 void MainWindow::on_Screen2PushButton_2_clicked()
 {
-    enviarInt16(CMD_CHANGE_OLED_SCREEN, 3);
+    cambiarPantallaOled(3);
     ui->TxTextEdit->append("PC: CMD_CHANGE_OLED_SCREEN");
     ui->InfoTextEdit->append("PC: Screen 3");
 }
