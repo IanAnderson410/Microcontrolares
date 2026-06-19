@@ -6,4 +6,4 @@
 ../Core/Src/obstacle_follow.c:167:9:ObstacleFollow_Start	16	static
 ../Core/Src/obstacle_follow.c:191:6:ObstacleFollow_Stop	8	static
 ../Core/Src/obstacle_follow.c:198:9:ObstacleFollow_IsActive	4	static
-../Core/Src/obstacle_follow.c:203:6:ObstacleFollow_Task	40	static
+../Core/Src/obstacle_follow.c:203:6:ObstacleFollow_Task	32	static

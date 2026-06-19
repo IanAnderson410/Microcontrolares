@@ -268,13 +268,6 @@ public:
     QPushButton *Screen2PushButton;
     QWidget *PaginaComandosAvanzados;
     QLabel *advancedTitleLabel;
-    QGroupBox *yawPdQuickBox;
-    QGridLayout *yawPdQuickLayout;
-    QLabel *yawKpLabel;
-    QLineEdit *yawKpEdit;
-    QLabel *yawKdLabel;
-    QLineEdit *yawKdEdit;
-    QPushButton *yawPdButton;
     QGroupBox *yawConfigBox;
     QGridLayout *yawConfigLayout;
     QLabel *yawCfgMulLabel;
@@ -350,14 +343,14 @@ public:
     QPushButton *accelLogSaveButton;
     QLabel *accelLogStatusLabel;
     QTextEdit *accelLogTextEdit;
-    QPushButton *obstacleFollowStartButton;
     QGroupBox *wallFollowConfigBox;
     QGridLayout *wallFollowConfigLayout;
-    QLabel *wallKpLabel;
     QDoubleSpinBox *wallKpSpin;
-    QLabel *wallTargetMmLabel;
-    QSpinBox *wallTargetMmSpin;
     QPushButton *wallConfigSendButton;
+    QSpinBox *wallTargetMmSpin;
+    QLabel *wallKpLabel;
+    QLabel *wallTargetMmLabel;
+    QPushButton *obstacleFollowStartButton;
     QGroupBox *irRightLogBox;
     QVBoxLayout *irRightLogLayout;
     QHBoxLayout *irRightLogControlsLayout;
@@ -405,6 +398,13 @@ public:
     QPushButton *cleanInfoPushButton_2;
     QPushButton *cleanTxPushButton;
     QPushButton *Screen2PushButton_2;
+    QGroupBox *yawPdQuickBox;
+    QGridLayout *yawPdQuickLayout;
+    QLabel *yawKpLabel;
+    QLineEdit *yawKpEdit;
+    QLabel *yawKdLabel;
+    QLineEdit *yawKdEdit;
+    QPushButton *yawPdButton;
     QMenuBar *menubar;
     QStatusBar *statusbar;
     QToolBar *toolBar;
@@ -1561,7 +1561,7 @@ public:
         IR5_progressBar->setTextVisible(false);
         IR5_progressBar->setOrientation(Qt::Orientation::Vertical);
         stackedWidget->addWidget(page);
-        layoutWidget2->raise();
+        layoutWidget->raise();
         PitchQuickWidget->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
@@ -2814,36 +2814,6 @@ public:
         advancedTitleLabel->setObjectName("advancedTitleLabel");
         advancedTitleLabel->setGeometry(QRect(20, 0, 1110, 21));
         advancedTitleLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
-        yawPdQuickBox = new QGroupBox(PaginaComandosAvanzados);
-        yawPdQuickBox->setObjectName("yawPdQuickBox");
-        yawPdQuickBox->setGeometry(QRect(20, 310, 181, 91));
-        yawPdQuickLayout = new QGridLayout(yawPdQuickBox);
-        yawPdQuickLayout->setObjectName("yawPdQuickLayout");
-        yawKpLabel = new QLabel(yawPdQuickBox);
-        yawKpLabel->setObjectName("yawKpLabel");
-
-        yawPdQuickLayout->addWidget(yawKpLabel, 0, 0, 1, 1);
-
-        yawKpEdit = new QLineEdit(yawPdQuickBox);
-        yawKpEdit->setObjectName("yawKpEdit");
-
-        yawPdQuickLayout->addWidget(yawKpEdit, 0, 1, 1, 1);
-
-        yawKdLabel = new QLabel(yawPdQuickBox);
-        yawKdLabel->setObjectName("yawKdLabel");
-
-        yawPdQuickLayout->addWidget(yawKdLabel, 1, 0, 1, 1);
-
-        yawKdEdit = new QLineEdit(yawPdQuickBox);
-        yawKdEdit->setObjectName("yawKdEdit");
-
-        yawPdQuickLayout->addWidget(yawKdEdit, 1, 1, 1, 1);
-
-        yawPdButton = new QPushButton(yawPdQuickBox);
-        yawPdButton->setObjectName("yawPdButton");
-
-        yawPdQuickLayout->addWidget(yawPdButton, 2, 1, 1, 1);
-
         yawConfigBox = new QGroupBox(PaginaComandosAvanzados);
         yawConfigBox->setObjectName("yawConfigBox");
         yawConfigBox->setGeometry(QRect(230, 100, 361, 451));
@@ -3207,19 +3177,11 @@ public:
 
         accelLogLayout->addWidget(accelLogTextEdit);
 
-        obstacleFollowStartButton = new QPushButton(PaginaComandosAvanzados);
-        obstacleFollowStartButton->setObjectName("obstacleFollowStartButton");
-        obstacleFollowStartButton->setGeometry(QRect(10, 410, 181, 71));
         wallFollowConfigBox = new QGroupBox(PaginaComandosAvanzados);
         wallFollowConfigBox->setObjectName("wallFollowConfigBox");
-        wallFollowConfigBox->setGeometry(QRect(10, 485, 181, 96));
+        wallFollowConfigBox->setGeometry(QRect(0, 330, 221, 231));
         wallFollowConfigLayout = new QGridLayout(wallFollowConfigBox);
         wallFollowConfigLayout->setObjectName("wallFollowConfigLayout");
-        wallKpLabel = new QLabel(wallFollowConfigBox);
-        wallKpLabel->setObjectName("wallKpLabel");
-
-        wallFollowConfigLayout->addWidget(wallKpLabel, 0, 0, 1, 1);
-
         wallKpSpin = new QDoubleSpinBox(wallFollowConfigBox);
         wallKpSpin->setObjectName("wallKpSpin");
         wallKpSpin->setDecimals(2);
@@ -3229,10 +3191,10 @@ public:
 
         wallFollowConfigLayout->addWidget(wallKpSpin, 0, 1, 1, 1);
 
-        wallTargetMmLabel = new QLabel(wallFollowConfigBox);
-        wallTargetMmLabel->setObjectName("wallTargetMmLabel");
+        wallConfigSendButton = new QPushButton(wallFollowConfigBox);
+        wallConfigSendButton->setObjectName("wallConfigSendButton");
 
-        wallFollowConfigLayout->addWidget(wallTargetMmLabel, 1, 0, 1, 1);
+        wallFollowConfigLayout->addWidget(wallConfigSendButton, 2, 0, 1, 2);
 
         wallTargetMmSpin = new QSpinBox(wallFollowConfigBox);
         wallTargetMmSpin->setObjectName("wallTargetMmSpin");
@@ -3242,10 +3204,21 @@ public:
 
         wallFollowConfigLayout->addWidget(wallTargetMmSpin, 1, 1, 1, 1);
 
-        wallConfigSendButton = new QPushButton(wallFollowConfigBox);
-        wallConfigSendButton->setObjectName("wallConfigSendButton");
+        wallKpLabel = new QLabel(wallFollowConfigBox);
+        wallKpLabel->setObjectName("wallKpLabel");
 
-        wallFollowConfigLayout->addWidget(wallConfigSendButton, 2, 0, 1, 2);
+        wallFollowConfigLayout->addWidget(wallKpLabel, 0, 0, 1, 1);
+
+        wallTargetMmLabel = new QLabel(wallFollowConfigBox);
+        wallTargetMmLabel->setObjectName("wallTargetMmLabel");
+
+        wallFollowConfigLayout->addWidget(wallTargetMmLabel, 1, 0, 1, 1);
+
+        obstacleFollowStartButton = new QPushButton(wallFollowConfigBox);
+        obstacleFollowStartButton->setObjectName("obstacleFollowStartButton");
+        obstacleFollowStartButton->setMinimumSize(QSize(220, 0));
+
+        wallFollowConfigLayout->addWidget(obstacleFollowStartButton, 3, 0, 1, 1);
 
         irRightLogBox = new QGroupBox(PaginaComandosAvanzados);
         irRightLogBox->setObjectName("irRightLogBox");
@@ -3530,6 +3503,36 @@ public:
         Screen2PushButton_2->setObjectName("Screen2PushButton_2");
         Screen2PushButton_2->setGeometry(QRect(510, 690, 127, 29));
         Screen2PushButton_2->setMinimumSize(QSize(0, 10));
+        yawPdQuickBox = new QGroupBox(centralwidget);
+        yawPdQuickBox->setObjectName("yawPdQuickBox");
+        yawPdQuickBox->setGeometry(QRect(700, 690, 181, 91));
+        yawPdQuickLayout = new QGridLayout(yawPdQuickBox);
+        yawPdQuickLayout->setObjectName("yawPdQuickLayout");
+        yawKpLabel = new QLabel(yawPdQuickBox);
+        yawKpLabel->setObjectName("yawKpLabel");
+
+        yawPdQuickLayout->addWidget(yawKpLabel, 0, 0, 1, 1);
+
+        yawKpEdit = new QLineEdit(yawPdQuickBox);
+        yawKpEdit->setObjectName("yawKpEdit");
+
+        yawPdQuickLayout->addWidget(yawKpEdit, 0, 1, 1, 1);
+
+        yawKdLabel = new QLabel(yawPdQuickBox);
+        yawKdLabel->setObjectName("yawKdLabel");
+
+        yawPdQuickLayout->addWidget(yawKdLabel, 1, 0, 1, 1);
+
+        yawKdEdit = new QLineEdit(yawPdQuickBox);
+        yawKdEdit->setObjectName("yawKdEdit");
+
+        yawPdQuickLayout->addWidget(yawKdEdit, 1, 1, 1, 1);
+
+        yawPdButton = new QPushButton(yawPdQuickBox);
+        yawPdButton->setObjectName("yawPdButton");
+
+        yawPdQuickLayout->addWidget(yawPdButton, 2, 1, 1, 1);
+
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
@@ -3668,12 +3671,6 @@ public:
         SET_FRECUENCY_HB_BUTTON->setText(QCoreApplication::translate("MainWindow", "Set HeartBit Frecuency", nullptr));
         Screen2PushButton->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
         advancedTitleLabel->setText(QCoreApplication::translate("MainWindow", "Comandos avanzados de red, yaw y maniobras", nullptr));
-        yawPdQuickBox->setTitle(QCoreApplication::translate("MainWindow", "Yaw PD rapido", nullptr));
-        yawKpLabel->setText(QCoreApplication::translate("MainWindow", "KpY", nullptr));
-        yawKpEdit->setText(QCoreApplication::translate("MainWindow", "100.0", nullptr));
-        yawKdLabel->setText(QCoreApplication::translate("MainWindow", "KdY", nullptr));
-        yawKdEdit->setText(QCoreApplication::translate("MainWindow", "0.0", nullptr));
-        yawPdButton->setText(QCoreApplication::translate("MainWindow", "SET YAW PD", nullptr));
         yawConfigBox->setTitle(QString());
         yawCfgMulLabel->setText(QCoreApplication::translate("MainWindow", "SpeedRed", nullptr));
         turnStartButton->setText(QCoreApplication::translate("MainWindow", "TURN", nullptr));
@@ -3714,11 +3711,11 @@ public:
         accelLogCopyButton->setText(QCoreApplication::translate("MainWindow", "COPY CSV", nullptr));
         accelLogSaveButton->setText(QCoreApplication::translate("MainWindow", "SAVE CSV", nullptr));
         accelLogStatusLabel->setText(QCoreApplication::translate("MainWindow", "Idle", nullptr));
-        obstacleFollowStartButton->setText(QCoreApplication::translate("MainWindow", "START FACE_FOLLOW", nullptr));
         wallFollowConfigBox->setTitle(QCoreApplication::translate("MainWindow", "Wall follow", nullptr));
+        wallConfigSendButton->setText(QCoreApplication::translate("MainWindow", "APPLY WALL", nullptr));
         wallKpLabel->setText(QCoreApplication::translate("MainWindow", "Kp Wall", nullptr));
         wallTargetMmLabel->setText(QCoreApplication::translate("MainWindow", "Target", nullptr));
-        wallConfigSendButton->setText(QCoreApplication::translate("MainWindow", "APPLY WALL", nullptr));
+        obstacleFollowStartButton->setText(QCoreApplication::translate("MainWindow", "START FACE_FOLLOW", nullptr));
         irRightLogBox->setTitle(QCoreApplication::translate("MainWindow", "IR sensor 4 - caracterizacion", nullptr));
         irRightDistanceLabel->setText(QCoreApplication::translate("MainWindow", "Dist mm", nullptr));
         irRightCaptureButton->setText(QCoreApplication::translate("MainWindow", "CAPTURAR 50", nullptr));
@@ -3751,6 +3748,12 @@ public:
         cleanInfoPushButton_2->setText(QCoreApplication::translate("MainWindow", "CLEAN Info", nullptr));
         cleanTxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Tx", nullptr));
         Screen2PushButton_2->setText(QCoreApplication::translate("MainWindow", "3", nullptr));
+        yawPdQuickBox->setTitle(QCoreApplication::translate("MainWindow", "Yaw PD rapido", nullptr));
+        yawKpLabel->setText(QCoreApplication::translate("MainWindow", "KpY", nullptr));
+        yawKpEdit->setText(QCoreApplication::translate("MainWindow", "100.0", nullptr));
+        yawKdLabel->setText(QCoreApplication::translate("MainWindow", "KdY", nullptr));
+        yawKdEdit->setText(QCoreApplication::translate("MainWindow", "0.0", nullptr));
+        yawPdButton->setText(QCoreApplication::translate("MainWindow", "SET YAW PD", nullptr));
         toolBar->setWindowTitle(QCoreApplication::translate("MainWindow", "toolBar", nullptr));
     } // retranslateUi
 

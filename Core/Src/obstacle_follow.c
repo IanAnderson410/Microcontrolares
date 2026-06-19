@@ -262,18 +262,8 @@ void ObstacleFollow_Task(void){
         return;
     }
 
-    if (obstacle_follow_state == OBSTACLE_FOLLOW_STATE_FACE_FOLLOW) {
-        float yaw_error_deg = obstacle_follow_yaw_reference - angle_yaw;
-        float yaw_error = yaw_error_deg * multiplicadorYaw;
-        obstacle_follow_yaw_error_cdeg = (int16_t)(yaw_error_deg * 100.0f);
-        obstacle_follow_yaw_error_filtered =
-            (yaw_error_filter_alpha * obstacle_follow_yaw_error_filtered) +
-            ((1.0f - yaw_error_filter_alpha) * yaw_error);
-
-        target_steering += (Kp_yaw * obstacle_follow_yaw_error_filtered) - (Kd_yaw * giro_z);
-    } else {
-        obstacle_follow_yaw_error_cdeg = 0;
-    }
+    obstacle_follow_yaw_error_cdeg = 0;
+    obstacle_follow_yaw_error_filtered = 0.0f;
 
     obstacle_follow_side_steering = (int16_t)side_steering;
     obstacle_follow_wall_steering = obstacle_follow_side_steering;
