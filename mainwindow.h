@@ -518,7 +518,8 @@ private:
         CMD_IR_RIGHT_LOG_CHUNK      = 74,
         CMD_IR_RIGHT_LOG_DONE       = 75,
         CMD_IR_RIGHT_LOG_CLEAR      = 76,
-        CMD_IR_RIGHT_LOG_TRANSMIT   = 77
+        CMD_IR_RIGHT_LOG_TRANSMIT   = 77,
+        CMD_SET_WALL_FOLLOW_CONFIG  = 78
         // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
         // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
     };

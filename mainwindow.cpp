@@ -264,6 +264,12 @@ MainWindow::MainWindow(QWidget *parent)
     ui->accelAdaptiveLimitSpin->setSuffix(" deg");
     configureSpin(ui->accelAdaptiveResetAbsSpin, 120.0, 0.0, 5000.0, 10.0, 0);
     configureSpin(ui->accelAdaptiveResetCountSpin, 5.0, 1.0, 255.0, 1.0, 0);
+    configureSpin(ui->wallKpSpin, 8.0, 0.0, 100.0, 0.5, 2);
+    ui->wallKpSpin->setSuffix(" st/mm");
+    ui->wallTargetMmSpin->setRange(30, 60);
+    ui->wallTargetMmSpin->setSingleStep(1);
+    ui->wallTargetMmSpin->setValue(40);
+    ui->wallTargetMmSpin->setSuffix(" mm");
     updateAccelRunawayModeButton(false);
     ui->turnArcPercentSpin->setSuffix("%");
     ui->turnArcPercentSpin->setEnabled(false);
@@ -344,6 +350,24 @@ MainWindow::MainWindow(QWidget *parent)
         payload.append(static_cast<char>(1U));
         if (enviarComando(CMD_OBSTACLE_FOLLOW, payload)) {
             ui->TxTextEdit->append("TX: CMD_OBSTACLE_FOLLOW START RIGHT");
+        }
+    });
+
+    connect(ui->wallConfigSendButton, &QPushButton::clicked, this, [this]() {
+        QByteArray payload;
+        float kp = static_cast<float>(ui->wallKpSpin->value());
+        quint32 kpRaw;
+        memcpy(&kpRaw, &kp, sizeof(kpRaw));
+        kpRaw = qToLittleEndian<quint32>(kpRaw);
+        payload.append(reinterpret_cast<const char*>(&kpRaw), sizeof(kpRaw));
+
+        quint16 targetRaw = qToLittleEndian<quint16>(static_cast<quint16>(ui->wallTargetMmSpin->value()));
+        payload.append(reinterpret_cast<const char*>(&targetRaw), sizeof(targetRaw));
+
+        if (enviarComando(CMD_SET_WALL_FOLLOW_CONFIG, payload)) {
+            ui->TxTextEdit->append(QString("TX: WALL CONFIG Kp=%1 Target=%2mm")
+                                       .arg(kp, 0, 'f', 2)
+                                       .arg(ui->wallTargetMmSpin->value()));
         }
     });
 
@@ -968,6 +992,7 @@ bool MainWindow::isCriticalCommand(uint8_t cmd) const
     case CMD_IR_RIGHT_LOG_CAPTURE:
     case CMD_IR_RIGHT_LOG_CLEAR:
     case CMD_IR_RIGHT_LOG_TRANSMIT:
+    case CMD_SET_WALL_FOLLOW_CONFIG:
         return true;
     default:
         return false;
