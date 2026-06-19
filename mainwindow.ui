@@ -8520,56 +8520,6 @@ QComboBox{
             <set>Qt::AlignmentFlag::AlignCenter</set>
            </property>
           </widget>
-          <widget class="QGroupBox" name="yawPdQuickBox">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>310</y>
-             <width>181</width>
-             <height>91</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>Yaw PD rapido</string>
-           </property>
-           <layout class="QGridLayout" name="yawPdQuickLayout">
-            <item row="0" column="0">
-             <widget class="QLabel" name="yawKpLabel">
-              <property name="text">
-               <string>KpY</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="yawKpEdit">
-              <property name="text">
-               <string>100.0</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="yawKdLabel">
-              <property name="text">
-               <string>KdY</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QLineEdit" name="yawKdEdit">
-              <property name="text">
-               <string>0.0</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QPushButton" name="yawPdButton">
-              <property name="text">
-               <string>SET YAW PD</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
           <widget class="QGroupBox" name="yawConfigBox">
            <property name="geometry">
             <rect>
@@ -9004,39 +8954,19 @@ QComboBox{
             </item>
            </layout>
           </widget>
-          <widget class="QPushButton" name="obstacleFollowStartButton">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>410</y>
-             <width>181</width>
-             <height>71</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>START FACE_FOLLOW</string>
-           </property>
-          </widget>
           <widget class="QGroupBox" name="wallFollowConfigBox">
            <property name="geometry">
             <rect>
-             <x>10</x>
-             <y>485</y>
-             <width>181</width>
-             <height>96</height>
+             <x>0</x>
+             <y>330</y>
+             <width>221</width>
+             <height>231</height>
             </rect>
            </property>
            <property name="title">
             <string>Wall follow</string>
            </property>
            <layout class="QGridLayout" name="wallFollowConfigLayout">
-            <item row="0" column="0">
-             <widget class="QLabel" name="wallKpLabel">
-              <property name="text">
-               <string>Kp Wall</string>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="1">
              <widget class="QDoubleSpinBox" name="wallKpSpin">
               <property name="decimals">
@@ -9053,10 +8983,10 @@ QComboBox{
               </property>
              </widget>
             </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="wallTargetMmLabel">
+            <item row="2" column="0" colspan="2">
+             <widget class="QPushButton" name="wallConfigSendButton">
               <property name="text">
-               <string>Target</string>
+               <string>APPLY WALL</string>
               </property>
              </widget>
             </item>
@@ -9073,10 +9003,30 @@ QComboBox{
               </property>
              </widget>
             </item>
-            <item row="2" column="0" colspan="2">
-             <widget class="QPushButton" name="wallConfigSendButton">
+            <item row="0" column="0">
+             <widget class="QLabel" name="wallKpLabel">
               <property name="text">
-               <string>APPLY WALL</string>
+               <string>Kp Wall</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="wallTargetMmLabel">
+              <property name="text">
+               <string>Target</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QPushButton" name="obstacleFollowStartButton">
+              <property name="minimumSize">
+               <size>
+                <width>220</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>START FACE_FOLLOW</string>
               </property>
              </widget>
             </item>
@@ -9639,6 +9589,56 @@ QComboBox{
     <property name="text">
      <string>3</string>
     </property>
+   </widget>
+   <widget class="QGroupBox" name="yawPdQuickBox">
+    <property name="geometry">
+     <rect>
+      <x>700</x>
+      <y>690</y>
+      <width>181</width>
+      <height>91</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Yaw PD rapido</string>
+    </property>
+    <layout class="QGridLayout" name="yawPdQuickLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="yawKpLabel">
+       <property name="text">
+        <string>KpY</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="yawKpEdit">
+       <property name="text">
+        <string>100.0</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="yawKdLabel">
+       <property name="text">
+        <string>KdY</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLineEdit" name="yawKdEdit">
+       <property name="text">
+        <string>0.0</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QPushButton" name="yawPdButton">
+       <property name="text">
+        <string>SET YAW PD</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
