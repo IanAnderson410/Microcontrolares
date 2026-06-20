@@ -350,6 +350,10 @@ public:
     QSpinBox *wallTargetMmSpin;
     QLabel *wallKpLabel;
     QLabel *wallTargetMmLabel;
+    QLabel *wallKpDistanceLabel;
+    QDoubleSpinBox *wallKpDistanceSpin;
+    QLabel *wallRearAdcOffsetLabel;
+    QSpinBox *wallRearAdcOffsetSpin;
     QPushButton *obstacleFollowStartButton;
     QGroupBox *irRightLogBox;
     QVBoxLayout *irRightLogLayout;
@@ -397,7 +401,6 @@ public:
     QPushButton *cleanRxPushButton;
     QPushButton *cleanInfoPushButton_2;
     QPushButton *cleanTxPushButton;
-    QPushButton *Screen2PushButton_2;
     QGroupBox *yawPdQuickBox;
     QGridLayout *yawPdQuickLayout;
     QLabel *yawKpLabel;
@@ -405,6 +408,7 @@ public:
     QLabel *yawKdLabel;
     QLineEdit *yawKdEdit;
     QPushButton *yawPdButton;
+    QPushButton *Screen2PushButton_2;
     QMenuBar *menubar;
     QStatusBar *statusbar;
     QToolBar *toolBar;
@@ -1561,7 +1565,7 @@ public:
         IR5_progressBar->setTextVisible(false);
         IR5_progressBar->setOrientation(Qt::Orientation::Vertical);
         stackedWidget->addWidget(page);
-        layoutWidget->raise();
+        layoutWidget1->raise();
         PitchQuickWidget->raise();
         VistaSuperiorQuickWidget->raise();
         IR6_progressBar->raise();
@@ -3185,8 +3189,8 @@ public:
         wallKpSpin = new QDoubleSpinBox(wallFollowConfigBox);
         wallKpSpin->setObjectName("wallKpSpin");
         wallKpSpin->setDecimals(2);
-        wallKpSpin->setMaximum(100.000000000000000);
-        wallKpSpin->setSingleStep(0.100000000000000);
+        wallKpSpin->setMaximum(10000.000000000000000);
+        wallKpSpin->setSingleStep(1.000000000000000);
         wallKpSpin->setValue(8.000000000000000);
 
         wallFollowConfigLayout->addWidget(wallKpSpin, 0, 1, 1, 1);
@@ -3194,7 +3198,7 @@ public:
         wallConfigSendButton = new QPushButton(wallFollowConfigBox);
         wallConfigSendButton->setObjectName("wallConfigSendButton");
 
-        wallFollowConfigLayout->addWidget(wallConfigSendButton, 2, 0, 1, 2);
+        wallFollowConfigLayout->addWidget(wallConfigSendButton, 4, 0, 1, 2);
 
         wallTargetMmSpin = new QSpinBox(wallFollowConfigBox);
         wallTargetMmSpin->setObjectName("wallTargetMmSpin");
@@ -3214,11 +3218,37 @@ public:
 
         wallFollowConfigLayout->addWidget(wallTargetMmLabel, 1, 0, 1, 1);
 
+        wallKpDistanceLabel = new QLabel(wallFollowConfigBox);
+        wallKpDistanceLabel->setObjectName("wallKpDistanceLabel");
+
+        wallFollowConfigLayout->addWidget(wallKpDistanceLabel, 2, 0, 1, 1);
+
+        wallKpDistanceSpin = new QDoubleSpinBox(wallFollowConfigBox);
+        wallKpDistanceSpin->setObjectName("wallKpDistanceSpin");
+        wallKpDistanceSpin->setDecimals(2);
+        wallKpDistanceSpin->setMaximum(100.000000000000000);
+        wallKpDistanceSpin->setSingleStep(0.100000000000000);
+        wallKpDistanceSpin->setValue(0.200000000000000);
+
+        wallFollowConfigLayout->addWidget(wallKpDistanceSpin, 2, 1, 1, 1);
+
+        wallRearAdcOffsetLabel = new QLabel(wallFollowConfigBox);
+        wallRearAdcOffsetLabel->setObjectName("wallRearAdcOffsetLabel");
+
+        wallFollowConfigLayout->addWidget(wallRearAdcOffsetLabel, 3, 0, 1, 1);
+
+        wallRearAdcOffsetSpin = new QSpinBox(wallFollowConfigBox);
+        wallRearAdcOffsetSpin->setObjectName("wallRearAdcOffsetSpin");
+        wallRearAdcOffsetSpin->setMinimum(-100000);
+        wallRearAdcOffsetSpin->setMaximum(100000);
+
+        wallFollowConfigLayout->addWidget(wallRearAdcOffsetSpin, 3, 1, 1, 1);
+
         obstacleFollowStartButton = new QPushButton(wallFollowConfigBox);
         obstacleFollowStartButton->setObjectName("obstacleFollowStartButton");
         obstacleFollowStartButton->setMinimumSize(QSize(220, 0));
 
-        wallFollowConfigLayout->addWidget(obstacleFollowStartButton, 3, 0, 1, 1);
+        wallFollowConfigLayout->addWidget(obstacleFollowStartButton, 5, 0, 1, 1);
 
         irRightLogBox = new QGroupBox(PaginaComandosAvanzados);
         irRightLogBox->setObjectName("irRightLogBox");
@@ -3289,7 +3319,7 @@ public:
 
         Screen2PushButton_3 = new QPushButton(PaginaComandosAvanzados);
         Screen2PushButton_3->setObjectName("Screen2PushButton_3");
-        Screen2PushButton_3->setGeometry(QRect(370, 550, 29, 29));
+        Screen2PushButton_3->setGeometry(QRect(400, 550, 29, 29));
         stackedWidget->addWidget(PaginaComandosAvanzados);
 
         verticalLayout_35->addWidget(stackedWidget);
@@ -3499,10 +3529,6 @@ public:
         cleanTxPushButton = new QPushButton(centralwidget);
         cleanTxPushButton->setObjectName("cleanTxPushButton");
         cleanTxPushButton->setGeometry(QRect(200, 810, 497, 29));
-        Screen2PushButton_2 = new QPushButton(centralwidget);
-        Screen2PushButton_2->setObjectName("Screen2PushButton_2");
-        Screen2PushButton_2->setGeometry(QRect(510, 690, 127, 29));
-        Screen2PushButton_2->setMinimumSize(QSize(0, 10));
         yawPdQuickBox = new QGroupBox(centralwidget);
         yawPdQuickBox->setObjectName("yawPdQuickBox");
         yawPdQuickBox->setGeometry(QRect(700, 690, 181, 91));
@@ -3533,6 +3559,10 @@ public:
 
         yawPdQuickLayout->addWidget(yawPdButton, 2, 1, 1, 1);
 
+        Screen2PushButton_2 = new QPushButton(centralwidget);
+        Screen2PushButton_2->setObjectName("Screen2PushButton_2");
+        Screen2PushButton_2->setGeometry(QRect(430, 700, 127, 29));
+        Screen2PushButton_2->setMinimumSize(QSize(0, 10));
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
@@ -3715,8 +3745,10 @@ public:
         wallConfigSendButton->setText(QCoreApplication::translate("MainWindow", "APPLY WALL", nullptr));
         wallKpLabel->setText(QCoreApplication::translate("MainWindow", "Kp Wall", nullptr));
         wallTargetMmLabel->setText(QCoreApplication::translate("MainWindow", "Target", nullptr));
+        wallKpDistanceLabel->setText(QCoreApplication::translate("MainWindow", "Kp2 Dist", nullptr));
+        wallRearAdcOffsetLabel->setText(QCoreApplication::translate("MainWindow", "Rear ADC Off", nullptr));
         obstacleFollowStartButton->setText(QCoreApplication::translate("MainWindow", "START FACE_FOLLOW", nullptr));
-        irRightLogBox->setTitle(QCoreApplication::translate("MainWindow", "IR sensor 4 - caracterizacion", nullptr));
+        irRightLogBox->setTitle(QCoreApplication::translate("MainWindow", "IR sensores 6/4 - caracterizacion", nullptr));
         irRightDistanceLabel->setText(QCoreApplication::translate("MainWindow", "Dist mm", nullptr));
         irRightCaptureButton->setText(QCoreApplication::translate("MainWindow", "CAPTURAR 50", nullptr));
         irRightTransmitButton->setText(QCoreApplication::translate("MainWindow", "DESCARGAR", nullptr));
@@ -3747,13 +3779,13 @@ public:
         cleanRxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Rx", nullptr));
         cleanInfoPushButton_2->setText(QCoreApplication::translate("MainWindow", "CLEAN Info", nullptr));
         cleanTxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Tx", nullptr));
-        Screen2PushButton_2->setText(QCoreApplication::translate("MainWindow", "3", nullptr));
         yawPdQuickBox->setTitle(QCoreApplication::translate("MainWindow", "Yaw PD rapido", nullptr));
         yawKpLabel->setText(QCoreApplication::translate("MainWindow", "KpY", nullptr));
         yawKpEdit->setText(QCoreApplication::translate("MainWindow", "100.0", nullptr));
         yawKdLabel->setText(QCoreApplication::translate("MainWindow", "KdY", nullptr));
         yawKdEdit->setText(QCoreApplication::translate("MainWindow", "0.0", nullptr));
         yawPdButton->setText(QCoreApplication::translate("MainWindow", "SET YAW PD", nullptr));
+        Screen2PushButton_2->setText(QCoreApplication::translate("MainWindow", "3", nullptr));
         toolBar->setWindowTitle(QCoreApplication::translate("MainWindow", "toolBar", nullptr));
     } // retranslateUi
 

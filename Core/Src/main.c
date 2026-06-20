@@ -190,7 +190,8 @@ typedef struct __attribute__((packed)) {
     uint8_t capture_index;
     uint16_t distance_mm;
     uint8_t sample_index;
-    uint16_t adc_filtered;
+    uint16_t adc6_filtered;
+    uint16_t adc4_filtered;
 } IrRightLogTxSample_t;
 
 enum {
@@ -219,9 +220,10 @@ enum {
 #define     ACCEL_LOG_DONE_REPEATS     5U
 #define     IR_RIGHT_LOG_MAX_CAPTURES  9U
 #define     IR_RIGHT_LOG_SAMPLE_COUNT  50U
-#define     IR_RIGHT_LOG_CHUNK_SAMPLES 9U
+#define     IR_RIGHT_LOG_CHUNK_SAMPLES 7U
 #define     IR_RIGHT_LOG_DONE_REPEATS  5U
-#define     IR_RIGHT_LOG_ADC_INDEX     4U
+#define     IR_RIGHT_LOG_FRONT_ADC_INDEX 6U
+#define     IR_RIGHT_LOG_REAR_ADC_INDEX  4U
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		        64
 #define     ESP01_RX_DMA_SIZE          256
@@ -259,7 +261,7 @@ static volatile uint32_t accel_log_tx_block_udp = 0U;
 static volatile uint32_t accel_log_tx_block_queue = 0U;
 static volatile uint32_t accel_log_tx_send_fail = 0U;
 static uint16_t ir_right_log_distances_mm[IR_RIGHT_LOG_MAX_CAPTURES];
-static uint16_t ir_right_log_samples[IR_RIGHT_LOG_MAX_CAPTURES][IR_RIGHT_LOG_SAMPLE_COUNT];
+static IrRightLogTxSample_t ir_right_log_samples[IR_RIGHT_LOG_MAX_CAPTURES][IR_RIGHT_LOG_SAMPLE_COUNT];
 static volatile uint8_t ir_right_log_state = IR_RIGHT_LOG_IDLE;
 static uint8_t ir_right_log_capture_count = 0U;
 static uint8_t ir_right_log_active_capture = 0U;
@@ -276,20 +278,22 @@ static uint8_t ir_right_log_session_id = 0U;
 			float 			Kd = 3.8f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float			integral_limit = 1600.0f;
 			float 			setpoint = 0.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
-			float 			setpointDeEquilibrio = 0.1f;	/*!< Set Point de equilibrio, el cero del robot, el punto en el qeu el robot queda a vertical*/
+
+			float 			setpointDeEquilibrio = 0.1f;	// Esta variable sirve?
 			float 			integral = 0;
 			float 			last_error = 0;
-			float           ALPHA_PID = 0.96f;
-			float			pitch_recovery_brake_ms = 80.0f;
-			float 			pitch_recovery_error_threshold_deg = 3.0f;
+			float           ALPHA_PID = 0.96f;	// Esta variable sirve?
+			float			pitch_recovery_brake_ms = 80.0f;		// Esta variable sirve?
+			float 			pitch_recovery_error_threshold_deg = 3.0f;	// Esta variable sirve?
 // =================[ Variables de Control PID YAW] ================= //
-			float 		Kp_yaw = 1200.0f;
+			float 		Kp_yaw = 1500.0f;
 			float 		Kd_yaw = 0.0f;
+			float 		yaw_steering_limit = 3600.0f;
+
 			float 		last_error_yaw = 0;
 volatile    float 		FL_setpoint = 4.4f;
 			float 		yaw_error_filter_alpha = 0.70f;
 			float 		yaw_steering_step_max = 90.0f;
-			float 		yaw_steering_limit = 3600.0f;
 			float 		turn_maneuver_forward_bias_deg = 100.0f;
 			uint16_t 	turn_maneuver_pre_bias_delay_ms = 300U;
 			float 		last_state_linea = 0.0f;
@@ -677,8 +681,12 @@ static void IrRightLog_RecordSample(void)
         return;
     }
 
-    ir_right_log_samples[ir_right_log_active_capture][ir_right_log_write_index] =
-        adc_filtrado[IR_RIGHT_LOG_ADC_INDEX];
+    IrRightLogTxSample_t *sample = &ir_right_log_samples[ir_right_log_active_capture][ir_right_log_write_index];
+    sample->capture_index = ir_right_log_active_capture;
+    sample->distance_mm = ir_right_log_distances_mm[ir_right_log_active_capture];
+    sample->sample_index = ir_right_log_write_index;
+    sample->adc6_filtered = adc_filtrado[IR_RIGHT_LOG_FRONT_ADC_INDEX];
+    sample->adc4_filtered = adc_filtrado[IR_RIGHT_LOG_REAR_ADC_INDEX];
 
     ir_right_log_write_index++;
     if (ir_right_log_write_index >= IR_RIGHT_LOG_SAMPLE_COUNT) {
@@ -691,10 +699,6 @@ static uint8_t IrRightLog_StartTransmit(void)
 {
     if (ir_right_log_state != IR_RIGHT_LOG_IDLE) {
         return 1U;
-    }
-
-    if (ir_right_log_capture_count == 0U) {
-        return 2U;
     }
 
     ir_right_log_tx_index = 0U;
@@ -759,12 +763,7 @@ static void IrRightLog_ServiceTx(void)
         uint16_t global_index = (uint16_t)(ir_right_log_tx_index + i);
         uint8_t capture_index = (uint8_t)(global_index / IR_RIGHT_LOG_SAMPLE_COUNT);
         uint8_t sample_index = (uint8_t)(global_index % IR_RIGHT_LOG_SAMPLE_COUNT);
-        IrRightLogTxSample_t tx_sample;
-
-        tx_sample.capture_index = capture_index;
-        tx_sample.distance_mm = ir_right_log_distances_mm[capture_index];
-        tx_sample.sample_index = sample_index;
-        tx_sample.adc_filtered = ir_right_log_samples[capture_index][sample_index];
+        IrRightLogTxSample_t tx_sample = ir_right_log_samples[capture_index][sample_index];
         memcpy(&payload[8U + ((uint16_t)i * sizeof(IrRightLogTxSample_t))],
                &tx_sample,
                sizeof(tx_sample));
@@ -1366,11 +1365,27 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         if (payload_len >= 6) {
             float wall_kp = UNER_ReadFloatLE(payload);
             uint16_t target_mm = (uint16_t)payload[4] | ((uint16_t)payload[5] << 8);
+            float distance_kp = obstacle_follow_distance_kp;
+            int32_t rear_adc_offset = obstacle_rear_ir_adc_offset;
+
+            if (payload_len >= 10) {
+                distance_kp = UNER_ReadFloatLE(payload + 6);
+            }
+            if (payload_len >= 14) {
+                rear_adc_offset = (int32_t)((uint32_t)payload[10] |
+                                            ((uint32_t)payload[11] << 8) |
+                                            ((uint32_t)payload[12] << 16) |
+                                            ((uint32_t)payload[13] << 24));
+            }
 
             if (wall_kp >= 0.0f && wall_kp <= 100.0f &&
-                target_mm >= 30U && target_mm <= 60U) {
+                target_mm >= 30U && target_mm <= 60U &&
+                distance_kp >= 0.0f && distance_kp <= 100.0f &&
+                rear_adc_offset >= -100000L && rear_adc_offset <= 100000L) {
                 obstacle_follow_wall_kp = wall_kp;
                 obstacle_follow_target_mm = target_mm;
+                obstacle_follow_distance_kp = distance_kp;
+                obstacle_rear_ir_adc_offset = rear_adc_offset;
                 uner_ack_status = 0U;
             } else {
                 uner_ack_status = 1U;
