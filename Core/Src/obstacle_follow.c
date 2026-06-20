@@ -12,7 +12,7 @@
 #define OBSTACLE_RIGHT_TARGET_ADC            2431U
 #define OBSTACLE_RIGHT_TARGET_MM_DEFAULT     40U
 #define OBSTACLE_FOLLOW_ALIGN_CONFIRM_TICKS  10U
-#define OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS   8U
+#define OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS   20U
 #define OBSTACLE_FOLLOW_IMU_STALE_MS         100U
 #define OBSTACLE_FOLLOW_YAW_LIMIT            3600.0f
 #define OBSTACLE_FOLLOW_WALL_KP_DEFAULT      8.0f
@@ -236,9 +236,13 @@ void ObstacleFollow_Task(void){
     float target_setpoint = 0.0f;
     float average_distance_mm = 0.0f;
     float proportional_correction = 0.0f;
+    uint8_t front_lost = 0U;
+    uint8_t rear_lost = 0U;
     uint32_t now = HAL_GetTick();
 
     ObstacleFollow_UpdateRightSensor();
+    front_lost = (obstacle_front_ir_filtered >= OBSTACLE_RIGHT_LOST_THRESHOLD) ? 1U : 0U;
+    rear_lost = (obstacle_rear_ir_filtered >= OBSTACLE_RIGHT_LOST_THRESHOLD) ? 1U : 0U;
     obstacle_follow_adc_error = (int16_t)obstacle_right_ir_filtered - (int16_t)OBSTACLE_RIGHT_TARGET_ADC;
     average_distance_mm = ((float)obstacle_front_distance_mm + (float)obstacle_rear_distance_mm) * 0.5f;
     obstacle_follow_distance_error_mm = (int16_t)(average_distance_mm - (float)obstacle_follow_target_mm);
@@ -270,7 +274,17 @@ void ObstacleFollow_Task(void){
         break;
 
     case OBSTACLE_FOLLOW_STATE_FACE_FOLLOW:
-        if (obstacle_right_face_state == OBSTACLE_RIGHT_FACE_LOST) {
+        if (front_lost && rear_lost) {
+            if (obstacle_follow_lost_count < OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
+                obstacle_follow_lost_count++;
+            }
+            if (obstacle_follow_lost_count >= OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
+                ObstacleFollow_Stop();
+            }
+            break;
+        }
+
+        if (front_lost) {
             if (obstacle_follow_lost_count < OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
                 obstacle_follow_lost_count++;
             }
