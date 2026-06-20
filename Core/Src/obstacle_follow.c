@@ -72,6 +72,7 @@ static uint32_t obstacle_follow_forward_phase_tick = 0;
 static uint8_t obstacle_follow_motion_phase = 1;
 static uint8_t obstacle_ir_filter_ready = 0;
 static uint16_t obstacle_rear_ir_filter_state = 0;
+static float obstacle_follow_last_valid_side_steering = 0.0f;
 
 static float ObstacleFollow_ClampFloat(float value, float limit)
 {
@@ -192,6 +193,7 @@ static void ObstacleFollow_ClearOutput(void)
     obstacle_follow_forward_phase_tick = 0;
     obstacle_follow_motion_phase = 1U;
     obstacle_follow_lost_count = 0;
+    obstacle_follow_last_valid_side_steering = 0.0f;
 }
 
 uint8_t ObstacleFollow_Start(uint8_t side)
@@ -300,6 +302,13 @@ void ObstacleFollow_Task(void){
             }
             break;
         }
+
+        if (rear_lost) {
+            obstacle_follow_lost_count = 0;
+            side_steering = obstacle_follow_last_valid_side_steering;
+            target_steering += side_steering;
+            break;
+        }
         obstacle_follow_lost_count = 0;
 
         proportional_correction = (obstacle_follow_wall_kp * (float)obstacle_follow_parallel_error_mm) -
@@ -307,6 +316,7 @@ void ObstacleFollow_Task(void){
         side_steering = -OBSTACLE_FOLLOW_RIGHT_STEER_SIGN *
                         proportional_correction;
         side_steering = ObstacleFollow_ClampFloat(side_steering, OBSTACLE_FOLLOW_WALL_STEER_LIMIT);
+        obstacle_follow_last_valid_side_steering = side_steering;
         target_steering += side_steering;
         break;
 
