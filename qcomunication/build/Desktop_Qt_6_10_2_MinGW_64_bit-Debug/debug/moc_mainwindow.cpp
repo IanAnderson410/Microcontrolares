@@ -180,7 +180,8 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
         "on_Limite_error_spinBox_textChanged",
         "on_accelAdaptiveLimitSpin_textChanged",
         "on_accelLogStartButton_clicked",
-        "on_Screen2PushButton_3_clicked"
+        "on_Screen2PushButton_3_clicked",
+        "on_SistemasDeControl_pushButton_2_clicked"
     };
 
     QtMocHelpers::UintData qt_methods {
@@ -405,6 +406,8 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
         QtMocHelpers::SlotData<void()>(116, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_Screen2PushButton_3_clicked'
         QtMocHelpers::SlotData<void()>(117, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_SistemasDeControl_pushButton_2_clicked'
+        QtMocHelpers::SlotData<void()>(118, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -515,6 +518,7 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 78: _t->on_accelAdaptiveLimitSpin_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
         case 79: _t->on_accelLogStartButton_clicked(); break;
         case 80: _t->on_Screen2PushButton_3_clicked(); break;
+        case 81: _t->on_SistemasDeControl_pushButton_2_clicked(); break;
         default: ;
         }
     }
@@ -539,14 +543,14 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 81)
+        if (_id < 82)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 81;
+        _id -= 82;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 81)
+        if (_id < 82)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 81;
+        _id -= 82;
     }
     return _id;
 }

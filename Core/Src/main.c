@@ -1367,6 +1367,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
             uint16_t target_mm = (uint16_t)payload[4] | ((uint16_t)payload[5] << 8);
             float distance_kp = obstacle_follow_distance_kp;
             int32_t rear_adc_offset = obstacle_rear_ir_adc_offset;
+            uint8_t lost_turn_enabled = obstacle_follow_lost_turn_enabled;
 
             if (payload_len >= 10) {
                 distance_kp = UNER_ReadFloatLE(payload + 6);
@@ -1377,6 +1378,11 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                                             ((uint32_t)payload[12] << 16) |
                                             ((uint32_t)payload[13] << 24));
             }
+            if (payload_len >= 15) {
+                lost_turn_enabled = payload[14] ? 1U : 0U;
+            } else if (payload_len >= 7 && payload_len < 10) {
+                lost_turn_enabled = payload[6] ? 1U : 0U;
+            }
 
             if (wall_kp >= 0.0f && wall_kp <= 100.0f &&
                 target_mm >= 30U && target_mm <= 60U &&
@@ -1386,6 +1392,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 obstacle_follow_target_mm = target_mm;
                 obstacle_follow_distance_kp = distance_kp;
                 obstacle_rear_ir_adc_offset = rear_adc_offset;
+                obstacle_follow_lost_turn_enabled = lost_turn_enabled;
                 uner_ack_status = 0U;
             } else {
                 uner_ack_status = 1U;

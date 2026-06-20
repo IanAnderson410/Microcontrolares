@@ -55,6 +55,7 @@ extern volatile float obstacle_follow_setpoint;
 extern volatile int16_t obstacle_follow_steering;
 extern volatile int16_t obstacle_follow_side_steering;
 extern volatile uint8_t obstacle_follow_steering_saturated;
+extern volatile uint8_t obstacle_follow_lost_turn_enabled;
 
 uint8_t ObstacleFollow_Start(uint8_t side);
 void ObstacleFollow_Stop(void);

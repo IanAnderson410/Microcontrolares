@@ -61,6 +61,7 @@ volatile float obstacle_follow_setpoint = 0.0f;
 volatile int16_t obstacle_follow_steering = 0;
 volatile int16_t obstacle_follow_side_steering = 0;
 volatile uint8_t obstacle_follow_steering_saturated = 0;
+volatile uint8_t obstacle_follow_lost_turn_enabled = 1U;
 
 static float obstacle_follow_yaw_reference = 0.0f;
 static float obstacle_follow_yaw_error_filtered = 0.0f;
@@ -155,7 +156,9 @@ static void ObstacleFollow_UpdateRightSensor(void)
                                                                    obstacle_front_table_adc);
     obstacle_right_distance_mm = obstacle_front_distance_mm;
 
-    if (obstacle_front_distance_mm > OBSTACLE_RIGHT_TOO_FAR_MM &&
+    if (obstacle_front_ir_filtered >= OBSTACLE_RIGHT_LOST_THRESHOLD) {
+        obstacle_right_face_state = OBSTACLE_RIGHT_FACE_LOST;
+    } else if (obstacle_front_distance_mm > OBSTACLE_RIGHT_TOO_FAR_MM &&
         obstacle_rear_distance_mm > OBSTACLE_RIGHT_TOO_FAR_MM) {
         obstacle_right_face_state = OBSTACLE_RIGHT_FACE_TOO_FAR;
     } else if (obstacle_front_distance_mm < OBSTACLE_RIGHT_TOO_CLOSE_MM &&
@@ -267,6 +270,22 @@ void ObstacleFollow_Task(void){
         break;
 
     case OBSTACLE_FOLLOW_STATE_FACE_FOLLOW:
+        if (obstacle_right_face_state == OBSTACLE_RIGHT_FACE_LOST) {
+            if (obstacle_follow_lost_count < OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
+                obstacle_follow_lost_count++;
+            }
+            if (obstacle_follow_lost_count >= OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
+                ObstacleFollow_ClearOutput();
+                if (obstacle_follow_lost_turn_enabled &&
+                    TurnManeuver_StartStoredCorner(OBSTACLE_FOLLOW_CORNER_TURN_DEG) ==
+                    TURN_MANEUVER_STATUS_OK) {
+                    ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_CORNER_TURN);
+                } else {
+                    ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
+                }
+            }
+            break;
+        }
         obstacle_follow_lost_count = 0;
 
         proportional_correction = (obstacle_follow_wall_kp * (float)obstacle_follow_parallel_error_mm) -

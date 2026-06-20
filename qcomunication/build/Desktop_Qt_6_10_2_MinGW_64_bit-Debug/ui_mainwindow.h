@@ -152,7 +152,6 @@ public:
     QLabel *label_9;
     QLineEdit *TypePORT_lineEdit;
     QVBoxLayout *verticalLayout_24;
-    QPushButton *connect_pushButton;
     QPushButton *aliveUdpButton;
     QPushButton *httpSoftApButton;
     QHBoxLayout *horizontalLayout_14;
@@ -268,6 +267,57 @@ public:
     QPushButton *Screen2PushButton;
     QWidget *PaginaComandosAvanzados;
     QLabel *advancedTitleLabel;
+    QGroupBox *accelRunawayBox;
+    QGridLayout *accelRunawayLayout;
+    QLabel *accelRunawayDeltaLabel;
+    QDoubleSpinBox *accelRunawayDeltaSpin;
+    QLabel *accelRunawayAbsLabel;
+    QDoubleSpinBox *accelRunawayAbsSpin;
+    QLabel *accelRunawayTrendLimitLabel;
+    QDoubleSpinBox *accelRunawayTrendLimitSpin;
+    QLabel *accelRunawayAbsLimitLabel;
+    QDoubleSpinBox *accelRunawayAbsLimitSpin;
+    QLabel *accelAdaptiveStepLabel;
+    QDoubleSpinBox *accelAdaptiveStepSpin;
+    QLabel *accelAdaptiveLimitLabel;
+    QDoubleSpinBox *accelAdaptiveLimitSpin;
+    QLabel *accelAdaptiveResetAbsLabel;
+    QDoubleSpinBox *accelAdaptiveResetAbsSpin;
+    QLabel *accelAdaptiveResetCountLabel;
+    QDoubleSpinBox *accelAdaptiveResetCountSpin;
+    QPushButton *accelRunawayModeButton;
+    QPushButton *accelRunawayApplyButton;
+    QWidget *pitchRecoveryWidget;
+    QVBoxLayout *pitchRecoveryLayout;
+    QHBoxLayout *pitchRecoveryThresholdLayout;
+    QLabel *pitchRecoveryThresholdLabel;
+    QDoubleSpinBox *pitchRecoveryThresholdSpin;
+    QHBoxLayout *pitchRecoveryBrakeLayout;
+    QLabel *pitchRecoveryBrakeMsLabel;
+    QDoubleSpinBox *pitchRecoveryBrakeMsSpin;
+    QPushButton *pitchRecoveryApplyButton;
+    QGroupBox *accelLogBox;
+    QVBoxLayout *accelLogLayout;
+    QHBoxLayout *accelLogButtonsLayout;
+    QPushButton *accelLogStartButton;
+    QPushButton *accelLogCopyButton;
+    QPushButton *accelLogSaveButton;
+    QLabel *accelLogStatusLabel;
+    QTextEdit *accelLogTextEdit;
+    QGroupBox *irRightLogBox;
+    QVBoxLayout *irRightLogLayout;
+    QHBoxLayout *irRightLogControlsLayout;
+    QLabel *irRightDistanceLabel;
+    QVBoxLayout *verticalLayout_40;
+    QSpinBox *irRightDistanceSpin;
+    QPushButton *irRightCaptureButton;
+    QVBoxLayout *verticalLayout_39;
+    QPushButton *irRightTransmitButton;
+    QPushButton *irRightClearButton;
+    QPushButton *irRightSaveButton;
+    QLabel *irRightLogStatusLabel;
+    QTextEdit *irRightLogTextEdit;
+    QWidget *page_2;
     QGroupBox *yawConfigBox;
     QGridLayout *yawConfigLayout;
     QLabel *yawCfgMulLabel;
@@ -306,75 +356,29 @@ public:
     QDoubleSpinBox *turnPreBiasDelaySpin;
     QDoubleSpinBox *flCfgBalanceMs;
     QPushButton *yawCfgOled;
-    QGroupBox *accelRunawayBox;
-    QGridLayout *accelRunawayLayout;
-    QLabel *accelRunawayDeltaLabel;
-    QDoubleSpinBox *accelRunawayDeltaSpin;
-    QLabel *accelRunawayAbsLabel;
-    QDoubleSpinBox *accelRunawayAbsSpin;
-    QLabel *accelRunawayTrendLimitLabel;
-    QDoubleSpinBox *accelRunawayTrendLimitSpin;
-    QLabel *accelRunawayAbsLimitLabel;
-    QDoubleSpinBox *accelRunawayAbsLimitSpin;
-    QLabel *accelAdaptiveStepLabel;
-    QDoubleSpinBox *accelAdaptiveStepSpin;
-    QLabel *accelAdaptiveLimitLabel;
-    QDoubleSpinBox *accelAdaptiveLimitSpin;
-    QLabel *accelAdaptiveResetAbsLabel;
-    QDoubleSpinBox *accelAdaptiveResetAbsSpin;
-    QLabel *accelAdaptiveResetCountLabel;
-    QDoubleSpinBox *accelAdaptiveResetCountSpin;
-    QPushButton *accelRunawayModeButton;
-    QPushButton *accelRunawayApplyButton;
-    QWidget *pitchRecoveryWidget;
-    QVBoxLayout *pitchRecoveryLayout;
-    QHBoxLayout *pitchRecoveryThresholdLayout;
-    QLabel *pitchRecoveryThresholdLabel;
-    QDoubleSpinBox *pitchRecoveryThresholdSpin;
-    QHBoxLayout *pitchRecoveryBrakeLayout;
-    QLabel *pitchRecoveryBrakeMsLabel;
-    QDoubleSpinBox *pitchRecoveryBrakeMsSpin;
-    QPushButton *pitchRecoveryApplyButton;
-    QGroupBox *accelLogBox;
-    QVBoxLayout *accelLogLayout;
-    QHBoxLayout *accelLogButtonsLayout;
-    QPushButton *accelLogStartButton;
-    QPushButton *accelLogCopyButton;
-    QPushButton *accelLogSaveButton;
-    QLabel *accelLogStatusLabel;
-    QTextEdit *accelLogTextEdit;
+    QPushButton *obstacleFollowStartButton;
     QGroupBox *wallFollowConfigBox;
     QGridLayout *wallFollowConfigLayout;
-    QDoubleSpinBox *wallKpSpin;
-    QPushButton *wallConfigSendButton;
-    QSpinBox *wallTargetMmSpin;
     QLabel *wallKpLabel;
+    QDoubleSpinBox *wallKpSpin;
     QLabel *wallTargetMmLabel;
-    QLabel *wallKpDistanceLabel;
-    QDoubleSpinBox *wallKpDistanceSpin;
-    QLabel *wallRearAdcOffsetLabel;
-    QSpinBox *wallRearAdcOffsetSpin;
-    QPushButton *obstacleFollowStartButton;
-    QGroupBox *irRightLogBox;
-    QVBoxLayout *irRightLogLayout;
-    QHBoxLayout *irRightLogControlsLayout;
-    QLabel *irRightDistanceLabel;
-    QVBoxLayout *verticalLayout_40;
-    QSpinBox *irRightDistanceSpin;
-    QPushButton *irRightCaptureButton;
-    QVBoxLayout *verticalLayout_39;
-    QPushButton *irRightTransmitButton;
-    QPushButton *irRightClearButton;
-    QPushButton *irRightSaveButton;
-    QLabel *irRightLogStatusLabel;
-    QTextEdit *irRightLogTextEdit;
-    QPushButton *Screen2PushButton_3;
+    QSpinBox *wallTargetMmSpin;
+    QPushButton *wallLostTurnEnableButton;
+    QPushButton *wallConfigSendButton;
+    QGroupBox *yawPdQuickBox;
+    QGridLayout *yawPdQuickLayout;
+    QPushButton *yawPdButton;
+    QLineEdit *yawKdEdit;
+    QLabel *yawKdLabel;
+    QLineEdit *yawKpEdit;
+    QLabel *yawKpLabel;
     QHBoxLayout *horizontalLayout_30;
     QHBoxLayout *horizontalLayout_29;
     QPushButton *Home_pushButton;
     QPushButton *Ejecucion_pushButton;
     QPushButton *ScreenCalibrar_pushbutton;
     QPushButton *SistemasDeControl_pushButton;
+    QPushButton *SistemasDeControl_pushButton_2;
     QPushButton *Advanced_pushButton;
     QVBoxLayout *verticalLayout_2;
     QHBoxLayout *horizontalLayout_26;
@@ -386,6 +390,7 @@ public:
     QVBoxLayout *verticalLayout_38;
     QVBoxLayout *verticalLayout_37;
     QVBoxLayout *verticalLayout_28;
+    QPushButton *connect_pushButton;
     QPushButton *pushButton;
     QPushButton *telemetryUdpButton;
     QLabel *ModeLabel_4;
@@ -401,14 +406,8 @@ public:
     QPushButton *cleanRxPushButton;
     QPushButton *cleanInfoPushButton_2;
     QPushButton *cleanTxPushButton;
-    QGroupBox *yawPdQuickBox;
-    QGridLayout *yawPdQuickLayout;
-    QLabel *yawKpLabel;
-    QLineEdit *yawKpEdit;
-    QLabel *yawKdLabel;
-    QLineEdit *yawKdEdit;
-    QPushButton *yawPdButton;
     QPushButton *Screen2PushButton_2;
+    QPushButton *Screen2PushButton_3;
     QMenuBar *menubar;
     QStatusBar *statusbar;
     QToolBar *toolBar;
@@ -1702,12 +1701,6 @@ public:
 
         verticalLayout_24 = new QVBoxLayout();
         verticalLayout_24->setObjectName("verticalLayout_24");
-        connect_pushButton = new QPushButton(layoutWidget6);
-        connect_pushButton->setObjectName("connect_pushButton");
-        connect_pushButton->setMinimumSize(QSize(0, 45));
-
-        verticalLayout_24->addWidget(connect_pushButton);
-
         aliveUdpButton = new QPushButton(layoutWidget6);
         aliveUdpButton->setObjectName("aliveUdpButton");
 
@@ -2818,9 +2811,254 @@ public:
         advancedTitleLabel->setObjectName("advancedTitleLabel");
         advancedTitleLabel->setGeometry(QRect(20, 0, 1110, 21));
         advancedTitleLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
-        yawConfigBox = new QGroupBox(PaginaComandosAvanzados);
+        accelRunawayBox = new QGroupBox(PaginaComandosAvanzados);
+        accelRunawayBox->setObjectName("accelRunawayBox");
+        accelRunawayBox->setGeometry(QRect(10, 20, 230, 491));
+        accelRunawayLayout = new QGridLayout(accelRunawayBox);
+        accelRunawayLayout->setObjectName("accelRunawayLayout");
+        accelRunawayDeltaLabel = new QLabel(accelRunawayBox);
+        accelRunawayDeltaLabel->setObjectName("accelRunawayDeltaLabel");
+
+        accelRunawayLayout->addWidget(accelRunawayDeltaLabel, 0, 0, 1, 1);
+
+        accelRunawayDeltaSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelRunawayDeltaSpin->setObjectName("accelRunawayDeltaSpin");
+
+        accelRunawayLayout->addWidget(accelRunawayDeltaSpin, 0, 1, 1, 1);
+
+        accelRunawayAbsLabel = new QLabel(accelRunawayBox);
+        accelRunawayAbsLabel->setObjectName("accelRunawayAbsLabel");
+
+        accelRunawayLayout->addWidget(accelRunawayAbsLabel, 1, 0, 1, 1);
+
+        accelRunawayAbsSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelRunawayAbsSpin->setObjectName("accelRunawayAbsSpin");
+
+        accelRunawayLayout->addWidget(accelRunawayAbsSpin, 1, 1, 1, 1);
+
+        accelRunawayTrendLimitLabel = new QLabel(accelRunawayBox);
+        accelRunawayTrendLimitLabel->setObjectName("accelRunawayTrendLimitLabel");
+
+        accelRunawayLayout->addWidget(accelRunawayTrendLimitLabel, 2, 0, 1, 1);
+
+        accelRunawayTrendLimitSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelRunawayTrendLimitSpin->setObjectName("accelRunawayTrendLimitSpin");
+
+        accelRunawayLayout->addWidget(accelRunawayTrendLimitSpin, 2, 1, 1, 1);
+
+        accelRunawayAbsLimitLabel = new QLabel(accelRunawayBox);
+        accelRunawayAbsLimitLabel->setObjectName("accelRunawayAbsLimitLabel");
+
+        accelRunawayLayout->addWidget(accelRunawayAbsLimitLabel, 3, 0, 1, 1);
+
+        accelRunawayAbsLimitSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelRunawayAbsLimitSpin->setObjectName("accelRunawayAbsLimitSpin");
+
+        accelRunawayLayout->addWidget(accelRunawayAbsLimitSpin, 3, 1, 1, 1);
+
+        accelAdaptiveStepLabel = new QLabel(accelRunawayBox);
+        accelAdaptiveStepLabel->setObjectName("accelAdaptiveStepLabel");
+
+        accelRunawayLayout->addWidget(accelAdaptiveStepLabel, 4, 0, 1, 1);
+
+        accelAdaptiveStepSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelAdaptiveStepSpin->setObjectName("accelAdaptiveStepSpin");
+
+        accelRunawayLayout->addWidget(accelAdaptiveStepSpin, 4, 1, 1, 1);
+
+        accelAdaptiveLimitLabel = new QLabel(accelRunawayBox);
+        accelAdaptiveLimitLabel->setObjectName("accelAdaptiveLimitLabel");
+
+        accelRunawayLayout->addWidget(accelAdaptiveLimitLabel, 5, 0, 1, 1);
+
+        accelAdaptiveLimitSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelAdaptiveLimitSpin->setObjectName("accelAdaptiveLimitSpin");
+        accelAdaptiveLimitSpin->setMaximum(9999.989999999999782);
+
+        accelRunawayLayout->addWidget(accelAdaptiveLimitSpin, 5, 1, 1, 1);
+
+        accelAdaptiveResetAbsLabel = new QLabel(accelRunawayBox);
+        accelAdaptiveResetAbsLabel->setObjectName("accelAdaptiveResetAbsLabel");
+
+        accelRunawayLayout->addWidget(accelAdaptiveResetAbsLabel, 6, 0, 1, 1);
+
+        accelAdaptiveResetAbsSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelAdaptiveResetAbsSpin->setObjectName("accelAdaptiveResetAbsSpin");
+
+        accelRunawayLayout->addWidget(accelAdaptiveResetAbsSpin, 6, 1, 1, 1);
+
+        accelAdaptiveResetCountLabel = new QLabel(accelRunawayBox);
+        accelAdaptiveResetCountLabel->setObjectName("accelAdaptiveResetCountLabel");
+
+        accelRunawayLayout->addWidget(accelAdaptiveResetCountLabel, 7, 0, 1, 1);
+
+        accelAdaptiveResetCountSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelAdaptiveResetCountSpin->setObjectName("accelAdaptiveResetCountSpin");
+
+        accelRunawayLayout->addWidget(accelAdaptiveResetCountSpin, 7, 1, 1, 1);
+
+        accelRunawayModeButton = new QPushButton(accelRunawayBox);
+        accelRunawayModeButton->setObjectName("accelRunawayModeButton");
+        accelRunawayModeButton->setCheckable(true);
+        accelRunawayModeButton->setChecked(false);
+
+        accelRunawayLayout->addWidget(accelRunawayModeButton, 8, 0, 1, 2);
+
+        accelRunawayApplyButton = new QPushButton(accelRunawayBox);
+        accelRunawayApplyButton->setObjectName("accelRunawayApplyButton");
+
+        accelRunawayLayout->addWidget(accelRunawayApplyButton, 9, 1, 1, 1);
+
+        pitchRecoveryWidget = new QWidget(PaginaComandosAvanzados);
+        pitchRecoveryWidget->setObjectName("pitchRecoveryWidget");
+        pitchRecoveryWidget->setGeometry(QRect(240, 40, 301, 107));
+        pitchRecoveryLayout = new QVBoxLayout(pitchRecoveryWidget);
+        pitchRecoveryLayout->setObjectName("pitchRecoveryLayout");
+        pitchRecoveryLayout->setContentsMargins(0, 0, 0, 0);
+        pitchRecoveryThresholdLayout = new QHBoxLayout();
+        pitchRecoveryThresholdLayout->setObjectName("pitchRecoveryThresholdLayout");
+        pitchRecoveryThresholdLabel = new QLabel(pitchRecoveryWidget);
+        pitchRecoveryThresholdLabel->setObjectName("pitchRecoveryThresholdLabel");
+
+        pitchRecoveryThresholdLayout->addWidget(pitchRecoveryThresholdLabel);
+
+        pitchRecoveryThresholdSpin = new QDoubleSpinBox(pitchRecoveryWidget);
+        pitchRecoveryThresholdSpin->setObjectName("pitchRecoveryThresholdSpin");
+
+        pitchRecoveryThresholdLayout->addWidget(pitchRecoveryThresholdSpin);
+
+
+        pitchRecoveryLayout->addLayout(pitchRecoveryThresholdLayout);
+
+        pitchRecoveryBrakeLayout = new QHBoxLayout();
+        pitchRecoveryBrakeLayout->setObjectName("pitchRecoveryBrakeLayout");
+        pitchRecoveryBrakeMsLabel = new QLabel(pitchRecoveryWidget);
+        pitchRecoveryBrakeMsLabel->setObjectName("pitchRecoveryBrakeMsLabel");
+
+        pitchRecoveryBrakeLayout->addWidget(pitchRecoveryBrakeMsLabel);
+
+        pitchRecoveryBrakeMsSpin = new QDoubleSpinBox(pitchRecoveryWidget);
+        pitchRecoveryBrakeMsSpin->setObjectName("pitchRecoveryBrakeMsSpin");
+
+        pitchRecoveryBrakeLayout->addWidget(pitchRecoveryBrakeMsSpin);
+
+
+        pitchRecoveryLayout->addLayout(pitchRecoveryBrakeLayout);
+
+        pitchRecoveryApplyButton = new QPushButton(pitchRecoveryWidget);
+        pitchRecoveryApplyButton->setObjectName("pitchRecoveryApplyButton");
+
+        pitchRecoveryLayout->addWidget(pitchRecoveryApplyButton);
+
+        accelLogBox = new QGroupBox(PaginaComandosAvanzados);
+        accelLogBox->setObjectName("accelLogBox");
+        accelLogBox->setGeometry(QRect(560, 20, 581, 211));
+        accelLogLayout = new QVBoxLayout(accelLogBox);
+        accelLogLayout->setObjectName("accelLogLayout");
+        accelLogButtonsLayout = new QHBoxLayout();
+        accelLogButtonsLayout->setObjectName("accelLogButtonsLayout");
+        accelLogStartButton = new QPushButton(accelLogBox);
+        accelLogStartButton->setObjectName("accelLogStartButton");
+
+        accelLogButtonsLayout->addWidget(accelLogStartButton);
+
+        accelLogCopyButton = new QPushButton(accelLogBox);
+        accelLogCopyButton->setObjectName("accelLogCopyButton");
+
+        accelLogButtonsLayout->addWidget(accelLogCopyButton);
+
+        accelLogSaveButton = new QPushButton(accelLogBox);
+        accelLogSaveButton->setObjectName("accelLogSaveButton");
+
+        accelLogButtonsLayout->addWidget(accelLogSaveButton);
+
+        accelLogStatusLabel = new QLabel(accelLogBox);
+        accelLogStatusLabel->setObjectName("accelLogStatusLabel");
+
+        accelLogButtonsLayout->addWidget(accelLogStatusLabel);
+
+
+        accelLogLayout->addLayout(accelLogButtonsLayout);
+
+        accelLogTextEdit = new QTextEdit(accelLogBox);
+        accelLogTextEdit->setObjectName("accelLogTextEdit");
+        accelLogTextEdit->setReadOnly(true);
+
+        accelLogLayout->addWidget(accelLogTextEdit);
+
+        irRightLogBox = new QGroupBox(PaginaComandosAvanzados);
+        irRightLogBox->setObjectName("irRightLogBox");
+        irRightLogBox->setGeometry(QRect(570, 240, 571, 341));
+        irRightLogLayout = new QVBoxLayout(irRightLogBox);
+        irRightLogLayout->setObjectName("irRightLogLayout");
+        irRightLogControlsLayout = new QHBoxLayout();
+        irRightLogControlsLayout->setObjectName("irRightLogControlsLayout");
+        irRightDistanceLabel = new QLabel(irRightLogBox);
+        irRightDistanceLabel->setObjectName("irRightDistanceLabel");
+
+        irRightLogControlsLayout->addWidget(irRightDistanceLabel);
+
+        verticalLayout_40 = new QVBoxLayout();
+        verticalLayout_40->setObjectName("verticalLayout_40");
+        irRightDistanceSpin = new QSpinBox(irRightLogBox);
+        irRightDistanceSpin->setObjectName("irRightDistanceSpin");
+        irRightDistanceSpin->setMaximum(100);
+        irRightDistanceSpin->setSingleStep(10);
+        irRightDistanceSpin->setValue(10);
+
+        verticalLayout_40->addWidget(irRightDistanceSpin);
+
+        irRightCaptureButton = new QPushButton(irRightLogBox);
+        irRightCaptureButton->setObjectName("irRightCaptureButton");
+
+        verticalLayout_40->addWidget(irRightCaptureButton);
+
+
+        irRightLogControlsLayout->addLayout(verticalLayout_40);
+
+        verticalLayout_39 = new QVBoxLayout();
+        verticalLayout_39->setObjectName("verticalLayout_39");
+        irRightTransmitButton = new QPushButton(irRightLogBox);
+        irRightTransmitButton->setObjectName("irRightTransmitButton");
+        irRightTransmitButton->setMinimumSize(QSize(0, 25));
+
+        verticalLayout_39->addWidget(irRightTransmitButton);
+
+        irRightClearButton = new QPushButton(irRightLogBox);
+        irRightClearButton->setObjectName("irRightClearButton");
+        irRightClearButton->setMinimumSize(QSize(0, 25));
+
+        verticalLayout_39->addWidget(irRightClearButton);
+
+        irRightSaveButton = new QPushButton(irRightLogBox);
+        irRightSaveButton->setObjectName("irRightSaveButton");
+        irRightSaveButton->setMinimumSize(QSize(0, 22));
+
+        verticalLayout_39->addWidget(irRightSaveButton);
+
+
+        irRightLogControlsLayout->addLayout(verticalLayout_39);
+
+
+        irRightLogLayout->addLayout(irRightLogControlsLayout);
+
+        irRightLogStatusLabel = new QLabel(irRightLogBox);
+        irRightLogStatusLabel->setObjectName("irRightLogStatusLabel");
+
+        irRightLogLayout->addWidget(irRightLogStatusLabel);
+
+        irRightLogTextEdit = new QTextEdit(irRightLogBox);
+        irRightLogTextEdit->setObjectName("irRightLogTextEdit");
+        irRightLogTextEdit->setReadOnly(true);
+
+        irRightLogLayout->addWidget(irRightLogTextEdit);
+
+        stackedWidget->addWidget(PaginaComandosAvanzados);
+        page_2 = new QWidget();
+        page_2->setObjectName("page_2");
+        yawConfigBox = new QGroupBox(page_2);
         yawConfigBox->setObjectName("yawConfigBox");
-        yawConfigBox->setGeometry(QRect(230, 100, 361, 451));
+        yawConfigBox->setGeometry(QRect(10, 10, 381, 561));
         yawConfigLayout = new QGridLayout(yawConfigBox);
         yawConfigLayout->setObjectName("yawConfigLayout");
         yawCfgMulLabel = new QLabel(yawConfigBox);
@@ -3006,199 +3244,32 @@ public:
 
         yawConfigLayout->addWidget(yawCfgOled, 11, 1, 1, 1);
 
-        accelRunawayBox = new QGroupBox(PaginaComandosAvanzados);
-        accelRunawayBox->setObjectName("accelRunawayBox");
-        accelRunawayBox->setGeometry(QRect(10, 20, 230, 291));
-        accelRunawayLayout = new QGridLayout(accelRunawayBox);
-        accelRunawayLayout->setObjectName("accelRunawayLayout");
-        accelRunawayDeltaLabel = new QLabel(accelRunawayBox);
-        accelRunawayDeltaLabel->setObjectName("accelRunawayDeltaLabel");
-
-        accelRunawayLayout->addWidget(accelRunawayDeltaLabel, 0, 0, 1, 1);
-
-        accelRunawayDeltaSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelRunawayDeltaSpin->setObjectName("accelRunawayDeltaSpin");
-
-        accelRunawayLayout->addWidget(accelRunawayDeltaSpin, 0, 1, 1, 1);
-
-        accelRunawayAbsLabel = new QLabel(accelRunawayBox);
-        accelRunawayAbsLabel->setObjectName("accelRunawayAbsLabel");
-
-        accelRunawayLayout->addWidget(accelRunawayAbsLabel, 1, 0, 1, 1);
-
-        accelRunawayAbsSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelRunawayAbsSpin->setObjectName("accelRunawayAbsSpin");
-
-        accelRunawayLayout->addWidget(accelRunawayAbsSpin, 1, 1, 1, 1);
-
-        accelRunawayTrendLimitLabel = new QLabel(accelRunawayBox);
-        accelRunawayTrendLimitLabel->setObjectName("accelRunawayTrendLimitLabel");
-
-        accelRunawayLayout->addWidget(accelRunawayTrendLimitLabel, 2, 0, 1, 1);
-
-        accelRunawayTrendLimitSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelRunawayTrendLimitSpin->setObjectName("accelRunawayTrendLimitSpin");
-
-        accelRunawayLayout->addWidget(accelRunawayTrendLimitSpin, 2, 1, 1, 1);
-
-        accelRunawayAbsLimitLabel = new QLabel(accelRunawayBox);
-        accelRunawayAbsLimitLabel->setObjectName("accelRunawayAbsLimitLabel");
-
-        accelRunawayLayout->addWidget(accelRunawayAbsLimitLabel, 3, 0, 1, 1);
-
-        accelRunawayAbsLimitSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelRunawayAbsLimitSpin->setObjectName("accelRunawayAbsLimitSpin");
-
-        accelRunawayLayout->addWidget(accelRunawayAbsLimitSpin, 3, 1, 1, 1);
-
-        accelAdaptiveStepLabel = new QLabel(accelRunawayBox);
-        accelAdaptiveStepLabel->setObjectName("accelAdaptiveStepLabel");
-
-        accelRunawayLayout->addWidget(accelAdaptiveStepLabel, 4, 0, 1, 1);
-
-        accelAdaptiveStepSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelAdaptiveStepSpin->setObjectName("accelAdaptiveStepSpin");
-
-        accelRunawayLayout->addWidget(accelAdaptiveStepSpin, 4, 1, 1, 1);
-
-        accelAdaptiveLimitLabel = new QLabel(accelRunawayBox);
-        accelAdaptiveLimitLabel->setObjectName("accelAdaptiveLimitLabel");
-
-        accelRunawayLayout->addWidget(accelAdaptiveLimitLabel, 5, 0, 1, 1);
-
-        accelAdaptiveLimitSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelAdaptiveLimitSpin->setObjectName("accelAdaptiveLimitSpin");
-        accelAdaptiveLimitSpin->setMaximum(9999.989999999999782);
-
-        accelRunawayLayout->addWidget(accelAdaptiveLimitSpin, 5, 1, 1, 1);
-
-        accelAdaptiveResetAbsLabel = new QLabel(accelRunawayBox);
-        accelAdaptiveResetAbsLabel->setObjectName("accelAdaptiveResetAbsLabel");
-
-        accelRunawayLayout->addWidget(accelAdaptiveResetAbsLabel, 6, 0, 1, 1);
-
-        accelAdaptiveResetAbsSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelAdaptiveResetAbsSpin->setObjectName("accelAdaptiveResetAbsSpin");
-
-        accelRunawayLayout->addWidget(accelAdaptiveResetAbsSpin, 6, 1, 1, 1);
-
-        accelAdaptiveResetCountLabel = new QLabel(accelRunawayBox);
-        accelAdaptiveResetCountLabel->setObjectName("accelAdaptiveResetCountLabel");
-
-        accelRunawayLayout->addWidget(accelAdaptiveResetCountLabel, 7, 0, 1, 1);
-
-        accelAdaptiveResetCountSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelAdaptiveResetCountSpin->setObjectName("accelAdaptiveResetCountSpin");
-
-        accelRunawayLayout->addWidget(accelAdaptiveResetCountSpin, 7, 1, 1, 1);
-
-        accelRunawayModeButton = new QPushButton(accelRunawayBox);
-        accelRunawayModeButton->setObjectName("accelRunawayModeButton");
-        accelRunawayModeButton->setCheckable(true);
-        accelRunawayModeButton->setChecked(false);
-
-        accelRunawayLayout->addWidget(accelRunawayModeButton, 8, 0, 1, 2);
-
-        accelRunawayApplyButton = new QPushButton(accelRunawayBox);
-        accelRunawayApplyButton->setObjectName("accelRunawayApplyButton");
-
-        accelRunawayLayout->addWidget(accelRunawayApplyButton, 9, 1, 1, 1);
-
-        pitchRecoveryWidget = new QWidget(PaginaComandosAvanzados);
-        pitchRecoveryWidget->setObjectName("pitchRecoveryWidget");
-        pitchRecoveryWidget->setGeometry(QRect(240, 20, 301, 107));
-        pitchRecoveryLayout = new QVBoxLayout(pitchRecoveryWidget);
-        pitchRecoveryLayout->setObjectName("pitchRecoveryLayout");
-        pitchRecoveryLayout->setContentsMargins(0, 0, 0, 0);
-        pitchRecoveryThresholdLayout = new QHBoxLayout();
-        pitchRecoveryThresholdLayout->setObjectName("pitchRecoveryThresholdLayout");
-        pitchRecoveryThresholdLabel = new QLabel(pitchRecoveryWidget);
-        pitchRecoveryThresholdLabel->setObjectName("pitchRecoveryThresholdLabel");
-
-        pitchRecoveryThresholdLayout->addWidget(pitchRecoveryThresholdLabel);
-
-        pitchRecoveryThresholdSpin = new QDoubleSpinBox(pitchRecoveryWidget);
-        pitchRecoveryThresholdSpin->setObjectName("pitchRecoveryThresholdSpin");
-
-        pitchRecoveryThresholdLayout->addWidget(pitchRecoveryThresholdSpin);
-
-
-        pitchRecoveryLayout->addLayout(pitchRecoveryThresholdLayout);
-
-        pitchRecoveryBrakeLayout = new QHBoxLayout();
-        pitchRecoveryBrakeLayout->setObjectName("pitchRecoveryBrakeLayout");
-        pitchRecoveryBrakeMsLabel = new QLabel(pitchRecoveryWidget);
-        pitchRecoveryBrakeMsLabel->setObjectName("pitchRecoveryBrakeMsLabel");
-
-        pitchRecoveryBrakeLayout->addWidget(pitchRecoveryBrakeMsLabel);
-
-        pitchRecoveryBrakeMsSpin = new QDoubleSpinBox(pitchRecoveryWidget);
-        pitchRecoveryBrakeMsSpin->setObjectName("pitchRecoveryBrakeMsSpin");
-
-        pitchRecoveryBrakeLayout->addWidget(pitchRecoveryBrakeMsSpin);
-
-
-        pitchRecoveryLayout->addLayout(pitchRecoveryBrakeLayout);
-
-        pitchRecoveryApplyButton = new QPushButton(pitchRecoveryWidget);
-        pitchRecoveryApplyButton->setObjectName("pitchRecoveryApplyButton");
-
-        pitchRecoveryLayout->addWidget(pitchRecoveryApplyButton);
-
-        accelLogBox = new QGroupBox(PaginaComandosAvanzados);
-        accelLogBox->setObjectName("accelLogBox");
-        accelLogBox->setGeometry(QRect(600, 20, 541, 121));
-        accelLogLayout = new QVBoxLayout(accelLogBox);
-        accelLogLayout->setObjectName("accelLogLayout");
-        accelLogButtonsLayout = new QHBoxLayout();
-        accelLogButtonsLayout->setObjectName("accelLogButtonsLayout");
-        accelLogStartButton = new QPushButton(accelLogBox);
-        accelLogStartButton->setObjectName("accelLogStartButton");
-
-        accelLogButtonsLayout->addWidget(accelLogStartButton);
-
-        accelLogCopyButton = new QPushButton(accelLogBox);
-        accelLogCopyButton->setObjectName("accelLogCopyButton");
-
-        accelLogButtonsLayout->addWidget(accelLogCopyButton);
-
-        accelLogSaveButton = new QPushButton(accelLogBox);
-        accelLogSaveButton->setObjectName("accelLogSaveButton");
-
-        accelLogButtonsLayout->addWidget(accelLogSaveButton);
-
-        accelLogStatusLabel = new QLabel(accelLogBox);
-        accelLogStatusLabel->setObjectName("accelLogStatusLabel");
-
-        accelLogButtonsLayout->addWidget(accelLogStatusLabel);
-
-
-        accelLogLayout->addLayout(accelLogButtonsLayout);
-
-        accelLogTextEdit = new QTextEdit(accelLogBox);
-        accelLogTextEdit->setObjectName("accelLogTextEdit");
-        accelLogTextEdit->setReadOnly(true);
-
-        accelLogLayout->addWidget(accelLogTextEdit);
-
-        wallFollowConfigBox = new QGroupBox(PaginaComandosAvanzados);
+        obstacleFollowStartButton = new QPushButton(page_2);
+        obstacleFollowStartButton->setObjectName("obstacleFollowStartButton");
+        obstacleFollowStartButton->setGeometry(QRect(500, 230, 215, 21));
+        wallFollowConfigBox = new QGroupBox(page_2);
         wallFollowConfigBox->setObjectName("wallFollowConfigBox");
-        wallFollowConfigBox->setGeometry(QRect(0, 330, 221, 231));
+        wallFollowConfigBox->setGeometry(QRect(470, 60, 181, 126));
         wallFollowConfigLayout = new QGridLayout(wallFollowConfigBox);
         wallFollowConfigLayout->setObjectName("wallFollowConfigLayout");
+        wallKpLabel = new QLabel(wallFollowConfigBox);
+        wallKpLabel->setObjectName("wallKpLabel");
+
+        wallFollowConfigLayout->addWidget(wallKpLabel, 0, 0, 1, 1);
+
         wallKpSpin = new QDoubleSpinBox(wallFollowConfigBox);
         wallKpSpin->setObjectName("wallKpSpin");
         wallKpSpin->setDecimals(2);
-        wallKpSpin->setMaximum(10000.000000000000000);
-        wallKpSpin->setSingleStep(1.000000000000000);
+        wallKpSpin->setMaximum(100.000000000000000);
+        wallKpSpin->setSingleStep(0.100000000000000);
         wallKpSpin->setValue(8.000000000000000);
 
         wallFollowConfigLayout->addWidget(wallKpSpin, 0, 1, 1, 1);
 
-        wallConfigSendButton = new QPushButton(wallFollowConfigBox);
-        wallConfigSendButton->setObjectName("wallConfigSendButton");
+        wallTargetMmLabel = new QLabel(wallFollowConfigBox);
+        wallTargetMmLabel->setObjectName("wallTargetMmLabel");
 
-        wallFollowConfigLayout->addWidget(wallConfigSendButton, 4, 0, 1, 2);
+        wallFollowConfigLayout->addWidget(wallTargetMmLabel, 1, 0, 1, 1);
 
         wallTargetMmSpin = new QSpinBox(wallFollowConfigBox);
         wallTargetMmSpin->setObjectName("wallTargetMmSpin");
@@ -3208,119 +3279,49 @@ public:
 
         wallFollowConfigLayout->addWidget(wallTargetMmSpin, 1, 1, 1, 1);
 
-        wallKpLabel = new QLabel(wallFollowConfigBox);
-        wallKpLabel->setObjectName("wallKpLabel");
+        wallLostTurnEnableButton = new QPushButton(wallFollowConfigBox);
+        wallLostTurnEnableButton->setObjectName("wallLostTurnEnableButton");
+        wallLostTurnEnableButton->setCheckable(true);
+        wallLostTurnEnableButton->setChecked(true);
 
-        wallFollowConfigLayout->addWidget(wallKpLabel, 0, 0, 1, 1);
+        wallFollowConfigLayout->addWidget(wallLostTurnEnableButton, 2, 0, 1, 2);
 
-        wallTargetMmLabel = new QLabel(wallFollowConfigBox);
-        wallTargetMmLabel->setObjectName("wallTargetMmLabel");
+        wallConfigSendButton = new QPushButton(wallFollowConfigBox);
+        wallConfigSendButton->setObjectName("wallConfigSendButton");
 
-        wallFollowConfigLayout->addWidget(wallTargetMmLabel, 1, 0, 1, 1);
+        wallFollowConfigLayout->addWidget(wallConfigSendButton, 3, 0, 1, 2);
 
-        wallKpDistanceLabel = new QLabel(wallFollowConfigBox);
-        wallKpDistanceLabel->setObjectName("wallKpDistanceLabel");
+        yawPdQuickBox = new QGroupBox(page_2);
+        yawPdQuickBox->setObjectName("yawPdQuickBox");
+        yawPdQuickBox->setGeometry(QRect(760, 190, 281, 221));
+        yawPdQuickLayout = new QGridLayout(yawPdQuickBox);
+        yawPdQuickLayout->setObjectName("yawPdQuickLayout");
+        yawPdButton = new QPushButton(yawPdQuickBox);
+        yawPdButton->setObjectName("yawPdButton");
 
-        wallFollowConfigLayout->addWidget(wallKpDistanceLabel, 2, 0, 1, 1);
+        yawPdQuickLayout->addWidget(yawPdButton, 2, 1, 1, 1);
 
-        wallKpDistanceSpin = new QDoubleSpinBox(wallFollowConfigBox);
-        wallKpDistanceSpin->setObjectName("wallKpDistanceSpin");
-        wallKpDistanceSpin->setDecimals(2);
-        wallKpDistanceSpin->setMaximum(100.000000000000000);
-        wallKpDistanceSpin->setSingleStep(0.100000000000000);
-        wallKpDistanceSpin->setValue(0.200000000000000);
+        yawKdEdit = new QLineEdit(yawPdQuickBox);
+        yawKdEdit->setObjectName("yawKdEdit");
 
-        wallFollowConfigLayout->addWidget(wallKpDistanceSpin, 2, 1, 1, 1);
+        yawPdQuickLayout->addWidget(yawKdEdit, 1, 1, 1, 1);
 
-        wallRearAdcOffsetLabel = new QLabel(wallFollowConfigBox);
-        wallRearAdcOffsetLabel->setObjectName("wallRearAdcOffsetLabel");
+        yawKdLabel = new QLabel(yawPdQuickBox);
+        yawKdLabel->setObjectName("yawKdLabel");
 
-        wallFollowConfigLayout->addWidget(wallRearAdcOffsetLabel, 3, 0, 1, 1);
+        yawPdQuickLayout->addWidget(yawKdLabel, 1, 0, 1, 1);
 
-        wallRearAdcOffsetSpin = new QSpinBox(wallFollowConfigBox);
-        wallRearAdcOffsetSpin->setObjectName("wallRearAdcOffsetSpin");
-        wallRearAdcOffsetSpin->setMinimum(-100000);
-        wallRearAdcOffsetSpin->setMaximum(100000);
+        yawKpEdit = new QLineEdit(yawPdQuickBox);
+        yawKpEdit->setObjectName("yawKpEdit");
 
-        wallFollowConfigLayout->addWidget(wallRearAdcOffsetSpin, 3, 1, 1, 1);
+        yawPdQuickLayout->addWidget(yawKpEdit, 0, 1, 1, 1);
 
-        obstacleFollowStartButton = new QPushButton(wallFollowConfigBox);
-        obstacleFollowStartButton->setObjectName("obstacleFollowStartButton");
-        obstacleFollowStartButton->setMinimumSize(QSize(220, 0));
+        yawKpLabel = new QLabel(yawPdQuickBox);
+        yawKpLabel->setObjectName("yawKpLabel");
 
-        wallFollowConfigLayout->addWidget(obstacleFollowStartButton, 5, 0, 1, 1);
+        yawPdQuickLayout->addWidget(yawKpLabel, 0, 0, 1, 1);
 
-        irRightLogBox = new QGroupBox(PaginaComandosAvanzados);
-        irRightLogBox->setObjectName("irRightLogBox");
-        irRightLogBox->setGeometry(QRect(570, 140, 571, 441));
-        irRightLogLayout = new QVBoxLayout(irRightLogBox);
-        irRightLogLayout->setObjectName("irRightLogLayout");
-        irRightLogControlsLayout = new QHBoxLayout();
-        irRightLogControlsLayout->setObjectName("irRightLogControlsLayout");
-        irRightDistanceLabel = new QLabel(irRightLogBox);
-        irRightDistanceLabel->setObjectName("irRightDistanceLabel");
-
-        irRightLogControlsLayout->addWidget(irRightDistanceLabel);
-
-        verticalLayout_40 = new QVBoxLayout();
-        verticalLayout_40->setObjectName("verticalLayout_40");
-        irRightDistanceSpin = new QSpinBox(irRightLogBox);
-        irRightDistanceSpin->setObjectName("irRightDistanceSpin");
-        irRightDistanceSpin->setMaximum(100);
-        irRightDistanceSpin->setSingleStep(10);
-        irRightDistanceSpin->setValue(10);
-
-        verticalLayout_40->addWidget(irRightDistanceSpin);
-
-        irRightCaptureButton = new QPushButton(irRightLogBox);
-        irRightCaptureButton->setObjectName("irRightCaptureButton");
-
-        verticalLayout_40->addWidget(irRightCaptureButton);
-
-
-        irRightLogControlsLayout->addLayout(verticalLayout_40);
-
-        verticalLayout_39 = new QVBoxLayout();
-        verticalLayout_39->setObjectName("verticalLayout_39");
-        irRightTransmitButton = new QPushButton(irRightLogBox);
-        irRightTransmitButton->setObjectName("irRightTransmitButton");
-        irRightTransmitButton->setMinimumSize(QSize(0, 25));
-
-        verticalLayout_39->addWidget(irRightTransmitButton);
-
-        irRightClearButton = new QPushButton(irRightLogBox);
-        irRightClearButton->setObjectName("irRightClearButton");
-        irRightClearButton->setMinimumSize(QSize(0, 25));
-
-        verticalLayout_39->addWidget(irRightClearButton);
-
-        irRightSaveButton = new QPushButton(irRightLogBox);
-        irRightSaveButton->setObjectName("irRightSaveButton");
-        irRightSaveButton->setMinimumSize(QSize(0, 22));
-
-        verticalLayout_39->addWidget(irRightSaveButton);
-
-
-        irRightLogControlsLayout->addLayout(verticalLayout_39);
-
-
-        irRightLogLayout->addLayout(irRightLogControlsLayout);
-
-        irRightLogStatusLabel = new QLabel(irRightLogBox);
-        irRightLogStatusLabel->setObjectName("irRightLogStatusLabel");
-
-        irRightLogLayout->addWidget(irRightLogStatusLabel);
-
-        irRightLogTextEdit = new QTextEdit(irRightLogBox);
-        irRightLogTextEdit->setObjectName("irRightLogTextEdit");
-        irRightLogTextEdit->setReadOnly(true);
-
-        irRightLogLayout->addWidget(irRightLogTextEdit);
-
-        Screen2PushButton_3 = new QPushButton(PaginaComandosAvanzados);
-        Screen2PushButton_3->setObjectName("Screen2PushButton_3");
-        Screen2PushButton_3->setGeometry(QRect(400, 550, 29, 29));
-        stackedWidget->addWidget(PaginaComandosAvanzados);
+        stackedWidget->addWidget(page_2);
 
         verticalLayout_35->addWidget(stackedWidget);
 
@@ -3351,6 +3352,12 @@ public:
         SistemasDeControl_pushButton->setMinimumSize(QSize(100, 50));
 
         horizontalLayout_29->addWidget(SistemasDeControl_pushButton);
+
+        SistemasDeControl_pushButton_2 = new QPushButton(layoutWidget);
+        SistemasDeControl_pushButton_2->setObjectName("SistemasDeControl_pushButton_2");
+        SistemasDeControl_pushButton_2->setMinimumSize(QSize(100, 50));
+
+        horizontalLayout_29->addWidget(SistemasDeControl_pushButton_2);
 
         Advanced_pushButton = new QPushButton(layoutWidget);
         Advanced_pushButton->setObjectName("Advanced_pushButton");
@@ -3432,6 +3439,12 @@ public:
         verticalLayout_37->setObjectName("verticalLayout_37");
         verticalLayout_28 = new QVBoxLayout();
         verticalLayout_28->setObjectName("verticalLayout_28");
+        connect_pushButton = new QPushButton(layoutWidget);
+        connect_pushButton->setObjectName("connect_pushButton");
+        connect_pushButton->setMinimumSize(QSize(0, 45));
+
+        verticalLayout_28->addWidget(connect_pushButton);
+
         pushButton = new QPushButton(layoutWidget);
         pushButton->setObjectName("pushButton");
         pushButton->setMinimumSize(QSize(60, 20));
@@ -3529,40 +3542,13 @@ public:
         cleanTxPushButton = new QPushButton(centralwidget);
         cleanTxPushButton->setObjectName("cleanTxPushButton");
         cleanTxPushButton->setGeometry(QRect(200, 810, 497, 29));
-        yawPdQuickBox = new QGroupBox(centralwidget);
-        yawPdQuickBox->setObjectName("yawPdQuickBox");
-        yawPdQuickBox->setGeometry(QRect(700, 690, 181, 91));
-        yawPdQuickLayout = new QGridLayout(yawPdQuickBox);
-        yawPdQuickLayout->setObjectName("yawPdQuickLayout");
-        yawKpLabel = new QLabel(yawPdQuickBox);
-        yawKpLabel->setObjectName("yawKpLabel");
-
-        yawPdQuickLayout->addWidget(yawKpLabel, 0, 0, 1, 1);
-
-        yawKpEdit = new QLineEdit(yawPdQuickBox);
-        yawKpEdit->setObjectName("yawKpEdit");
-
-        yawPdQuickLayout->addWidget(yawKpEdit, 0, 1, 1, 1);
-
-        yawKdLabel = new QLabel(yawPdQuickBox);
-        yawKdLabel->setObjectName("yawKdLabel");
-
-        yawPdQuickLayout->addWidget(yawKdLabel, 1, 0, 1, 1);
-
-        yawKdEdit = new QLineEdit(yawPdQuickBox);
-        yawKdEdit->setObjectName("yawKdEdit");
-
-        yawPdQuickLayout->addWidget(yawKdEdit, 1, 1, 1, 1);
-
-        yawPdButton = new QPushButton(yawPdQuickBox);
-        yawPdButton->setObjectName("yawPdButton");
-
-        yawPdQuickLayout->addWidget(yawPdButton, 2, 1, 1, 1);
-
         Screen2PushButton_2 = new QPushButton(centralwidget);
         Screen2PushButton_2->setObjectName("Screen2PushButton_2");
-        Screen2PushButton_2->setGeometry(QRect(430, 700, 127, 29));
+        Screen2PushButton_2->setGeometry(QRect(510, 690, 127, 29));
         Screen2PushButton_2->setMinimumSize(QSize(0, 10));
+        Screen2PushButton_3 = new QPushButton(centralwidget);
+        Screen2PushButton_3->setObjectName("Screen2PushButton_3");
+        Screen2PushButton_3->setGeometry(QRect(1020, 710, 29, 29));
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
@@ -3577,7 +3563,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        stackedWidget->setCurrentIndex(4);
+        stackedWidget->setCurrentIndex(5);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
@@ -3637,7 +3623,6 @@ public:
         label_9->setText(QCoreApplication::translate("MainWindow", "Type PORT", nullptr));
         TypePORT_lineEdit->setInputMask(QString());
         TypePORT_lineEdit->setText(QCoreApplication::translate("MainWindow", "8888", nullptr));
-        connect_pushButton->setText(QCoreApplication::translate("MainWindow", "Connect To STM32", nullptr));
         aliveUdpButton->setText(QCoreApplication::translate("MainWindow", "ALIVE UDP", nullptr));
         httpSoftApButton->setText(QCoreApplication::translate("MainWindow", "HTTP AP", nullptr));
         SerialPort_Label->setText(QCoreApplication::translate("MainWindow", "Conexi\303\263n Serial", nullptr));
@@ -3701,6 +3686,32 @@ public:
         SET_FRECUENCY_HB_BUTTON->setText(QCoreApplication::translate("MainWindow", "Set HeartBit Frecuency", nullptr));
         Screen2PushButton->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
         advancedTitleLabel->setText(QCoreApplication::translate("MainWindow", "Comandos avanzados de red, yaw y maniobras", nullptr));
+        accelRunawayBox->setTitle(QCoreApplication::translate("MainWindow", "Accel runaway", nullptr));
+        accelRunawayDeltaLabel->setText(QCoreApplication::translate("MainWindow", "Delta th", nullptr));
+        accelRunawayAbsLabel->setText(QCoreApplication::translate("MainWindow", "Abs th", nullptr));
+        accelRunawayTrendLimitLabel->setText(QCoreApplication::translate("MainWindow", "Trend cnt", nullptr));
+        accelRunawayAbsLimitLabel->setText(QCoreApplication::translate("MainWindow", "Abs cnt", nullptr));
+        accelAdaptiveStepLabel->setText(QCoreApplication::translate("MainWindow", "Offset step", nullptr));
+        accelAdaptiveLimitLabel->setText(QCoreApplication::translate("MainWindow", "Offset lim", nullptr));
+        accelAdaptiveResetAbsLabel->setText(QCoreApplication::translate("MainWindow", "Reset abs", nullptr));
+        accelAdaptiveResetCountLabel->setText(QCoreApplication::translate("MainWindow", "Reset cnt", nullptr));
+        accelRunawayModeButton->setText(QCoreApplication::translate("MainWindow", "Detection OFF", nullptr));
+        accelRunawayApplyButton->setText(QCoreApplication::translate("MainWindow", "APPLY", nullptr));
+        pitchRecoveryThresholdLabel->setText(QCoreApplication::translate("MainWindow", "Recovery deg", nullptr));
+        pitchRecoveryBrakeMsLabel->setText(QCoreApplication::translate("MainWindow", "Brake ms", nullptr));
+        pitchRecoveryApplyButton->setText(QCoreApplication::translate("MainWindow", "APPLY RECOVERY", nullptr));
+        accelLogBox->setTitle(QCoreApplication::translate("MainWindow", "Accel / Pitch RAM log", nullptr));
+        accelLogStartButton->setText(QCoreApplication::translate("MainWindow", "START", nullptr));
+        accelLogCopyButton->setText(QCoreApplication::translate("MainWindow", "COPY CSV", nullptr));
+        accelLogSaveButton->setText(QCoreApplication::translate("MainWindow", "SAVE CSV", nullptr));
+        accelLogStatusLabel->setText(QCoreApplication::translate("MainWindow", "Idle", nullptr));
+        irRightLogBox->setTitle(QCoreApplication::translate("MainWindow", "IR sensor 4 - caracterizacion", nullptr));
+        irRightDistanceLabel->setText(QCoreApplication::translate("MainWindow", "Dist mm", nullptr));
+        irRightCaptureButton->setText(QCoreApplication::translate("MainWindow", "CAPTURAR 50", nullptr));
+        irRightTransmitButton->setText(QCoreApplication::translate("MainWindow", "DESCARGAR", nullptr));
+        irRightClearButton->setText(QCoreApplication::translate("MainWindow", "LIMPIAR", nullptr));
+        irRightSaveButton->setText(QCoreApplication::translate("MainWindow", "CSV", nullptr));
+        irRightLogStatusLabel->setText(QCoreApplication::translate("MainWindow", "Idle", nullptr));
         yawConfigBox->setTitle(QString());
         yawCfgMulLabel->setText(QCoreApplication::translate("MainWindow", "SpeedRed", nullptr));
         turnStartButton->setText(QCoreApplication::translate("MainWindow", "TURN", nullptr));
@@ -3722,49 +3733,29 @@ public:
         turnBiasLabel->setText(QCoreApplication::translate("MainWindow", "Turn bias", nullptr));
         turnPreBiasDelayLabel->setText(QCoreApplication::translate("MainWindow", "Pre-bias delay", nullptr));
         yawCfgOled->setText(QCoreApplication::translate("MainWindow", "OLED", nullptr));
-        accelRunawayBox->setTitle(QCoreApplication::translate("MainWindow", "Accel runaway", nullptr));
-        accelRunawayDeltaLabel->setText(QCoreApplication::translate("MainWindow", "Delta th", nullptr));
-        accelRunawayAbsLabel->setText(QCoreApplication::translate("MainWindow", "Abs th", nullptr));
-        accelRunawayTrendLimitLabel->setText(QCoreApplication::translate("MainWindow", "Trend cnt", nullptr));
-        accelRunawayAbsLimitLabel->setText(QCoreApplication::translate("MainWindow", "Abs cnt", nullptr));
-        accelAdaptiveStepLabel->setText(QCoreApplication::translate("MainWindow", "Offset step", nullptr));
-        accelAdaptiveLimitLabel->setText(QCoreApplication::translate("MainWindow", "Offset lim", nullptr));
-        accelAdaptiveResetAbsLabel->setText(QCoreApplication::translate("MainWindow", "Reset abs", nullptr));
-        accelAdaptiveResetCountLabel->setText(QCoreApplication::translate("MainWindow", "Reset cnt", nullptr));
-        accelRunawayModeButton->setText(QCoreApplication::translate("MainWindow", "Detection OFF", nullptr));
-        accelRunawayApplyButton->setText(QCoreApplication::translate("MainWindow", "APPLY", nullptr));
-        pitchRecoveryThresholdLabel->setText(QCoreApplication::translate("MainWindow", "Recovery deg", nullptr));
-        pitchRecoveryBrakeMsLabel->setText(QCoreApplication::translate("MainWindow", "Brake ms", nullptr));
-        pitchRecoveryApplyButton->setText(QCoreApplication::translate("MainWindow", "APPLY RECOVERY", nullptr));
-        accelLogBox->setTitle(QCoreApplication::translate("MainWindow", "Accel / Pitch RAM log", nullptr));
-        accelLogStartButton->setText(QCoreApplication::translate("MainWindow", "START", nullptr));
-        accelLogCopyButton->setText(QCoreApplication::translate("MainWindow", "COPY CSV", nullptr));
-        accelLogSaveButton->setText(QCoreApplication::translate("MainWindow", "SAVE CSV", nullptr));
-        accelLogStatusLabel->setText(QCoreApplication::translate("MainWindow", "Idle", nullptr));
+        obstacleFollowStartButton->setText(QCoreApplication::translate("MainWindow", "START FACE_FOLLOW", nullptr));
         wallFollowConfigBox->setTitle(QCoreApplication::translate("MainWindow", "Wall follow", nullptr));
-        wallConfigSendButton->setText(QCoreApplication::translate("MainWindow", "APPLY WALL", nullptr));
         wallKpLabel->setText(QCoreApplication::translate("MainWindow", "Kp Wall", nullptr));
         wallTargetMmLabel->setText(QCoreApplication::translate("MainWindow", "Target", nullptr));
-        wallKpDistanceLabel->setText(QCoreApplication::translate("MainWindow", "Kp2 Dist", nullptr));
-        wallRearAdcOffsetLabel->setText(QCoreApplication::translate("MainWindow", "Rear ADC Off", nullptr));
-        obstacleFollowStartButton->setText(QCoreApplication::translate("MainWindow", "START FACE_FOLLOW", nullptr));
-        irRightLogBox->setTitle(QCoreApplication::translate("MainWindow", "IR sensores 6/4 - caracterizacion", nullptr));
-        irRightDistanceLabel->setText(QCoreApplication::translate("MainWindow", "Dist mm", nullptr));
-        irRightCaptureButton->setText(QCoreApplication::translate("MainWindow", "CAPTURAR 50", nullptr));
-        irRightTransmitButton->setText(QCoreApplication::translate("MainWindow", "DESCARGAR", nullptr));
-        irRightClearButton->setText(QCoreApplication::translate("MainWindow", "LIMPIAR", nullptr));
-        irRightSaveButton->setText(QCoreApplication::translate("MainWindow", "CSV", nullptr));
-        irRightLogStatusLabel->setText(QCoreApplication::translate("MainWindow", "Idle", nullptr));
-        Screen2PushButton_3->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
+        wallLostTurnEnableButton->setText(QCoreApplication::translate("MainWindow", "LOST TURN ON", nullptr));
+        wallConfigSendButton->setText(QCoreApplication::translate("MainWindow", "APPLY WALL", nullptr));
+        yawPdQuickBox->setTitle(QCoreApplication::translate("MainWindow", "Yaw PD rapido", nullptr));
+        yawPdButton->setText(QCoreApplication::translate("MainWindow", "SET YAW PD", nullptr));
+        yawKdEdit->setText(QCoreApplication::translate("MainWindow", "0.0", nullptr));
+        yawKdLabel->setText(QCoreApplication::translate("MainWindow", "KdY", nullptr));
+        yawKpEdit->setText(QCoreApplication::translate("MainWindow", "100.0", nullptr));
+        yawKpLabel->setText(QCoreApplication::translate("MainWindow", "KpY", nullptr));
         Home_pushButton->setText(QCoreApplication::translate("MainWindow", "HOME", nullptr));
         Ejecucion_pushButton->setText(QCoreApplication::translate("MainWindow", "EJECUCION", nullptr));
         ScreenCalibrar_pushbutton->setText(QCoreApplication::translate("MainWindow", "Calibraci\303\263n ", nullptr));
         SistemasDeControl_pushButton->setText(QCoreApplication::translate("MainWindow", "Sistemas de Control", nullptr));
+        SistemasDeControl_pushButton_2->setText(QCoreApplication::translate("MainWindow", "Esquivar Obst\303\241culos", nullptr));
         Advanced_pushButton->setText(QCoreApplication::translate("MainWindow", "AVANZADO", nullptr));
         TPCCONECTED->setText(QString());
         label_11->setText(QCoreApplication::translate("MainWindow", "Comunicaci\303\263n inalambrica", nullptr));
         TPCCONECTED_2->setText(QString());
         MODO_LABEL->setText(QCoreApplication::translate("MainWindow", "Modo: IDDLE", nullptr));
+        connect_pushButton->setText(QCoreApplication::translate("MainWindow", "Connect To STM32", nullptr));
         pushButton->setText(QCoreApplication::translate("MainWindow", "MotorIsOn", nullptr));
         telemetryUdpButton->setText(QCoreApplication::translate("MainWindow", "START TEL", nullptr));
         ModeLabel_4->setText(QCoreApplication::translate("MainWindow", "Mode", nullptr));
@@ -3779,13 +3770,8 @@ public:
         cleanRxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Rx", nullptr));
         cleanInfoPushButton_2->setText(QCoreApplication::translate("MainWindow", "CLEAN Info", nullptr));
         cleanTxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Tx", nullptr));
-        yawPdQuickBox->setTitle(QCoreApplication::translate("MainWindow", "Yaw PD rapido", nullptr));
-        yawKpLabel->setText(QCoreApplication::translate("MainWindow", "KpY", nullptr));
-        yawKpEdit->setText(QCoreApplication::translate("MainWindow", "100.0", nullptr));
-        yawKdLabel->setText(QCoreApplication::translate("MainWindow", "KdY", nullptr));
-        yawKdEdit->setText(QCoreApplication::translate("MainWindow", "0.0", nullptr));
-        yawPdButton->setText(QCoreApplication::translate("MainWindow", "SET YAW PD", nullptr));
         Screen2PushButton_2->setText(QCoreApplication::translate("MainWindow", "3", nullptr));
+        Screen2PushButton_3->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
         toolBar->setWindowTitle(QCoreApplication::translate("MainWindow", "toolBar", nullptr));
     } // retranslateUi
 
