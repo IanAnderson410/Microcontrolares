@@ -12,11 +12,11 @@
 #define OBSTACLE_RIGHT_TARGET_ADC            2431U
 #define OBSTACLE_RIGHT_TARGET_MM_DEFAULT     40U
 #define OBSTACLE_FOLLOW_ALIGN_CONFIRM_TICKS  10U
-#define OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS   20U
+#define OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS   200		/*!< Si pierdo la lectura de ambos sensores al mismo tiemmpo por más de 2 segundos, paro la maniobra*/
 #define OBSTACLE_FOLLOW_IMU_STALE_MS         100U
-#define OBSTACLE_FOLLOW_YAW_LIMIT            3600.0f
-#define OBSTACLE_FOLLOW_WALL_KP_DEFAULT      8.0f
-#define OBSTACLE_FOLLOW_DISTANCE_KP_DEFAULT  0.2f
+#define OBSTACLE_FOLLOW_YAW_LIMIT            3600.0f	/*!< Límite para el Yaw. Actualmente desactivado*/
+#define OBSTACLE_FOLLOW_WALL_KP_DEFAULT      100.0f		/*!< Término proporcional del giro de posicionamiento paralelo al obstáculo*/
+#define OBSTACLE_FOLLOW_DISTANCE_KP_DEFAULT  0.2f		/*!< Término proporcional del giro ajustador de dsitacia*/
 #define OBSTACLE_FOLLOW_WALL_STEER_LIMIT     3600.0f
 #define OBSTACLE_FOLLOW_CORNER_TURN_DEG      90.0f
 #define OBSTACLE_FOLLOW_RIGHT_STEER_SIGN     -1.0f
@@ -73,6 +73,7 @@ static uint8_t obstacle_follow_motion_phase = 1;
 static uint8_t obstacle_ir_filter_ready = 0;
 static uint16_t obstacle_rear_ir_filter_state = 0;
 static float obstacle_follow_last_valid_side_steering = 0.0f;
+static uint8_t obstacle_follow_fixed_corner_active = 0U;
 
 static float ObstacleFollow_ClampFloat(float value, float limit)
 {
@@ -194,6 +195,7 @@ static void ObstacleFollow_ClearOutput(void)
     obstacle_follow_motion_phase = 1U;
     obstacle_follow_lost_count = 0;
     obstacle_follow_last_valid_side_steering = 0.0f;
+    obstacle_follow_fixed_corner_active = 0U;
 }
 
 uint8_t ObstacleFollow_Start(uint8_t side)
@@ -286,27 +288,39 @@ void ObstacleFollow_Task(void){
             break;
         }
 
-        if (front_lost) {
+        if (obstacle_follow_fixed_corner_active) {
+            if (obstacle_rear_distance_mm <= 10U) {
+                obstacle_follow_fixed_corner_active = 0U;
+            } else {
+                obstacle_follow_lost_count = 0;
+                side_steering = obstacle_follow_last_valid_side_steering;
+                target_steering += side_steering;
+                break;
+            }
+        }
+
+        if (front_lost && obstacle_rear_distance_mm > 10U) {
             if (obstacle_follow_lost_count < OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
                 obstacle_follow_lost_count++;
             }
             if (obstacle_follow_lost_count >= OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
-                ObstacleFollow_ClearOutput();
-                if (obstacle_follow_lost_turn_enabled &&
-                    TurnManeuver_StartStoredCorner(OBSTACLE_FOLLOW_CORNER_TURN_DEG) ==
-                    TURN_MANEUVER_STATUS_OK) {
-                    ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_CORNER_TURN);
-                } else {
-                    ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
-                }
+                obstacle_follow_fixed_corner_active = 1U;
+                side_steering = obstacle_follow_last_valid_side_steering;
+                target_steering += side_steering;
             }
             break;
         }
 
         if (rear_lost) {
             obstacle_follow_lost_count = 0;
-            side_steering = obstacle_follow_last_valid_side_steering;
-            target_steering += side_steering;
+            ObstacleFollow_ClearOutput();
+            if (obstacle_follow_lost_turn_enabled &&
+                TurnManeuver_StartStoredCorner(OBSTACLE_FOLLOW_CORNER_TURN_DEG) ==
+                TURN_MANEUVER_STATUS_OK) {
+                ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_CORNER_TURN);
+            } else {
+                ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
+            }
             break;
         }
         obstacle_follow_lost_count = 0;
