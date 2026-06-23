@@ -3,25 +3,28 @@
 #include "line_sensors.h"
 #include <math.h>
 
-#define OBSTACLE_REAR_ADC_INDEX              4U
-#define OBSTACLE_FRONT_ADC_INDEX             6U
-#define OBSTACLE_RIGHT_TABLE_POINTS          7U
-#define OBSTACLE_RIGHT_TOO_CLOSE_MM          30U
-#define OBSTACLE_RIGHT_TOO_FAR_MM            55U
-#define OBSTACLE_RIGHT_LOST_THRESHOLD        3600U
-#define OBSTACLE_RIGHT_TARGET_ADC            2431U
-#define OBSTACLE_RIGHT_TARGET_MM_DEFAULT     40U
-#define OBSTACLE_FOLLOW_ALIGN_CONFIRM_TICKS  10U
-#define OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS   200		/*!< Si pierdo la lectura de ambos sensores al mismo tiemmpo por más de 2 segundos, paro la maniobra*/
-#define OBSTACLE_FOLLOW_IMU_STALE_MS         100U
-#define OBSTACLE_FOLLOW_YAW_LIMIT            3600.0f	/*!< Límite para el Yaw. Actualmente desactivado*/
-#define OBSTACLE_FOLLOW_WALL_KP_DEFAULT      100.0f		/*!< Término proporcional del giro de posicionamiento paralelo al obstáculo*/
-#define OBSTACLE_FOLLOW_DISTANCE_KP_DEFAULT  0.2f		/*!< Término proporcional del giro ajustador de dsitacia*/
-#define OBSTACLE_FOLLOW_WALL_STEER_LIMIT     3600.0f
-#define OBSTACLE_FOLLOW_CORNER_TURN_DEG      90.0f
-#define OBSTACLE_FOLLOW_RIGHT_STEER_SIGN     -1.0f
-#define OBSTACLE_REAR_ADC_OFFSET_MIN         (-100000L)
+#define OBSTACLE_REAR_ADC_INDEX              		4U
+#define OBSTACLE_FRONT_ADC_INDEX             		6U
+#define OBSTACLE_RIGHT_TABLE_POINTS          		7U
+#define OBSTACLE_RIGHT_TOO_CLOSE_MM          		30U
+#define OBSTACLE_RIGHT_TOO_FAR_MM            		55U
+#define OBSTACLE_RIGHT_LOST_THRESHOLD        		3600U
+#define OBSTACLE_RIGHT_TARGET_ADC            		2431U
+#define OBSTACLE_RIGHT_TARGET_MM_DEFAULT     		50
+#define OBSTACLE_FOLLOW_ALIGN_CONFIRM_TICKS  		10
+#define OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS   		100		/*!< Si pierdo la lectura de ambos sensores al mismo tiemmpo por más de 2 segundos, paro la maniobra*/
+#define OBSTACLE_FOLLOW_CORNER_EXIT_CONFIRM_TICKS 	20
+#define OBSTACLE_FOLLOW_CORRECTION_HISTORY_SIZE 	5U
+#define OBSTACLE_FOLLOW_IMU_STALE_MS         		100U
+#define OBSTACLE_FOLLOW_YAW_LIMIT            		3600.0f	/*!< Límite para el Yaw. Actualmente desactivado*/
+#define OBSTACLE_FOLLOW_WALL_KP_DEFAULT      		90.0f		/*!< Término proporcional del giro de posicionamiento paralelo al obstáculo*/
+#define OBSTACLE_FOLLOW_DISTANCE_KP_DEFAULT  		2.0f		/*!< Término proporcional del giro ajustador de dsitacia*/
+#define OBSTACLE_FOLLOW_WALL_STEER_LIMIT     		3600.0f
+#define OBSTACLE_FOLLOW_RIGHT_STEER_SIGN     		-1.0f
+#define OBSTACLE_REAR_ADC_OFFSET_MIN         		(-100000L)
 #define OBSTACLE_REAR_ADC_OFFSET_MAX         100000L
+//no se si se utiliza, evaluare quitarlo
+#define OBSTACLE_FOLLOW_CORNER_TURN_DEG      90.0f
 
 static const uint16_t obstacle_rear_table_adc[OBSTACLE_RIGHT_TABLE_POINTS] = {
     159U, 206U, 251U, 784U, 1757U, 2138U, 2398U
@@ -74,6 +77,12 @@ static uint8_t obstacle_ir_filter_ready = 0;
 static uint16_t obstacle_rear_ir_filter_state = 0;
 static float obstacle_follow_last_valid_side_steering = 0.0f;
 static uint8_t obstacle_follow_fixed_corner_active = 0U;
+static uint8_t obstacle_follow_corner_exit_count = 0U;
+static float obstacle_follow_fixed_corner_steering = 0.0f;
+static float obstacle_follow_valid_side_steering_history[OBSTACLE_FOLLOW_CORRECTION_HISTORY_SIZE] = {0.0f};
+static float obstacle_follow_valid_side_steering_sum = 0.0f;
+static uint8_t obstacle_follow_valid_side_steering_index = 0U;
+static uint8_t obstacle_follow_valid_side_steering_count = 0U;
 
 static float ObstacleFollow_ClampFloat(float value, float limit)
 {
@@ -126,6 +135,57 @@ static uint16_t ObstacleFollow_ApplyRearAdcOffset(uint16_t filtered_adc)
     }
 
     return (uint16_t)adjusted_adc;
+}
+
+static void ObstacleFollow_ResetValidSteeringHistory(void)
+{
+    for (uint8_t i = 0U; i < OBSTACLE_FOLLOW_CORRECTION_HISTORY_SIZE; i++) {
+        obstacle_follow_valid_side_steering_history[i] = 0.0f;
+    }
+    obstacle_follow_valid_side_steering_sum = 0.0f;
+    obstacle_follow_valid_side_steering_index = 0U;
+    obstacle_follow_valid_side_steering_count = 0U;
+    obstacle_follow_last_valid_side_steering = 0.0f;
+}
+
+static void ObstacleFollow_UpdateValidSteeringHistory(float side_steering)
+{
+    if (obstacle_follow_valid_side_steering_count < OBSTACLE_FOLLOW_CORRECTION_HISTORY_SIZE) {
+        obstacle_follow_valid_side_steering_history[obstacle_follow_valid_side_steering_index] = side_steering;
+        obstacle_follow_valid_side_steering_sum += side_steering;
+        obstacle_follow_valid_side_steering_count++;
+    } else {
+        obstacle_follow_valid_side_steering_sum -=
+            obstacle_follow_valid_side_steering_history[obstacle_follow_valid_side_steering_index];
+        obstacle_follow_valid_side_steering_history[obstacle_follow_valid_side_steering_index] = side_steering;
+        obstacle_follow_valid_side_steering_sum += side_steering;
+    }
+
+    obstacle_follow_valid_side_steering_index++;
+    if (obstacle_follow_valid_side_steering_index >= OBSTACLE_FOLLOW_CORRECTION_HISTORY_SIZE) {
+        obstacle_follow_valid_side_steering_index = 0U;
+    }
+
+    if (obstacle_follow_valid_side_steering_count > 0U) {
+        obstacle_follow_last_valid_side_steering =
+            obstacle_follow_valid_side_steering_sum / (float)obstacle_follow_valid_side_steering_count;
+    }
+}
+
+static void ObstacleFollow_StartFixedCorner(void)
+{
+    float sign = 0.0f;
+    float magnitude = fabsf(obstacle_follow_last_valid_side_steering);
+
+    if (obstacle_follow_last_valid_side_steering > 0.0f) {
+        sign = 1.0f;
+    } else if (obstacle_follow_last_valid_side_steering < 0.0f) {
+        sign = -1.0f;
+    }
+
+    obstacle_follow_fixed_corner_steering = magnitude * sign;
+    obstacle_follow_fixed_corner_active = 1U;
+    obstacle_follow_corner_exit_count = 0U;
 }
 
 static void ObstacleFollow_UpdateRightSensor(void)
@@ -194,8 +254,10 @@ static void ObstacleFollow_ClearOutput(void)
     obstacle_follow_forward_phase_tick = 0;
     obstacle_follow_motion_phase = 1U;
     obstacle_follow_lost_count = 0;
-    obstacle_follow_last_valid_side_steering = 0.0f;
     obstacle_follow_fixed_corner_active = 0U;
+    obstacle_follow_corner_exit_count = 0U;
+    obstacle_follow_fixed_corner_steering = 0.0f;
+    ObstacleFollow_ResetValidSteeringHistory();
 }
 
 uint8_t ObstacleFollow_Start(uint8_t side)
@@ -289,11 +351,20 @@ void ObstacleFollow_Task(void){
         }
 
         if (obstacle_follow_fixed_corner_active) {
-            if (obstacle_rear_distance_mm <= 10U) {
+            if (obstacle_front_distance_mm <= 10U) {
+                if (obstacle_follow_corner_exit_count < OBSTACLE_FOLLOW_CORNER_EXIT_CONFIRM_TICKS) {
+                    obstacle_follow_corner_exit_count++;
+                }
+            } else {
+                obstacle_follow_corner_exit_count = 0U;
+            }
+
+            if (obstacle_follow_corner_exit_count >= OBSTACLE_FOLLOW_CORNER_EXIT_CONFIRM_TICKS) {
                 obstacle_follow_fixed_corner_active = 0U;
+                obstacle_follow_corner_exit_count = 0U;
             } else {
                 obstacle_follow_lost_count = 0;
-                side_steering = obstacle_follow_last_valid_side_steering;
+                side_steering = obstacle_follow_fixed_corner_steering;
                 target_steering += side_steering;
                 break;
             }
@@ -304,8 +375,8 @@ void ObstacleFollow_Task(void){
                 obstacle_follow_lost_count++;
             }
             if (obstacle_follow_lost_count >= OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
-                obstacle_follow_fixed_corner_active = 1U;
-                side_steering = obstacle_follow_last_valid_side_steering;
+                ObstacleFollow_StartFixedCorner();
+                side_steering = obstacle_follow_fixed_corner_steering;
                 target_steering += side_steering;
             }
             break;
@@ -330,7 +401,7 @@ void ObstacleFollow_Task(void){
         side_steering = -OBSTACLE_FOLLOW_RIGHT_STEER_SIGN *
                         proportional_correction;
         side_steering = ObstacleFollow_ClampFloat(side_steering, OBSTACLE_FOLLOW_WALL_STEER_LIMIT);
-        obstacle_follow_last_valid_side_steering = side_steering;
+        ObstacleFollow_UpdateValidSteeringHistory(side_steering);
         target_steering += side_steering;
         break;
 
