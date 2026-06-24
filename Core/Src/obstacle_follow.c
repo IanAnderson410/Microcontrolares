@@ -14,6 +14,7 @@
 #define OBSTACLE_FOLLOW_ALIGN_CONFIRM_TICKS  		10
 #define OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS   		100		/*!< Si pierdo la lectura de ambos sensores al mismo tiemmpo por más de 2 segundos, paro la maniobra*/
 #define OBSTACLE_FOLLOW_CORNER_EXIT_CONFIRM_TICKS 	20
+#define OBSTACLE_FOLLOW_LINE_REACQUIRE_CONFIRM_TICKS 5U
 #define OBSTACLE_FOLLOW_CORRECTION_HISTORY_SIZE 	5U
 #define OBSTACLE_FOLLOW_IMU_STALE_MS         		100U
 #define OBSTACLE_FOLLOW_YAW_LIMIT            		3600.0f	/*!< Límite para el Yaw. Actualmente desactivado*/
@@ -25,6 +26,7 @@
 #define OBSTACLE_REAR_ADC_OFFSET_MAX         100000L
 //no se si se utiliza, evaluare quitarlo
 #define OBSTACLE_FOLLOW_CORNER_TURN_DEG      90.0f
+#define OBSTACLE_FOLLOW_LINE_EXIT_TURN_DEG   30.0f
 
 static const uint16_t obstacle_rear_table_adc[OBSTACLE_RIGHT_TABLE_POINTS] = {
     159U, 206U, 251U, 784U, 1757U, 2138U, 2398U
@@ -83,6 +85,9 @@ static float obstacle_follow_valid_side_steering_history[OBSTACLE_FOLLOW_CORRECT
 static float obstacle_follow_valid_side_steering_sum = 0.0f;
 static uint8_t obstacle_follow_valid_side_steering_index = 0U;
 static uint8_t obstacle_follow_valid_side_steering_count = 0U;
+static uint8_t obstacle_follow_line_reacquire_count = 0U;
+static uint8_t obstacle_follow_line_reacquire_armed = 0U;
+static uint8_t obstacle_follow_line_exit_turn_active = 0U;
 
 static float ObstacleFollow_ClampFloat(float value, float limit)
 {
@@ -257,6 +262,7 @@ static void ObstacleFollow_ClearOutput(void)
     obstacle_follow_fixed_corner_active = 0U;
     obstacle_follow_corner_exit_count = 0U;
     obstacle_follow_fixed_corner_steering = 0.0f;
+    obstacle_follow_line_reacquire_count = 0U;
     ObstacleFollow_ResetValidSteeringHistory();
 }
 
@@ -265,7 +271,9 @@ uint8_t ObstacleFollow_Start(uint8_t side)
     if (side != OBSTACLE_FOLLOW_SIDE_RIGHT) {
         return OBSTACLE_FOLLOW_STATUS_RANGE;
     }
-    if ((currentMode != CONTROL_MODE_RC && currentMode != CONTROL_MODE_OBSTACLE_FOLLOW) ||
+    if ((currentMode != CONTROL_MODE_RC &&
+         currentMode != CONTROL_MODE_OBSTACLE_FOLLOW &&
+         currentMode != CONTROL_MODE_FL_CIRCLE_ALIGN) ||
         turn_maneuver_active) {
         return OBSTACLE_FOLLOW_STATUS_MODE;
     }
@@ -277,6 +285,8 @@ uint8_t ObstacleFollow_Start(uint8_t side)
     RC_setpoint = 0.0f;
     RC_steering = 0;
     ObstacleFollow_ClearOutput();
+    obstacle_follow_line_reacquire_armed = AIRAB ? 0U : 1U;
+    obstacle_follow_line_exit_turn_active = 0U;
     ObstacleFollow_UpdateRightSensor();
     obstacle_follow_yaw_reference = angle_yaw;
     ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
@@ -340,13 +350,35 @@ void ObstacleFollow_Task(void){
         break;
 
     case OBSTACLE_FOLLOW_STATE_FACE_FOLLOW:
-        if (front_lost && rear_lost) {
-            if (obstacle_follow_lost_count < OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
-                obstacle_follow_lost_count++;
+        if (!obstacle_follow_line_reacquire_armed) {
+            obstacle_follow_line_reacquire_armed = AIRAB ? 0U : 1U;
+            obstacle_follow_line_reacquire_count = 0U;
+        } else if (AIRAB) {
+            if (obstacle_follow_line_reacquire_count < OBSTACLE_FOLLOW_LINE_REACQUIRE_CONFIRM_TICKS) {
+                obstacle_follow_line_reacquire_count++;
             }
-            if (obstacle_follow_lost_count >= OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
+        } else {
+            obstacle_follow_line_reacquire_count = 0U;
+        }
+
+        if (obstacle_follow_line_reacquire_count >= OBSTACLE_FOLLOW_LINE_REACQUIRE_CONFIRM_TICKS) {
+            obstacle_follow_line_reacquire_count = 0U;
+            obstacle_follow_steering = 0;
+            obstacle_follow_side_steering = 0;
+            obstacle_follow_setpoint = 0.0f;
+            if (TurnManeuver_Start(OBSTACLE_FOLLOW_LINE_EXIT_TURN_DEG,
+                                   TURN_MANEUVER_MODE_TWO_WHEELS,
+                                   TURN_MANEUVER_WHEEL_RIGHT) == TURN_MANEUVER_STATUS_OK) {
+                obstacle_follow_line_exit_turn_active = 1U;
+                ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_CORNER_TURN);
+            } else {
                 ObstacleFollow_Stop();
+                currentMode = CONTROL_MODE_FL_BUSQUEDA_INICIAL;
             }
+            break;
+        }
+
+        if (front_lost && rear_lost) {
             break;
         }
 
@@ -411,10 +443,15 @@ void ObstacleFollow_Task(void){
             obstacle_follow_side_steering = 0;
             return;
         }
+        if (obstacle_follow_line_exit_turn_active) {
+            obstacle_follow_line_exit_turn_active = 0U;
+            ObstacleFollow_Stop();
+            currentMode = CONTROL_MODE_FL_BUSQUEDA_INICIAL;
+            return;
+        }
         ObstacleFollow_ClearOutput();
         ObstacleFollow_SetState(OBSTACLE_FOLLOW_STATE_FACE_ALIGN);
         break;
-
     case OBSTACLE_FOLLOW_STATE_IDLE:
     default:
         ObstacleFollow_Stop();

@@ -1,8 +1,16 @@
 #include "control_systems.h"
 #include "line_sensors.h"
+#include "obstacle_follow.h"
 #include <math.h>
 
 #define FL_RECOVERY_STEERING         700
+#define FL_CIRCLE_FRONT_ADC_INDEX    5U
+#define FL_CIRCLE_REAR_ADC_INDEX     4U
+#define FL_CIRCLE_FRONT_RIGHT_ADC_INDEX 6U
+#define FL_CIRCLE_FRONT_THRESHOLD    300U	//IR FRONTAL
+#define FL_CIRCLE_SIDE_THRESHOLD     2900U
+#define FL_CIRCLE_CONFIRM_TICKS      5U
+#define FL_CIRCLE_ALIGN_STEERING     -450
 #define ACCEL_RUNAWAY_WINDOW_CYCLES  10U
 #define ACCEL_RUNAWAY_SAFE_CENTER    550.0f
 #define TURN_MANEUVER_MIN_ANGLE_DEG  1.0f
@@ -234,6 +242,7 @@ void PID_PITCH(void)
 
     case CONTROL_MODE_FL_RESCATE:
     case CONTROL_MODE_FL_INGRESO_A_90:
+    case CONTROL_MODE_FL_CIRCLE_ALIGN:
         rc_phase_tick = 0U;
         rc_motion_phase = 1U;
         target_setpoint = setpoint;
@@ -402,15 +411,59 @@ void FollowLine_Task(void)
 {
     static float fl_steering_slow = 0.0f;
     static int8_t last_line_dir = 1;
+    static uint8_t circle_front_confirm_count = 0U;
+    static uint8_t circle_side_confirm_count = 0U;
     float target_steering = 0.0f;
 
+    if (currentMode == CONTROL_MODE_FL_CIRCLE_ALIGN) {
+        circle_front_confirm_count = 0U;
+        fl_steering_slow = (float)FL_CIRCLE_ALIGN_STEERING;
+        FL_steering = FL_CIRCLE_ALIGN_STEERING;
+
+        if (adc_buffer[FL_CIRCLE_FRONT_RIGHT_ADC_INDEX] <= FL_CIRCLE_SIDE_THRESHOLD &&
+            adc_buffer[FL_CIRCLE_REAR_ADC_INDEX] <= FL_CIRCLE_SIDE_THRESHOLD) {
+            if (circle_side_confirm_count < FL_CIRCLE_CONFIRM_TICKS) {
+                circle_side_confirm_count++;
+            }
+        } else {
+            circle_side_confirm_count = 0U;
+        }
+
+        if (circle_side_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
+            circle_side_confirm_count = 0U;
+            FL_steering = 0;
+            fl_steering_slow = 0.0f;
+            (void)ObstacleFollow_Start(OBSTACLE_FOLLOW_SIDE_RIGHT);
+        }
+        return;
+    }
+
     if (currentMode < CONTROL_MODE_FL_INICIO ||
-        currentMode > CONTROL_MODE_FL_INGRESO_A_90 ||
+        currentMode > CONTROL_MODE_FL_CIRCLE_ALIGN ||
         currentMode == CONTROL_MODE_FL_INICIO ||
         currentMode == CONTROL_MODE_OBSTACLE_FOLLOW ||
         flag_calibrando_linea) {
         FL_steering = 0;
         fl_steering_slow = 0.0f;
+        circle_front_confirm_count = 0U;
+        circle_side_confirm_count = 0U;
+        return;
+    }
+
+    if (adc_buffer[FL_CIRCLE_FRONT_ADC_INDEX] < FL_CIRCLE_FRONT_THRESHOLD) {
+        if (circle_front_confirm_count < FL_CIRCLE_CONFIRM_TICKS) {
+            circle_front_confirm_count++;
+        }
+    } else {
+        circle_front_confirm_count = 0U;
+    }
+
+    if (circle_front_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
+        circle_front_confirm_count = 0U;
+        circle_side_confirm_count = 0U;
+        fl_steering_slow = (float)FL_CIRCLE_ALIGN_STEERING;
+        FL_steering = FL_CIRCLE_ALIGN_STEERING;
+        currentMode = CONTROL_MODE_FL_CIRCLE_ALIGN;
         return;
     }
 
@@ -424,6 +477,7 @@ void FollowLine_Task(void)
     } else {
         target_steering = (float)(last_line_dir * FL_RECOVERY_STEERING);
     }
+    target_steering = -target_steering;
 
     float delta_steering = target_steering - fl_steering_slow;
 
@@ -639,7 +693,8 @@ void TurnManeuver_Task(void)
         turn_maneuver_error_filtered = 0.0f;
     }
 
-    if ((uint32_t)(now - turn_maneuver_start_tick) > TURN_MANEUVER_TIMEOUT_MS) {
+    if (currentMode != CONTROL_MODE_OBSTACLE_FOLLOW &&
+        (uint32_t)(now - turn_maneuver_start_tick) > TURN_MANEUVER_TIMEOUT_MS) {
         TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_TIMEOUT);
         return;
     }
