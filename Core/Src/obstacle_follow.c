@@ -330,7 +330,7 @@ void ObstacleFollow_Task(void){
         ObstacleFollow_Stop();
         return;
     }
-    if (!flagMotorsAreOn||imu_last_update_tick == 0U||(uint32_t)(now - imu_last_update_tick) > OBSTACLE_FOLLOW_IMU_STALE_MS){
+    if (!flagMotorsAreOn){
         ObstacleFollow_ClearOutput();
         return;
     }
@@ -403,14 +403,6 @@ void ObstacleFollow_Task(void){
         }
 
         if (front_lost && obstacle_rear_distance_mm > 10U) {
-            if (obstacle_follow_lost_count < OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
-                obstacle_follow_lost_count++;
-            }
-            if (obstacle_follow_lost_count >= OBSTACLE_FOLLOW_LOST_CONFIRM_TICKS) {
-                ObstacleFollow_StartFixedCorner();
-                side_steering = obstacle_follow_fixed_corner_steering;
-                target_steering += side_steering;
-            }
             break;
         }
 

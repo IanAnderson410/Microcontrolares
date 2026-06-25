@@ -277,7 +277,7 @@ static uint8_t ir_right_log_session_id = 0U;
 			float 			Ki = 800.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
 			float 			Kd = 3.8f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float			integral_limit = 1600.0f;
-			float 			setpoint = 0.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
+			float 			setpoint = 4.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 
 			float 			setpointDeEquilibrio = 0.1f;	// Esta variable sirve?
 			float 			integral = 0;

@@ -7,7 +7,7 @@
 #define FL_CIRCLE_FRONT_ADC_INDEX    5U
 #define FL_CIRCLE_REAR_ADC_INDEX     4U
 #define FL_CIRCLE_FRONT_RIGHT_ADC_INDEX 6U
-#define FL_CIRCLE_FRONT_THRESHOLD    300U	//IR FRONTAL
+#define FL_CIRCLE_FRONT_THRESHOLD    2500U	//IR FRONTAL
 #define FL_CIRCLE_SIDE_THRESHOLD     2900U
 #define FL_CIRCLE_CONFIRM_TICKS      5U
 #define FL_CIRCLE_ALIGN_STEERING     -450
@@ -80,6 +80,22 @@ static uint8_t accel_runaway_cycle_count = 0U;
 static float accel_runaway_prev_mean = 0.0f;
 static int8_t accel_runaway_last_delta_sign = 0;
 static uint8_t accel_runaway_has_prev_mean = 0U;
+static float fl_steering_slow = 0.0f;
+static int8_t fl_last_line_dir = 1;
+static uint8_t fl_circle_front_confirm_count = 0U;
+static uint8_t fl_circle_side_confirm_count = 0U;
+static float fl_error_linea_filtrado = 0.0f;
+
+static void FollowLine_ResetStateInternal(void)
+{
+    FL_steering = 0;
+    fl_steering_slow = 0.0f;
+    fl_last_line_dir = 1;
+    fl_circle_front_confirm_count = 0U;
+    fl_circle_side_confirm_count = 0U;
+    fl_error_linea_filtrado = 0.0f;
+    last_error_yaw = 0.0f;
+}
 
 static float clamp_float(float value, float limit)
 {
@@ -409,30 +425,24 @@ void PID_PITCH(void)
 
 void FollowLine_Task(void)
 {
-    static float fl_steering_slow = 0.0f;
-    static int8_t last_line_dir = 1;
-    static uint8_t circle_front_confirm_count = 0U;
-    static uint8_t circle_side_confirm_count = 0U;
     float target_steering = 0.0f;
 
     if (currentMode == CONTROL_MODE_FL_CIRCLE_ALIGN) {
-        circle_front_confirm_count = 0U;
+        fl_circle_front_confirm_count = 0U;
         fl_steering_slow = (float)FL_CIRCLE_ALIGN_STEERING;
         FL_steering = FL_CIRCLE_ALIGN_STEERING;
 
         if (adc_buffer[FL_CIRCLE_FRONT_RIGHT_ADC_INDEX] <= FL_CIRCLE_SIDE_THRESHOLD &&
             adc_buffer[FL_CIRCLE_REAR_ADC_INDEX] <= FL_CIRCLE_SIDE_THRESHOLD) {
-            if (circle_side_confirm_count < FL_CIRCLE_CONFIRM_TICKS) {
-                circle_side_confirm_count++;
+            if (fl_circle_side_confirm_count < FL_CIRCLE_CONFIRM_TICKS) {
+                fl_circle_side_confirm_count++;
             }
         } else {
-            circle_side_confirm_count = 0U;
+            fl_circle_side_confirm_count = 0U;
         }
 
-        if (circle_side_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
-            circle_side_confirm_count = 0U;
-            FL_steering = 0;
-            fl_steering_slow = 0.0f;
+        if (fl_circle_side_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
+            FollowLine_ResetStateInternal();
             (void)ObstacleFollow_Start(OBSTACLE_FOLLOW_SIDE_RIGHT);
         }
         return;
@@ -443,24 +453,20 @@ void FollowLine_Task(void)
         currentMode == CONTROL_MODE_FL_INICIO ||
         currentMode == CONTROL_MODE_OBSTACLE_FOLLOW ||
         flag_calibrando_linea) {
-        FL_steering = 0;
-        fl_steering_slow = 0.0f;
-        circle_front_confirm_count = 0U;
-        circle_side_confirm_count = 0U;
+        FollowLine_ResetStateInternal();
         return;
     }
 
     if (adc_buffer[FL_CIRCLE_FRONT_ADC_INDEX] < FL_CIRCLE_FRONT_THRESHOLD) {
-        if (circle_front_confirm_count < FL_CIRCLE_CONFIRM_TICKS) {
-            circle_front_confirm_count++;
+        if (fl_circle_front_confirm_count < FL_CIRCLE_CONFIRM_TICKS) {
+            fl_circle_front_confirm_count++;
         }
     } else {
-        circle_front_confirm_count = 0U;
+        fl_circle_front_confirm_count = 0U;
     }
 
-    if (circle_front_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
-        circle_front_confirm_count = 0U;
-        circle_side_confirm_count = 0U;
+    if (fl_circle_front_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
+        FollowLine_ResetStateInternal();
         fl_steering_slow = (float)FL_CIRCLE_ALIGN_STEERING;
         FL_steering = FL_CIRCLE_ALIGN_STEERING;
         currentMode = CONTROL_MODE_FL_CIRCLE_ALIGN;
@@ -469,13 +475,13 @@ void FollowLine_Task(void)
 
     if (AIRAB) {
         if (error_linea > 0.05f) {
-            last_line_dir = 1;
+            fl_last_line_dir = 1;
         } else if (error_linea < -0.05f) {
-            last_line_dir = -1;
+            fl_last_line_dir = -1;
         }
         target_steering = (float)Calcular_PID_YAW(error_linea);
     } else {
-        target_steering = (float)(last_line_dir * FL_RECOVERY_STEERING);
+        target_steering = (float)(fl_last_line_dir * FL_RECOVERY_STEERING);
     }
     target_steering = -target_steering;
 
@@ -500,14 +506,12 @@ void FollowLine_Task(void)
 
 int16_t Calcular_PID_YAW(float error_linea)
 {
-    static float error_linea_filtrado = 0.0f;
-
-    error_linea_filtrado = (yaw_error_filter_alpha * error_linea_filtrado) +
+    fl_error_linea_filtrado = (yaw_error_filter_alpha * fl_error_linea_filtrado) +
                            ((1.0f - yaw_error_filter_alpha) * error_linea);
 
-    float P_yaw = Kp_yaw * error_linea_filtrado;
+    float P_yaw = Kp_yaw * fl_error_linea_filtrado;
     float D_yaw = -Kd_yaw * giro_z;
-    last_error_yaw = error_linea_filtrado;
+    last_error_yaw = fl_error_linea_filtrado;
 
     return (int16_t)(P_yaw + D_yaw);
 }
@@ -541,8 +545,9 @@ static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
         return TURN_MANEUVER_STATUS_MODE;
     }
 
-    if (imu_last_update_tick == 0U ||
-        (uint32_t)(now - imu_last_update_tick) > TURN_MANEUVER_IMU_STALE_MS) {
+    if (currentMode != CONTROL_MODE_OBSTACLE_FOLLOW &&
+        (imu_last_update_tick == 0U ||
+         (uint32_t)(now - imu_last_update_tick) > TURN_MANEUVER_IMU_STALE_MS)) {
         return TURN_MANEUVER_STATUS_SENSOR;
     }
 
@@ -666,8 +671,9 @@ void TurnManeuver_Task(void)
                                       TURN_MANEUVER_EXIT_MODE_CHANGE);
         return;
     }
-    if (imu_last_update_tick == 0U ||
-        (uint32_t)(now - imu_last_update_tick) > TURN_MANEUVER_IMU_STALE_MS) {
+    if (currentMode != CONTROL_MODE_OBSTACLE_FOLLOW &&
+        (imu_last_update_tick == 0U ||
+         (uint32_t)(now - imu_last_update_tick) > TURN_MANEUVER_IMU_STALE_MS)) {
         TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_IMU_STALE);
         Control_SetMotorsEnabled(0U);
         return;
