@@ -207,6 +207,12 @@ enum {
     IR_RIGHT_LOG_TX_PENDING,
     IR_RIGHT_LOG_TRANSMITTING
 };
+
+enum {
+    MPU_DMA_IDLE = 0,
+    MPU_DMA_BUSY,
+    MPU_DMA_ERROR
+};
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -224,6 +230,8 @@ enum {
 #define     IR_RIGHT_LOG_DONE_REPEATS  5U
 #define     IR_RIGHT_LOG_FRONT_ADC_INDEX 6U
 #define     IR_RIGHT_LOG_REAR_ADC_INDEX  4U
+#define     MPU6050_RX_BUFFER_SIZE       14U
+#define     MPU6050_DATA_START_REG       0x3B
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		        64
 #define     ESP01_RX_DMA_SIZE          256
@@ -324,8 +332,16 @@ volatile 	uint8_t 	flag_calibrando_linea = 0; // Para saber en qué estado estam
 			float 			gyro_bias_y ;
 			float 			gyro_bias_z ;
 // =================[ Buffers de Sensores ] =================//
-			uint8_t			mpu_data[14]; // Los 14 bytes que trae el DMA
+			uint8_t			mpu_data[MPU6050_RX_BUFFER_SIZE]; // Los 14 bytes que trae el DMA
+static uint8_t              mpu_ready_data[MPU6050_RX_BUFFER_SIZE];
 volatile 	uint16_t 		adc_buffer[8]; // El buffer que llena el DMA
+static volatile uint8_t mpu_dma_state = MPU_DMA_IDLE;
+static volatile uint8_t mpu_sample_ready = 0U;
+static volatile uint32_t mpu_dma_start_count = 0U;
+static volatile uint32_t mpu_dma_ready_count = 0U;
+static volatile uint32_t mpu_dma_busy_count = 0U;
+static volatile uint32_t mpu_dma_error_count = 0U;
+static volatile uint32_t mpu_dma_stale_cycles = 0U;
 // =================[ Modo Radio Control ] =================//
 volatile 	float 			RC_setpoint 			= 0;
 volatile 	int16_t   		RC_steering = 0;
@@ -463,6 +479,9 @@ void screenScheduler(void);
 void KEY_CalibrationTask(void);
 void OLED_RequestUpdate(void);
 void OLED_Service(void);
+static void MPU6050_ParseSample(const uint8_t *buffer);
+static uint8_t MPU6050_ConsumeReadDMA(void);
+static void MPU6050_StartReadDMA(void);
 static uint8_t AccelLog_Start(void);
 static void AccelLog_RecordSample(void);
 static void AccelLog_ServiceTx(void);
@@ -479,12 +498,11 @@ static void AccelLog_ServiceTx(void);
  */
 void Telemetry_UpdateMPU(void)
 {
-    uint8_t buffer[14];
+    (void)MPU6050_ConsumeReadDMA();
+}
 
-    if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, 0x3B, 1, buffer, sizeof(buffer), 2) != HAL_OK) {
-        return;
-    }
-
+static void MPU6050_ParseSample(const uint8_t *buffer)
+{
     axRaw = (int16_t)((buffer[0] << 8) | buffer[1]);
     ayRaw = (int16_t)((buffer[2] << 8) | buffer[3]);
     azRaw = (int16_t)((buffer[4] << 8) | buffer[5]);
@@ -509,6 +527,70 @@ void Telemetry_UpdateMPU(void)
     accely = ayRaw;
     accelz = azRaw;
     imu_last_update_tick = HAL_GetTick();
+}
+
+static uint8_t MPU6050_ConsumeReadDMA(void)
+{
+    uint8_t snapshot[MPU6050_RX_BUFFER_SIZE];
+    uint8_t has_sample = 0U;
+
+    __disable_irq();
+    if (mpu_sample_ready) {
+        memcpy(snapshot, mpu_ready_data, MPU6050_RX_BUFFER_SIZE);
+        mpu_sample_ready = 0U;
+        has_sample = 1U;
+    }
+    __enable_irq();
+
+    if (!has_sample) {
+        mpu_dma_stale_cycles++;
+        return 0U;
+    }
+
+    MPU6050_ParseSample(snapshot);
+    return 1U;
+}
+
+static void MPU6050_StartReadDMA(void)
+{
+    HAL_StatusTypeDef status;
+
+    if (mpu_dma_state == MPU_DMA_ERROR) {
+        mpu_dma_state = MPU_DMA_IDLE;
+    }
+
+    if (mpu_dma_state != MPU_DMA_IDLE) {
+        mpu_dma_busy_count++;
+        return;
+    }
+
+    if (oled_is_busy ||
+        HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY ||
+        __HAL_I2C_GET_FLAG(&hi2c1, I2C_FLAG_BUSY) != RESET) {
+        mpu_dma_busy_count++;
+        return;
+    }
+
+    mpu_dma_state = MPU_DMA_BUSY;
+    status = HAL_I2C_Mem_Read_DMA(&hi2c1,
+                                  MPU6050_ADDR,
+                                  MPU6050_DATA_START_REG,
+                                  I2C_MEMADD_SIZE_8BIT,
+                                  mpu_data,
+                                  MPU6050_RX_BUFFER_SIZE);
+
+    if (status == HAL_OK) {
+        mpu_dma_start_count++;
+        return;
+    }
+
+    if (status == HAL_BUSY) {
+        mpu_dma_busy_count++;
+        mpu_dma_state = MPU_DMA_IDLE;
+    } else {
+        mpu_dma_error_count++;
+        mpu_dma_state = MPU_DMA_ERROR;
+    }
 }
 
 static uint8_t AccelLog_Start(void)
@@ -2103,13 +2185,30 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
     }
 }
 
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    if (hi2c->Instance == I2C1 && mpu_dma_state == MPU_DMA_BUSY) {
+        memcpy(mpu_ready_data, mpu_data, MPU6050_RX_BUFFER_SIZE);
+        mpu_sample_ready = 1U;
+        mpu_dma_ready_count++;
+        mpu_dma_state = MPU_DMA_IDLE;
+    }
+}
+
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
 {
-    if (hi2c->Instance == I2C1 && oled_is_busy) {
-        oled_i2c_errors++;
-        oled_is_busy = 0;
-        oled_current_page = 0;
-        oled_update_requested = 0;
+    if (hi2c->Instance == I2C1) {
+        if (mpu_dma_state == MPU_DMA_BUSY) {
+            mpu_dma_error_count++;
+            mpu_dma_state = MPU_DMA_ERROR;
+        }
+
+        if (oled_is_busy) {
+            oled_i2c_errors++;
+            oled_is_busy = 0;
+            oled_current_page = 0;
+            oled_update_requested = 0;
+        }
     }
 }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
@@ -2222,22 +2321,27 @@ int main(void)
 	  	static uint32_t last_ir_update = 0;
 	  	static uint8_t last_motors_are_on = 0;
 		uint32_t now = HAL_GetTick();
+		uint8_t run_control = 0;
+
+		if (flag10ms) {
+			flag10ms = 0;
+			run_control = 1U;
+			MPU6050_StartReadDMA();
+		}
 
 		if (flagMotorsAreOn != last_motors_are_on) {
 			PID_PITCH_ResetState();
 			last_motors_are_on = flagMotorsAreOn;
 		}
 
-		if (((now - last_ir_update) >= 1U) || flag10ms) {
+		if (((now - last_ir_update) >= 1U) || run_control) {
 			last_ir_update = now;
 			Filtrar_Sensores_IR();
 			ObstacleSensor_Task();
 			Leer_Linea_Digital();
 			if (flag_calibrando_linea){	Procesar_Calibracion_Linea();}
 		}
-		if(flag10ms){
-			flag10ms = 0;
-			Telemetry_UpdateMPU();
+		if(run_control){
 			if (!flag_calibrando_linea) {
 				ObstacleFollow_Task();
 				IrRightLog_RecordSample();
@@ -2249,6 +2353,7 @@ int main(void)
 				}
 				TurnManeuver_Task();
 			}
+			Telemetry_UpdateMPU();
 			PID_PITCH();
 			AccelLog_RecordSample();
 			control_slots_serviced++;
