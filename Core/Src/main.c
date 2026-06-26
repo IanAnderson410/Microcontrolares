@@ -234,6 +234,7 @@ enum {
 #define     MPU6050_DATA_START_REG       0x3B
 #define     CONTROL_LOOP_PERIOD_MS       10U
 #define     OLED_I2C_GUARD_MS            4U
+#define     OLED_SCREEN_REFRESH_MS       50U
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		        64
 #define     ESP01_RX_DMA_SIZE          256
@@ -904,19 +905,24 @@ void screenScheduler(void){
     	break;
     case 1:		// Pantalla de depuracion de la comuniacación inalambrica
     	SSD1306_GotoXY(0, 10);
-		SSD1306_Puts("WIRELESS", &Font_7x10, SSD1306_COLOR_WHITE);
+		snprintf(msg, sizeof(msg), "OF%04lu OE%04lu", (unsigned long)(oled_frames_done % 10000U),
+				 (unsigned long)(oled_i2c_errors % 10000U));
+		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 		SSD1306_GotoXY(0, 20);
-		snprintf(msg, sizeof(msg), "IP:%s", ip_address);
+		snprintf(msg, sizeof(msg), "OB%04lu OP%04lu", (unsigned long)(oled_busy_skips % 10000U),
+				 (unsigned long)(oled_pages_sent % 10000U));
 		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 		SSD1306_GotoXY(0, 30);
-		snprintf(msg, sizeof(msg), "W:%d U:%u/%u", flagWIFI, ESP.udp_connected, ESP.udp_started);
+		snprintf(msg, sizeof(msg), "CM%04lu CS%04lu", (unsigned long)(control_missed_slots % 10000U),
+				 (unsigned long)(control_slots_serviced % 10000U));
 		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 		SSD1306_GotoXY(0, 40);
-		snprintf(msg, sizeof(msg), "TX:%lu RX:%lu", (unsigned long)esp01_tx_count, (unsigned long)esp01_rx_count);
+		snprintf(msg, sizeof(msg), "MS%04lu MB%04lu", (unsigned long)(mpu_dma_stale_cycles % 10000U),
+				 (unsigned long)(mpu_dma_busy_count % 10000U));
 		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 		SSD1306_GotoXY(0, 50);
-		snprintf(msg, sizeof(msg), "P:%lu A:%lu B:%lu", (unsigned long)esp01_payload_count,
-				 (unsigned long)esp01_ack_count, (unsigned long)uner_tx_busy_count);
+		snprintf(msg, sizeof(msg), "MR%04lu ME%04lu", (unsigned long)(mpu_dma_ready_count % 10000U),
+				 (unsigned long)(mpu_dma_error_count % 10000U));
 		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 		OLED_RequestUpdate();
 		break;
@@ -2376,7 +2382,7 @@ int main(void)
 		UNER_Tx_Task();
 		AccelLog_ServiceTx();
 		IrRightLog_ServiceTx();
-		if((now - last_oled_update)>=500){last_oled_update = now;screenScheduler();	}
+		if((now - last_oled_update)>=OLED_SCREEN_REFRESH_MS){last_oled_update = now;screenScheduler();	}
 		OLED_Service();
 		ESP01_Generic_Functions(now);
 		ESP01_Task();
