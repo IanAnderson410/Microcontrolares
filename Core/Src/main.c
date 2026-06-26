@@ -232,6 +232,8 @@ enum {
 #define     IR_RIGHT_LOG_REAR_ADC_INDEX  4U
 #define     MPU6050_RX_BUFFER_SIZE       14U
 #define     MPU6050_DATA_START_REG       0x3B
+#define     CONTROL_LOOP_PERIOD_MS       10U
+#define     OLED_I2C_GUARD_MS            4U
 // ================= [ Comunicación ] ================= //
 #define 	RX_BUFFER_SIZE 		        64
 #define     ESP01_RX_DMA_SIZE          256
@@ -255,6 +257,7 @@ volatile    uint8_t			flag10ms  				=	0;
 volatile 	uint32_t 		counterHB=0;				/*!< Utilizado en la interrupción del Timer 4 para manejar el HeartBit*/
 volatile 	uint32_t 		control_missed_slots = 0;
 volatile 	uint32_t 		control_slots_serviced = 0;
+volatile    uint32_t        control_last_tick = 0;
 static AccelLogSample_t accel_log_buffer[ACCEL_LOG_SAMPLE_COUNT];
 static volatile uint8_t accel_log_state = ACCEL_LOG_IDLE;
 static uint16_t accel_log_write_index = 0U;
@@ -1369,11 +1372,18 @@ void OLED_RequestUpdate(void)
 
 void OLED_Service(void)
 {
+    uint32_t now = HAL_GetTick();
+
     if (!esp01_oled_ready || !oled_updates_enabled || !oled_update_requested || oled_is_busy || flag10ms) {
         return;
     }
 
-    if (HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY) {
+    if ((uint32_t)(now - control_last_tick) >= (CONTROL_LOOP_PERIOD_MS - OLED_I2C_GUARD_MS)) {
+        return;
+    }
+
+    if (HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY ||
+        __HAL_I2C_GET_FLAG(&hi2c1, I2C_FLAG_BUSY) != RESET) {
         return;
     }
 
@@ -2326,6 +2336,7 @@ int main(void)
 		if (flag10ms) {
 			flag10ms = 0;
 			run_control = 1U;
+			control_last_tick = now;
 			MPU6050_StartReadDMA();
 		}
 
@@ -2357,7 +2368,6 @@ int main(void)
 			PID_PITCH();
 			AccelLog_RecordSample();
 			control_slots_serviced++;
-			OLED_Service();
 		}
 
 	  	ESP01_App_Task();
@@ -2367,6 +2377,7 @@ int main(void)
 		AccelLog_ServiceTx();
 		IrRightLog_ServiceTx();
 		if((now - last_oled_update)>=500){last_oled_update = now;screenScheduler();	}
+		OLED_Service();
 		ESP01_Generic_Functions(now);
 		ESP01_Task();
   }
