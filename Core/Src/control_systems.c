@@ -11,6 +11,14 @@
 #define FL_CIRCLE_SIDE_THRESHOLD     2900U
 #define FL_CIRCLE_CONFIRM_TICKS      5U
 #define FL_CIRCLE_ALIGN_STEERING     -450
+#define FL_ENTRY_CONFIRM_TICKS       2U
+#define FL_ENTRY_STABILIZE_MS        500U
+#define FL_ENTRY_TURN_DEG            90.0f
+#define FL_ENTRY_TURN_TOLERANCE_DEG  7.0f
+#define FL_ENTRY_TURN_TIMEOUT_MS     2500U
+#define FL_ENTRY_ALIGN_TICKS         3U
+#define FL_ENTRY_ALIGN_TIMEOUT_MS    300U
+#define FL_ENTRY_LINE_MIN_TURN_DEG   45.0f
 #define ACCEL_RUNAWAY_WINDOW_CYCLES  10U
 #define ACCEL_RUNAWAY_SAFE_CENTER    550.0f
 #define TURN_MANEUVER_MIN_ANGLE_DEG  1.0f
@@ -21,6 +29,13 @@
 #define TURN_MANEUVER_YAW_BOOST      1000.0f
 #define TURN_MANEUVER_SETTLE_MS      300U
 #define ARC_MANEUVER_FORWARD_RATIO   0.50f
+
+typedef enum {
+    LINE_FOLLOW_NORMAL = 0,
+    LINE_ENTRY_STABILIZE,
+    LINE_ENTRY_TURN_LEFT_90,
+    LINE_ENTRY_ALIGN
+} LineFollowEntryState_t;
 
 volatile uint8_t turn_maneuver_active = 0;
 volatile uint8_t turn_maneuver_state = TURN_MANEUVER_STATE_IDLE;
@@ -85,6 +100,13 @@ static int8_t fl_last_line_dir = 1;
 static uint8_t fl_circle_front_confirm_count = 0U;
 static uint8_t fl_circle_side_confirm_count = 0U;
 static float fl_error_linea_filtrado = 0.0f;
+static LineFollowEntryState_t fl_entry_state = LINE_FOLLOW_NORMAL;
+static uint8_t fl_entry_confirm_count = 0U;
+static uint8_t fl_entry_align_count = 0U;
+static uint32_t fl_entry_state_tick = 0U;
+static uint32_t fl_entry_turn_start_tick = 0U;
+static float fl_entry_start_yaw_deg = 0.0f;
+static float fl_entry_steering_slow = 0.0f;
 
 static void FollowLine_ResetStateInternal(void)
 {
@@ -95,6 +117,33 @@ static void FollowLine_ResetStateInternal(void)
     fl_circle_side_confirm_count = 0U;
     fl_error_linea_filtrado = 0.0f;
     last_error_yaw = 0.0f;
+}
+
+static void FollowLine_ResetEntryState(void)
+{
+    fl_entry_state = LINE_FOLLOW_NORMAL;
+    fl_entry_confirm_count = 0U;
+    fl_entry_align_count = 0U;
+    fl_entry_state_tick = 0U;
+    fl_entry_turn_start_tick = 0U;
+    fl_entry_start_yaw_deg = 0.0f;
+    fl_entry_steering_slow = 0.0f;
+}
+
+static uint8_t FollowLine_BlackSensorCount(void)
+{
+    return (uint8_t)(estado_sensores[0] +
+                     estado_sensores[1] +
+                     estado_sensores[2] +
+                     estado_sensores[3]);
+}
+
+static uint8_t FollowLine_IsAlignedOnLine(void)
+{
+    uint8_t center_on_line = (estado_sensores[1] || estado_sensores[2]) ? 1U : 0U;
+    uint8_t all_black = IRCSAAB ? 1U : 0U;
+
+    return (center_on_line && !all_black) ? 1U : 0U;
 }
 
 static float clamp_float(float value, float limit)
@@ -426,8 +475,10 @@ void PID_PITCH(void)
 void FollowLine_Task(void)
 {
     float target_steering = 0.0f;
+    uint32_t now = HAL_GetTick();
 
     if (currentMode == CONTROL_MODE_FL_CIRCLE_ALIGN) {
+        FollowLine_ResetEntryState();
         fl_circle_front_confirm_count = 0U;
         fl_steering_slow = (float)FL_CIRCLE_ALIGN_STEERING;
         FL_steering = FL_CIRCLE_ALIGN_STEERING;
@@ -455,6 +506,104 @@ void FollowLine_Task(void)
         currentMode == CONTROL_MODE_OBSTACLE_FOLLOW ||
         flag_calibrando_linea) {
         FollowLine_ResetStateInternal();
+        FollowLine_ResetEntryState();
+        return;
+    }
+
+    if (fl_entry_state != LINE_FOLLOW_NORMAL) {
+        currentMode = CONTROL_MODE_FL_INGRESO_A_90;
+
+        switch (fl_entry_state) {
+        case LINE_ENTRY_STABILIZE:
+            FL_steering = 0;
+            fl_steering_slow = 0.0f;
+            fl_entry_steering_slow = 0.0f;
+            last_error_yaw = 0.0f;
+
+            if ((uint32_t)(now - fl_entry_state_tick) >= FL_ENTRY_STABILIZE_MS) {
+                fl_entry_state = LINE_ENTRY_TURN_LEFT_90;
+                fl_entry_state_tick = now;
+                fl_entry_turn_start_tick = now;
+                fl_entry_start_yaw_deg = angle_yaw;
+                fl_entry_align_count = 0U;
+            }
+            return;
+
+        case LINE_ENTRY_TURN_LEFT_90:
+        {
+            float turned_deg = angle_yaw - fl_entry_start_yaw_deg;
+            float remaining_deg = FL_ENTRY_TURN_DEG - turned_deg;
+            float yaw_error = remaining_deg * multiplicadorYaw;
+            float target = -(((Kp_yaw + 1500.0f) * yaw_error * TURN_MANEUVER_YAW_BOOST) -
+                             (Kd_yaw * giro_z));
+
+            target = clamp_float(target, yaw_steering_limit);
+            float delta = target - fl_entry_steering_slow;
+            delta = clamp_float(delta, yaw_steering_step_max);
+            fl_entry_steering_slow += delta;
+            fl_entry_steering_slow = clamp_float(fl_entry_steering_slow, yaw_steering_limit);
+            FL_steering = (int16_t)fl_entry_steering_slow;
+
+            if (fabsf(turned_deg) >= FL_ENTRY_LINE_MIN_TURN_DEG && FollowLine_IsAlignedOnLine()) {
+                if (fl_entry_align_count < FL_ENTRY_ALIGN_TICKS) {
+                    fl_entry_align_count++;
+                }
+            } else {
+                fl_entry_align_count = 0U;
+            }
+
+            if (fabsf(remaining_deg) <= FL_ENTRY_TURN_TOLERANCE_DEG ||
+                fl_entry_align_count >= FL_ENTRY_ALIGN_TICKS ||
+                (uint32_t)(now - fl_entry_turn_start_tick) >= FL_ENTRY_TURN_TIMEOUT_MS) {
+                fl_entry_state = LINE_ENTRY_ALIGN;
+                fl_entry_state_tick = now;
+                fl_entry_align_count = 0U;
+            }
+            return;
+        }
+
+        case LINE_ENTRY_ALIGN:
+            if (FollowLine_IsAlignedOnLine()) {
+                if (fl_entry_align_count < FL_ENTRY_ALIGN_TICKS) {
+                    fl_entry_align_count++;
+                }
+            } else {
+                fl_entry_align_count = 0U;
+            }
+
+            fl_entry_steering_slow = 0.5f * fl_entry_steering_slow;
+            FL_steering = (int16_t)fl_entry_steering_slow;
+
+            if (fl_entry_align_count >= FL_ENTRY_ALIGN_TICKS ||
+                (uint32_t)(now - fl_entry_state_tick) >= FL_ENTRY_ALIGN_TIMEOUT_MS) {
+                FollowLine_ResetEntryState();
+                FollowLine_ResetStateInternal();
+                currentMode = CONTROL_MODE_FL_SIGUIENDO;
+            }
+            return;
+
+        case LINE_FOLLOW_NORMAL:
+        default:
+            FollowLine_ResetEntryState();
+            break;
+        }
+    }
+
+    if (currentMode == CONTROL_MODE_FL_SIGUIENDO && FollowLine_BlackSensorCount() >= 3U) {
+        if (fl_entry_confirm_count < FL_ENTRY_CONFIRM_TICKS) {
+            fl_entry_confirm_count++;
+        }
+    } else {
+        fl_entry_confirm_count = 0U;
+    }
+
+    if (fl_entry_confirm_count >= FL_ENTRY_CONFIRM_TICKS) {
+        FollowLine_ResetStateInternal();
+        fl_entry_state = LINE_ENTRY_STABILIZE;
+        fl_entry_state_tick = now;
+        fl_entry_confirm_count = 0U;
+        currentMode = CONTROL_MODE_FL_INGRESO_A_90;
+        FL_steering = 0;
         return;
     }
 
