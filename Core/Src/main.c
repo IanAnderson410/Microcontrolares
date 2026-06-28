@@ -286,9 +286,9 @@ static uint8_t ir_right_log_session_id = 0U;
 			int16_t 		deadband_L = 130;			/*!< Zona Muerta del PWM para el motor 1*/
 			int16_t 		deadband_R = 75; 			/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
-			float 			Kp = 155.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
+			float 			Kp = 120.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 800.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
-			float 			Kd = 3.8f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
+			float 			Kd = 3.5f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float			integral_limit = 1600.0f;
 			float 			setpoint = 4.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
 

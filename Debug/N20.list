@@ -39,9 +39,9 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  17 .debug_line   0001e7fe  00000000  00000000  00058b69  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000a447d  00000000  00000000  00077367  2**0
+ 18 .debug_str    000a447e  00000000  00000000  00077367  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  0011b7e4  2**0
+ 19 .comment      00000043  00000000  00000000  0011b7e5  2**0
                   CONTENTS, READONLY
  20 .debug_frame  00007964  00000000  00000000  0011b828  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
@@ -6185,11 +6185,11 @@ void PID_PITCH(void)
  800311c:	20002334 	.word	0x20002334
  8003120:	20000058 	.word	0x20000058
  8003124:	20002380 	.word	0x20002380
- 8003128:	2000232c 	.word	0x2000232c
+ 8003128:	2000232e 	.word	0x2000232e
  800312c:	20002382 	.word	0x20002382
- 8003130:	2000232e 	.word	0x2000232e
+ 8003130:	20002330 	.word	0x20002330
  8003134:	20002384 	.word	0x20002384
- 8003138:	20002330 	.word	0x20002330
+ 8003138:	20002332 	.word	0x20002332
  800313c:	2000085a 	.word	0x2000085a
  8003140:	200022c0 	.word	0x200022c0
  8003144:	42820000 	.word	0x42820000
@@ -7105,7 +7105,7 @@ void FollowLine_Task(void)
  80038f4:	681b      	ldr	r3, [r3, #0]
  80038f6:	697a      	ldr	r2, [r7, #20]
  80038f8:	1ad3      	subs	r3, r2, r3
- 80038fa:	f5b3 7ffa 	cmp.w	r3, #500	@ 0x1f4
+ 80038fa:	f5b3 6ffa 	cmp.w	r3, #2000	@ 0x7d0
  80038fe:	f0c0 825a 	bcc.w	8003db6 <FollowLine_Task+0x5d6>
                 fl_entry_state = LINE_ENTRY_TURN_LEFT_90;
  8003902:	4b6f      	ldr	r3, [pc, #444]	@ (8003ac0 <FollowLine_Task+0x2e0>)
@@ -7296,7 +7296,7 @@ void FollowLine_Task(void)
  8003aac:	2000232a 	.word	0x2000232a
  8003ab0:	200022fc 	.word	0x200022fc
  8003ab4:	200005d5 	.word	0x200005d5
- 8003ab8:	2000009e 	.word	0x2000009e
+ 8003ab8:	2000232c 	.word	0x2000232c
  8003abc:	200022bc 	.word	0x200022bc
  8003ac0:	200005dc 	.word	0x200005dc
  8003ac4:	200005ec 	.word	0x200005ec
@@ -7699,7 +7699,7 @@ void FollowLine_Task(void)
  8003de0:	200005dc 	.word	0x200005dc
  8003de4:	200022fc 	.word	0x200022fc
  8003de8:	200005d4 	.word	0x200005d4
- 8003dec:	2000009e 	.word	0x2000009e
+ 8003dec:	2000232c 	.word	0x2000232c
  8003df0:	200005d0 	.word	0x200005d0
  8003df4:	c3e10000 	.word	0xc3e10000
  8003df8:	20002290 	.word	0x20002290
@@ -10142,9 +10142,9 @@ static void MPU6050_ParseSample(const uint8_t *buffer)
  8005120:	200022c8 	.word	0x200022c8
  8005124:	20002340 	.word	0x20002340
  8005128:	20002344 	.word	0x20002344
- 800512c:	2000232c 	.word	0x2000232c
- 8005130:	2000232e 	.word	0x2000232e
- 8005134:	20002330 	.word	0x20002330
+ 800512c:	2000232e 	.word	0x2000232e
+ 8005130:	20002330 	.word	0x20002330
+ 8005134:	20002332 	.word	0x20002332
  8005138:	2000233c 	.word	0x2000233c
 
 0800513c <MPU6050_ConsumeReadDMA>:
@@ -11809,7 +11809,7 @@ void screenScheduler(void){
  8005c92:	f001 b91e 	b.w	8006ed2 <screenScheduler+0x14e2>
  8005c96:	bf00      	nop
  8005c98:	2000238b 	.word	0x2000238b
- 8005c9c:	2000009f 	.word	0x2000009f
+ 8005c9c:	2000009e 	.word	0x2000009e
  8005ca0:	2000234a 	.word	0x2000234a
  8005ca4:	20002358 	.word	0x20002358
  8005ca8:	20002290 	.word	0x20002290
@@ -14073,7 +14073,7 @@ void OLED_Service(void)
  8006fe8:	bd80      	pop	{r7, pc}
  8006fea:	bf00      	nop
  8006fec:	2000238b 	.word	0x2000238b
- 8006ff0:	2000009f 	.word	0x2000009f
+ 8006ff0:	2000009e 	.word	0x2000009e
  8006ff4:	20002348 	.word	0x20002348
  8006ff8:	2000234a 	.word	0x2000234a
  8006ffc:	2000085d 	.word	0x2000085d
@@ -15739,7 +15739,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
  8007de4:	200023a1 	.word	0x200023a1
  8007de8:	200023a2 	.word	0x200023a2
  8007dec:	200023a0 	.word	0x200023a0
- 8007df0:	2000009e 	.word	0x2000009e
+ 8007df0:	2000232c 	.word	0x2000232c
  8007df4:	20000858 	.word	0x20000858
  8007df8:	42c80000 	.word	0x42c80000
  8007dfc:	20000080 	.word	0x20000080
@@ -16587,7 +16587,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
  80083a0:	20000074 	.word	0x20000074
  80083a4:	2000005c 	.word	0x2000005c
  80083a8:	200022c0 	.word	0x200022c0
- 80083ac:	2000009f 	.word	0x2000009f
+ 80083ac:	2000009e 	.word	0x2000009e
  80083b0:	20002348 	.word	0x20002348
  80083b4:	20000042 	.word	0x20000042
  80083b8:	20000858 	.word	0x20000858
@@ -26019,9 +26019,9 @@ uint8_t UNER_SendTelemetryV1(void)
  800c132:	3738      	adds	r7, #56	@ 0x38
  800c134:	46bd      	mov	sp, r7
  800c136:	bd80      	pop	{r7, pc}
- 800c138:	2000232c 	.word	0x2000232c
- 800c13c:	2000232e 	.word	0x2000232e
- 800c140:	20002330 	.word	0x20002330
+ 800c138:	2000232e 	.word	0x2000232e
+ 800c13c:	20002330 	.word	0x20002330
+ 800c140:	20002332 	.word	0x20002332
  800c144:	20002334 	.word	0x20002334
  800c148:	20002338 	.word	0x20002338
  800c14c:	200022c0 	.word	0x200022c0
