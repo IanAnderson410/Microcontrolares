@@ -354,7 +354,7 @@ volatile 	int16_t   		FL_steering = 0;
 volatile    uint16_t        FL_motion_phase_ms = 200;
 volatile    uint16_t        FL_balance_phase_ms = 500;
 volatile    uint16_t        forward_motion_balance_only_steering = FORWARD_MOTION_DEFAULT_BALANCE_ONLY_STEERING;
-volatile    uint8_t         fl_obstacle_avoidance_enabled = 1U;
+volatile    uint8_t         fl_obstacle_avoidance_enabled = 0U;
 float 		paso = 0.1f; // Velocidad de inclinación
 // =================[ Protocolo UNER ] =================//
 volatile 	uint16_t 		accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
@@ -910,25 +910,9 @@ void screenScheduler(void){
     	break;
     case 1:		// Pantalla de depuracion de la comuniacación inalambrica
     	SSD1306_GotoXY(0, 10);
-		snprintf(msg, sizeof(msg), "OF%04lu OE%04lu", (unsigned long)(oled_frames_done % 10000U),
-				 (unsigned long)(oled_i2c_errors % 10000U));
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		SSD1306_GotoXY(0, 20);
-		snprintf(msg, sizeof(msg), "OB%04lu OP%04lu", (unsigned long)(oled_busy_skips % 10000U),
-				 (unsigned long)(oled_pages_sent % 10000U));
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		SSD1306_GotoXY(0, 30);
-		snprintf(msg, sizeof(msg), "CM%04lu CS%04lu", (unsigned long)(control_missed_slots % 10000U),
-				 (unsigned long)(control_slots_serviced % 10000U));
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		SSD1306_GotoXY(0, 40);
-		snprintf(msg, sizeof(msg), "MS%04lu MB%04lu", (unsigned long)(mpu_dma_stale_cycles % 10000U),
-				 (unsigned long)(mpu_dma_busy_count % 10000U));
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		SSD1306_GotoXY(0, 50);
-		snprintf(msg, sizeof(msg), "MR%04lu ME%04lu", (unsigned long)(mpu_dma_ready_count % 10000U),
-				 (unsigned long)(mpu_dma_error_count % 10000U));
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
+    			snprintf(msg, sizeof(msg), "IP:%.15s", ip_address);
+    			SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
 		OLED_RequestUpdate();
 		break;
     case 2:
@@ -975,9 +959,7 @@ void screenScheduler(void){
 		SSD1306_GotoXY(0, 40);
 		snprintf(msg, sizeof(msg), "Kp:%4.0f Kd:%3.0f", Kp_yaw, Kd_yaw);
 		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
-		SSD1306_GotoXY(0, 50);
-		snprintf(msg, sizeof(msg), "IP:%.15s", ip_address);
-		SSD1306_Puts(msg, &Font_7x10, SSD1306_COLOR_WHITE);
+
 		OLED_RequestUpdate();
 		break;
     case 5:
