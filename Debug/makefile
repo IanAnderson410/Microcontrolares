@@ -52,6 +52,9 @@ default.size.stdout \
 OBJDUMP_LIST += \
 N20.list \
 
+OBJCOPY_HEX += \
+N20.hex \
+
 OBJCOPY_BIN += \
 N20.bin \
 
@@ -78,6 +81,11 @@ N20.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
+N20.hex: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O ihex $(EXECUTABLES) "N20.hex"
+	@echo 'Finished building: $@'
+	@echo ' '
+
 N20.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "N20.bin"
 	@echo 'Finished building: $@'
@@ -85,10 +93,10 @@ N20.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 
 # Other Targets
 clean:
-	-$(RM) N20.bin N20.elf N20.list N20.map default.size.stdout
+	-$(RM) N20.bin N20.elf N20.hex N20.list N20.map default.size.stdout
 	-@echo ' '
 
-secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_BIN)
+secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_HEX) $(OBJCOPY_BIN)
 
 fail-specified-linker-script-missing:
 	@echo 'Error: Cannot find the specified linker script. Check the linker settings in the build configuration.'

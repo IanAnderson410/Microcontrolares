@@ -67,6 +67,7 @@ extern volatile int16_t obstacle_follow_steering;
 extern volatile uint16_t FL_motion_phase_ms;
 extern volatile uint16_t FL_balance_phase_ms;
 extern volatile uint16_t forward_motion_balance_only_steering;
+extern volatile uint8_t fl_obstacle_avoidance_enabled;
 
 extern float angle_y;
 extern float angle_yaw;

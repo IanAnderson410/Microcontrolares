@@ -441,7 +441,8 @@ void FollowLine_Task(void)
             fl_circle_side_confirm_count = 0U;
         }
 
-        if (fl_circle_side_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
+        if (fl_obstacle_avoidance_enabled &&
+            fl_circle_side_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
             FollowLine_ResetStateInternal();
             (void)ObstacleFollow_Start(OBSTACLE_FOLLOW_SIDE_RIGHT);
         }
@@ -465,7 +466,8 @@ void FollowLine_Task(void)
         fl_circle_front_confirm_count = 0U;
     }
 
-    if (fl_circle_front_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
+    if (fl_obstacle_avoidance_enabled &&
+        fl_circle_front_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
         FollowLine_ResetStateInternal();
         fl_steering_slow = (float)FL_CIRCLE_ALIGN_STEERING;
         FL_steering = FL_CIRCLE_ALIGN_STEERING;

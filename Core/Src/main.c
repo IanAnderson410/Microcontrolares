@@ -173,7 +173,8 @@ enum {
        CMD_IR_RIGHT_LOG_DONE        = 75,
        CMD_IR_RIGHT_LOG_CLEAR       = 76,
        CMD_IR_RIGHT_LOG_TRANSMIT    = 77,
-       CMD_SET_WALL_FOLLOW_CONFIG   = 78
+       CMD_SET_WALL_FOLLOW_CONFIG   = 78,
+       CMD_SET_FL_OBSTACLE_AVOIDANCE = 79
        // CMD_TELEMETRY   			= 0xA0, 	/*!< Envío de ángulos, velocidad y sensores IR	*/
        // CMD_LOG_MSG     			= 0xA1,  	/*!< Envío de mensajes de texto para debug		*/
    };
@@ -353,6 +354,7 @@ volatile 	int16_t   		FL_steering = 0;
 volatile    uint16_t        FL_motion_phase_ms = 200;
 volatile    uint16_t        FL_balance_phase_ms = 500;
 volatile    uint16_t        forward_motion_balance_only_steering = FORWARD_MOTION_DEFAULT_BALANCE_ONLY_STEERING;
+volatile    uint8_t         fl_obstacle_avoidance_enabled = 1U;
 float 		paso = 0.1f; // Velocidad de inclinación
 // =================[ Protocolo UNER ] =================//
 volatile 	uint16_t 		accelx=0;	/*!< Utilizado para refrezcar la pantalla OLED*/
@@ -1662,6 +1664,23 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         }
         if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
             uner_ack_cmd = CMD_SET_FL_CONFIG;
+            uner_ack_seq = seq;
+            uner_ack_pending = 1;
+        }
+        break;
+    case CMD_SET_FL_OBSTACLE_AVOIDANCE:
+        if (payload_len >= 1) {
+            fl_obstacle_avoidance_enabled = payload[0] ? 1U : 0U;
+            if (!fl_obstacle_avoidance_enabled &&
+                currentMode == CONTROL_MODE_FL_CIRCLE_ALIGN) {
+                currentMode = CONTROL_MODE_FL_BUSQUEDA_INICIAL;
+            }
+            uner_ack_status = 0;
+        } else {
+            uner_ack_status = 2;
+        }
+        if (flags & UNER_V1_FLAG_ACK_REQUIRED) {
+            uner_ack_cmd = CMD_SET_FL_OBSTACLE_AVOIDANCE;
             uner_ack_seq = seq;
             uner_ack_pending = 1;
         }
