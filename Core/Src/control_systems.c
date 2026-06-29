@@ -12,13 +12,13 @@
 #define FL_CIRCLE_CONFIRM_TICKS      5U
 #define FL_CIRCLE_ALIGN_STEERING     -450
 #define FL_ENTRY_CONFIRM_TICKS       2U
-#define FL_ENTRY_STABILIZE_MS        2000U
+#define FL_ENTRY_STABILIZE_MS        500U
 #define FL_ENTRY_TURN_DEG            90.0f
 #define FL_ENTRY_TURN_TOLERANCE_DEG  7.0f
 #define FL_ENTRY_TURN_TIMEOUT_MS     2500U
 #define FL_ENTRY_ALIGN_TICKS         3U
 #define FL_ENTRY_ALIGN_TIMEOUT_MS    300U
-#define FL_ENTRY_LINE_MIN_TURN_DEG   45.0f
+#define FL_ENTRY_LINE_MIN_TURN_DEG   75.0f
 #define ACCEL_RUNAWAY_WINDOW_CYCLES  10U
 #define ACCEL_RUNAWAY_SAFE_CENTER    550.0f
 #define TURN_MANEUVER_MIN_ANGLE_DEG  1.0f
@@ -103,6 +103,7 @@ static float fl_error_linea_filtrado = 0.0f;
 static LineFollowEntryState_t fl_entry_state = LINE_FOLLOW_NORMAL;
 static uint8_t fl_entry_confirm_count = 0U;
 static uint8_t fl_entry_align_count = 0U;
+static uint8_t fl_entry_all_white_armed = 0U;
 static uint32_t fl_entry_state_tick = 0U;
 static uint32_t fl_entry_turn_start_tick = 0U;
 static float fl_entry_start_yaw_deg = 0.0f;
@@ -124,18 +125,11 @@ static void FollowLine_ResetEntryState(void)
     fl_entry_state = LINE_FOLLOW_NORMAL;
     fl_entry_confirm_count = 0U;
     fl_entry_align_count = 0U;
+    fl_entry_all_white_armed = 0U;
     fl_entry_state_tick = 0U;
     fl_entry_turn_start_tick = 0U;
     fl_entry_start_yaw_deg = 0.0f;
     fl_entry_steering_slow = 0.0f;
-}
-
-static uint8_t FollowLine_BlackSensorCount(void)
-{
-    return (uint8_t)(estado_sensores[0] +
-                     estado_sensores[1] +
-                     estado_sensores[2] +
-                     estado_sensores[3]);
 }
 
 static uint8_t FollowLine_IsAlignedOnLine(void)
@@ -144,6 +138,12 @@ static uint8_t FollowLine_IsAlignedOnLine(void)
     uint8_t all_black = IRCSAAB ? 1U : 0U;
 
     return (center_on_line && !all_black) ? 1U : 0U;
+}
+
+static uint8_t FollowLine_IsEntryDetectionMode(void)
+{
+    return (currentMode == CONTROL_MODE_FL_BUSQUEDA_INICIAL ||
+            currentMode == CONTROL_MODE_FL_SIGUIENDO) ? 1U : 0U;
 }
 
 static float clamp_float(float value, float limit)
@@ -521,6 +521,13 @@ void FollowLine_Task(void)
             last_error_yaw = 0.0f;
 
             if ((uint32_t)(now - fl_entry_state_tick) >= FL_ENTRY_STABILIZE_MS) {
+                if (!AIRAB) {
+                    FollowLine_ResetEntryState();
+                    FollowLine_ResetStateInternal();
+                    currentMode = CONTROL_MODE_IDLE;
+                    return;
+                }
+
                 fl_entry_state = LINE_ENTRY_TURN_LEFT_90;
                 fl_entry_state_tick = now;
                 fl_entry_turn_start_tick = now;
@@ -589,12 +596,18 @@ void FollowLine_Task(void)
         }
     }
 
-    if (currentMode == CONTROL_MODE_FL_SIGUIENDO && FollowLine_BlackSensorCount() >= 3U) {
+    if (FollowLine_IsEntryDetectionMode() && IRCSAAW) {
+        fl_entry_all_white_armed = 1U;
+        fl_entry_confirm_count = 0U;
+    } else if (FollowLine_IsEntryDetectionMode() && fl_entry_all_white_armed && IRCSAAB) {
         if (fl_entry_confirm_count < FL_ENTRY_CONFIRM_TICKS) {
             fl_entry_confirm_count++;
         }
     } else {
         fl_entry_confirm_count = 0U;
+        if (!FollowLine_IsEntryDetectionMode()) {
+            fl_entry_all_white_armed = 0U;
+        }
     }
 
     if (fl_entry_confirm_count >= FL_ENTRY_CONFIRM_TICKS) {
