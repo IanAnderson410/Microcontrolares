@@ -65,7 +65,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -74,6 +73,7 @@
 #include "math.h"
 
 #include "ESP01.h"
+#include <stdio.h>
 #include <string.h>
 /* USER CODE END Includes */
 
@@ -285,7 +285,8 @@ ESP01_App_t ESP = {0};
 #define     ESP01_WIFI_PROFILE_UNIVERSITY  0
 #define     ESP01_WIFI_PROFILE_HOME        1
 #define     ESP01_WIFI_PROFILE_LAB         2
-#define     ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_UNIVERSITY
+#define     ESP01_WIFI_PROFILE_UNIVERSITY2 3
+#define     ESP01_WIFI_PROFILE             ESP01_WIFI_PROFILE_UNIVERSITY2
 
 #if ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_HOME
 #define     WIFI_SSID                  "InternetPlus_872f10"
@@ -299,6 +300,10 @@ ESP01_App_t ESP = {0};
 #define     WIFI_SSID                  "FCAL"
 #define     WIFI_PASSWORD              "fcalconcordia.06-2019"
 #define     ESP01_QT_REMOTE_IP         "172.23.224.234"
+#elif ESP01_WIFI_PROFILE == ESP01_WIFI_PROFILE_UNIVERSITY2
+#define     WIFI_SSID                  "FCAL-Personal"
+#define     WIFI_PASSWORD              "fcal-uner+2019"
+#define     ESP01_QT_REMOTE_IP         "172.22.239.10"
 #else
 #error "Seleccionar un perfil WiFi valido para ESP01_WIFI_PROFILE"
 #endif
@@ -458,7 +463,7 @@ volatile uint32_t uner_tx_last_ok_tick = 0;
 volatile uint32_t uner_tx_recover_count = 0;
 volatile uint8_t uner_recovering_udp = 0;
 volatile uint32_t uner_next_telemetry_tick = 0;
-volatile uint8_t esp01_http_softap_requested = 0;
+volatile uint8_t esp01_http_softap_requested = 1;
 volatile uint8_t esp01_http_softap_active = 0;
 volatile uint8_t mpu_calibration_requested = 0;
 volatile uint32_t rc_last_packet_tick = 0;
@@ -902,6 +907,24 @@ void ESP01_App_Task(void)
     }
 #endif
     UNER_Rx_Task();
+
+    if (esp01_http_softap_requested) {
+        esp01_http_softap_requested = 0;
+        esp01_http_softap_active = 1;
+        uner_telemetry_enabled = 0;
+        uner_ack_pending = 0;
+        uner_tx_busy = 0;
+        uner_tx_last_try_tick = 0;
+        ESP.uner_tx_head = 0;
+        ESP.uner_tx_tail = 0;
+        ESP.uner_tx_count = 0;
+        ESP.udp_connected = 0;
+        ESP.udp_started = 0;
+        ESP01_StartTransport();
+        ESP.udp_started = 1;
+        return;
+    }
+
     UNER_Tx_Task();
 
     if ((now - last_mpu_update) >= 10) {
@@ -922,20 +945,6 @@ void ESP01_App_Task(void)
     if ((now - last_oled_update) >= 500) {
         last_oled_update = now;
         screenScheduler();
-    }
-
-    if (esp01_http_softap_requested && !uner_ack_pending && !uner_tx_busy) {
-        esp01_http_softap_requested = 0;
-        esp01_http_softap_active = 1;
-        uner_telemetry_enabled = 0;
-        ESP.uner_tx_head = 0;
-        ESP.uner_tx_tail = 0;
-        ESP.uner_tx_count = 0;
-        ESP.udp_connected = 0;
-        ESP.udp_started = 0;
-        ESP01_StartTransport();
-        ESP.udp_started = 1;
-        return;
     }
 
     if (uner_ack_pending && ESP.udp_connected && !uner_tx_busy) {
@@ -1555,10 +1564,8 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
     case CMD_HTTP_SOFTAP:
         uner_telemetry_enabled = 0;
         esp01_http_softap_requested = 1;
-        uner_ack_cmd = CMD_HTTP_SOFTAP;
-        uner_ack_seq = seq;
         uner_ack_status = 0;
-        uner_ack_pending = 1;
+        uner_ack_pending = 0;
         break;
 
     case CMD_START:

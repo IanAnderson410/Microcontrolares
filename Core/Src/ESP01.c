@@ -158,6 +158,7 @@ _eESP01STATUS ESP01_StartUDP(const char *RemoteIP, uint16_t RemotePORT, uint16_t
 	if(LocalPORT == 0)
 		LocalPORT = 30000;
 
+	esp01ServerMode = 0;
 	strcpy(esp01PROTO, "UDP");
 
 	strncpy(esp01RemoteIP, RemoteIP, 15);
@@ -185,9 +186,21 @@ _eESP01STATUS ESP01_StartHTTPServer(uint16_t LocalPORT){
 		LocalPORT = 80;
 
 	esp01ServerMode = 1;
+	esp01Flags.bit.UDPTCPCONNECTED = 0;
+	esp01Flags.bit.SENDINGDATA = 0;
+	esp01Flags.bit.WAITINGSYMBOL = 0;
+	esp01Flags.bit.TXCIPSEND = 0;
+	esp01Flags.bit.ATRESPONSEOK = 0;
 	esp01RemoteIP[0] = '\0';
 	strcpy(esp01PROTO, "TCP");
 	itoa(LocalPORT, esp01LocalPORT, 10);
+	esp01irTX = esp01iwTX;
+	esp01TimeoutTxSymbol = 0;
+	esp01TimeoutTask = 50;
+	esp01TriesAT = 0;
+	esp01HState = 0;
+	esp01CurrentIPDLinkId = 0;
+	esp01LastIPDLinkId = 0;
 	esp01ATSate = ESP01ATHARDRST0;
 
 	return ESP01_UDPTCP_CONNECTING;
@@ -204,6 +217,7 @@ _eESP01STATUS ESP01_StartTCP(const char *RemoteIP, uint16_t RemotePORT, uint16_t
 	if(LocalPORT == 0)
 		LocalPORT = 30000;
 
+	esp01ServerMode = 0;
 	strcpy(esp01PROTO, "TCP");
 
 	strncpy(esp01RemoteIP, RemoteIP, 15);
