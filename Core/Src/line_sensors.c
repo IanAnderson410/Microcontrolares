@@ -1,5 +1,6 @@
 #include "line_sensors.h"
 
+// Suaviza las lecturas ADC de los sensores IR antes de usarlas en control.
 void Filtrar_Sensores_IR(void)
 {
     for (int i = 0; i < 8; i++) {
@@ -8,6 +9,7 @@ void Filtrar_Sensores_IR(void)
     }
 }
 
+// Detecta presencia de obstaculo frontal con umbrales derivados de una linea base.
 void ObstacleSensor_Task(void)
 {
     static uint8_t baseline_ready = 0;
@@ -73,6 +75,7 @@ uint8_t ObstacleSensor_ConsumeEvent(void)
     return 1U;
 }
 
+// Inicia la captura de minimos y maximos para calibrar los sensores de linea.
 void Iniciar_Calibracion_Linea(void)
 {
     flag_calibrando_linea = 1;
@@ -84,6 +87,7 @@ void Iniciar_Calibracion_Linea(void)
     }
 }
 
+// Actualiza extremos observados durante el recorrido de calibracion sobre la pista.
 void Procesar_Calibracion_Linea(void)
 {
     if (flag_calibrando_linea) {
@@ -99,6 +103,7 @@ void Procesar_Calibracion_Linea(void)
     }
 }
 
+// Convierte valores filtrados a estados digitales y actualiza el error lateral.
 void Leer_Linea_Digital(void)
 {
     for (int i = 0; i < FL_LINE_SENSOR_COUNT; i++) {
@@ -117,6 +122,7 @@ void Leer_Linea_Digital(void)
     }
 }
 
+// Calcula umbrales finales de linea a partir de los extremos medidos.
 void Finalizar_Calibracion_Linea(void)
 {
     static const uint16_t fallback_threshold[FL_LINE_SENSOR_COUNT] = {
@@ -155,6 +161,7 @@ float calcularErrorYawDiscreto(void)
     return numerador / denominador;
 }
 
+// Estima el desplazamiento lateral usando la intensidad relativa de cada sensor.
 float calcularErrorYawContinuo(void)
 {
     static const float sensor_pos[FL_LINE_SENSOR_COUNT] = {

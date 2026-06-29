@@ -109,6 +109,7 @@ static uint32_t fl_entry_turn_start_tick = 0U;
 static float fl_entry_start_yaw_deg = 0.0f;
 static float fl_entry_steering_slow = 0.0f;
 
+// Limpia el estado dinamico del seguimiento de linea y del PID de yaw.
 static void FollowLine_ResetStateInternal(void)
 {
     FL_steering = 0;
@@ -179,6 +180,7 @@ static int16_t sign_preserving_limit(float value, float limit)
     return (int16_t)clamp_float(value, limit);
 }
 
+// Mezcla balanceo y giro cuando la maniobra usa una rueda activa y otra de pivote.
 static void TurnManeuver_ApplyOneWheelMix(int16_t pitch_output, int16_t steering)
 {
     float active_yaw = (turn_maneuver_wheel == TURN_MANEUVER_WHEEL_LEFT) ?
@@ -194,6 +196,7 @@ static void TurnManeuver_ApplyOneWheelMix(int16_t pitch_output, int16_t steering
     }
 }
 
+// Reinicia acumuladores y salidas internas del lazo de balanceo.
 void PID_PITCH_ResetState(void)
 {
     integral = 0.0f;
@@ -222,6 +225,7 @@ void PID_PITCH_ResetState(void)
     turn_debug_motor_saturated = 0;
 }
 
+// Centraliza el encendido logico de motores y limpia consignas al apagarlos.
 void Control_SetMotorsEnabled(uint8_t enabled)
 {
     enabled = enabled ? 1U : 0U;
@@ -242,6 +246,7 @@ void Control_SetMotorsEnabled(uint8_t enabled)
     }
 }
 
+// Lazo principal de balanceo: combina setpoint, yaw/steering y salida PWM de motores.
 void PID_PITCH(void)
 {
     float gyro_rate = giro;
@@ -273,6 +278,7 @@ void PID_PITCH(void)
         return;
     }
 
+    // Cada modo aporta una consigna de avance y una correccion diferencial de giro.
     switch (currentMode) {
     case CONTROL_MODE_RC:
         steering = RC_steering;
@@ -330,6 +336,7 @@ void PID_PITCH(void)
         break;
     }
 
+    // Las maniobras de giro tienen prioridad sobre el steering normal del modo activo.
     if (turn_maneuver_active) {
         if (turn_maneuver_state != TURN_MANEUVER_STATE_SETTLING) {
             turn_maneuver_setpoint = TurnManeuver_GetActiveSetpoint();
@@ -355,6 +362,7 @@ void PID_PITCH(void)
         accel_runaway_cycle_count++;
     }
 
+    // La ventana de aceleracion ajusta el equilibrio adaptativo cuando esta habilitada.
     if (accel_runaway_enabled && accel_runaway_cycle_count >= ACCEL_RUNAWAY_WINDOW_CYCLES) {
         float current_mean = (float)accel_runaway_sum / (float)ACCEL_RUNAWAY_WINDOW_CYCLES;
         float delta = accel_runaway_has_prev_mean ? (current_mean - accel_runaway_prev_mean) : 0.0f;
@@ -441,6 +449,7 @@ void PID_PITCH(void)
 
     target_setpoint -= accel_adaptive_equilibrium_offset_deg;
 
+    // PID de pitch: el angulo estimado se compara contra la inclinacion objetivo.
     error = angle_y - target_setpoint;
     integral += error * CONTROL_DT_PID;
     if (integral > integral_limit) {
@@ -472,6 +481,7 @@ void PID_PITCH(void)
     }
 }
 
+// Calcula el steering de seguimiento de linea y gestiona entradas especiales de pista.
 void FollowLine_Task(void)
 {
     float target_steering = 0.0f;
@@ -510,6 +520,7 @@ void FollowLine_Task(void)
         return;
     }
 
+    // Secuencia de ingreso a 90 grados: estabiliza, gira y vuelve a alinear con la linea.
     if (fl_entry_state != LINE_FOLLOW_NORMAL) {
         currentMode = CONTROL_MODE_FL_INGRESO_A_90;
 
@@ -637,6 +648,7 @@ void FollowLine_Task(void)
         return;
     }
 
+    // Con linea detectada usa PID de yaw; sin linea conserva el ultimo sentido conocido.
     if (AIRAB) {
         if (error_linea > 0.05f) {
             fl_last_line_dir = 1;
@@ -668,6 +680,7 @@ void FollowLine_Task(void)
     FL_steering = (int16_t)fl_steering_slow;
 }
 
+// PID de yaw para convertir error lateral de linea en correccion diferencial.
 int16_t Calcular_PID_YAW(float error_linea)
 {
     fl_error_linea_filtrado = (yaw_error_filter_alpha * fl_error_linea_filtrado) +
@@ -680,6 +693,7 @@ int16_t Calcular_PID_YAW(float error_linea)
     return (int16_t)(P_yaw + D_yaw);
 }
 
+// Inicializa una maniobra de giro con referencia de yaw y modo de ruedas seleccionado.
 static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
                                           uint8_t wheel_mode,
                                           uint8_t wheel_select,
@@ -820,6 +834,7 @@ void TurnManeuver_Cancel(void)
     TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_EXTERNAL_CANCEL);
 }
 
+// Avanza la maquina de estados de una maniobra de giro basada en yaw.
 void TurnManeuver_Task(void)
 {
     if (!turn_maneuver_active) return;

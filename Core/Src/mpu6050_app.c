@@ -1,5 +1,6 @@
 #include "mpu6050_app.h"
 
+// Configura el MPU6050 para lectura continua de acelerometro y giroscopio.
 void MPU6050_Init(I2C_HandleTypeDef *hi2c)
 {
     uint8_t check, data;
@@ -23,6 +24,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c)
     }
 }
 
+// Promedia muestras en reposo para obtener los sesgos usados por la estimacion angular.
 void MPU6050_Calibrate(void)
 {
     if (flagCalibrationIsReady == 0) {

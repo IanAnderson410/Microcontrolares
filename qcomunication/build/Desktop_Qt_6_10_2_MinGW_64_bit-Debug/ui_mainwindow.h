@@ -39,15 +39,13 @@ class Ui_MainWindow
 {
 public:
     QWidget *centralwidget;
-    QPushButton *obstacleOledButton;
-    QPushButton *Screen1PushButton;
     QWidget *layoutWidget;
     QHBoxLayout *horizontalLayout_40;
     QVBoxLayout *verticalLayout_35;
     QStackedWidget *stackedWidget;
     QWidget *PaginaControl;
     QChartView *graphicsView;
-    QWidget *layoutWidget1;
+    QWidget *widget;
     QVBoxLayout *verticalLayout_26;
     QLabel *IR_1_label_20;
     QHBoxLayout *horizontalLayout_34;
@@ -61,7 +59,6 @@ public:
     QLabel *IR_1_label_23;
     QLineEdit *Kp_yaw_LineEdit;
     QPushButton *Kp_yaw_pushButton;
-    QWidget *layoutWidget2;
     QVBoxLayout *verticalLayout_31;
     QLabel *IR_1_label_25;
     QHBoxLayout *horizontalLayout_20;
@@ -75,13 +72,11 @@ public:
     QHBoxLayout *horizontalLayout_21;
     QLabel *IR_1_label_26;
     QSpinBox *Setpoint_spinBox;
-    QHBoxLayout *horizontalLayout_25;
-    QLabel *IR_1_label_32;
-    QSpinBox *Setpoint_FL_spinBox;
-    QWidget *layoutWidget3;
-    QHBoxLayout *horizontalLayout_37;
-    QVBoxLayout *verticalLayout_29;
+    QWidget *widget1;
+    QVBoxLayout *verticalLayout_41;
     QLabel *IR_1_label_24;
+    QHBoxLayout *horizontalLayout_13;
+    QVBoxLayout *verticalLayout_29;
     QHBoxLayout *horizontalLayout_12;
     QLabel *IR_1_label_18;
     QLineEdit *Ki_LineEdit;
@@ -113,29 +108,9 @@ public:
     QHBoxLayout *horizontalLayout_36;
     QLabel *IR_1_label_31;
     QLineEdit *OUT_LineEdit_5;
-    QWidget *layoutWidget4;
-    QVBoxLayout *verticalLayout_36;
-    QHBoxLayout *horizontalLayout_38;
-    QLabel *CHANGE_RC_SETPOINT_label;
-    QSpinBox *Ajust_RC_Setpoint_spinBox;
-    QHBoxLayout *horizontalLayout_39;
-    QLabel *IR_1_label_33;
-    QSpinBox *Limite_error_spinBox;
     QWidget *page;
-    QQuickWidget *PitchQuickWidget;
-    QProgressBar *IR8_progressBar;
-    QProgressBar *IR7_progressBar;
-    QWidget *layoutWidget5;
-    QHBoxLayout *horizontalLayout_32;
-    QProgressBar *IR4_progressBar;
-    QProgressBar *IR3_progressBar;
-    QProgressBar *IR2_progressBar;
-    QProgressBar *IR1_progressBar;
-    QQuickWidget *VistaSuperiorQuickWidget;
-    QProgressBar *IR6_progressBar;
-    QProgressBar *IR5_progressBar;
     QWidget *PaginaPrincipal;
-    QWidget *layoutWidget6;
+    QWidget *layoutWidget1;
     QHBoxLayout *horizontalLayout_28;
     QVBoxLayout *verticalLayout_34;
     QQuickWidget *quickWidget;
@@ -185,23 +160,42 @@ public:
     QTextEdit *TxTextEdit;
     QPushButton *cleanInfoPushButton;
     QWidget *PaginaCalibracin;
-    QWidget *layoutWidget7;
+    QTextEdit *textEdit;
+    QQuickWidget *PitchQuickWidget;
+    QProgressBar *IR7_progressBar;
+    QProgressBar *IR8_progressBar;
+    QProgressBar *IR5_progressBar;
+    QProgressBar *IR6_progressBar;
+    QWidget *widget2;
+    QVBoxLayout *verticalLayout_14;
     QVBoxLayout *verticalLayout_22;
     QVBoxLayout *verticalLayout_13;
-    QVBoxLayout *verticalLayout_14;
-    QHBoxLayout *horizontalLayout_13;
-    QVBoxLayout *verticalLayout_16;
-    QLabel *label_6;
-    QComboBox *IR_ComboBox;
-    QVBoxLayout *verticalLayout_15;
+    QVBoxLayout *verticalLayout_25;
+    QLabel *label_4;
+    QHBoxLayout *horizontalLayout_9;
     QPushButton *StartCalibratePushButton;
     QPushButton *StopCalibratePushButton;
-    QHBoxLayout *horizontalLayout_19;
+    QGridLayout *gridLayout_5;
+    QLineEdit *IR_5_LineEdit;
+    QLineEdit *IR_4_LineEdit;
+    QLineEdit *IR_7_LineEdit;
+    QLabel *IR_6_label;
+    QLineEdit *IR_6_LineEdit;
+    QLabel *IR_8_label;
+    QLabel *IR_5_label;
+    QLabel *IR_2_label;
+    QLabel *IR_1_label;
+    QLineEdit *IR_8_LineEdit;
+    QLineEdit *IR_2_LineEdit;
+    QLabel *IR_3_label;
+    QLineEdit *IR_3_LineEdit;
+    QLineEdit *IR_1_LineEdit;
+    QLabel *IR_4_label;
+    QLabel *IR_7_label;
+    QVBoxLayout *verticalLayout_15;
+    QHBoxLayout *horizontalLayout_4;
     QLabel *label_5;
     QPushButton *MPU_calibrate;
-    QHBoxLayout *horizontalLayout_18;
-    QGridLayout *gridLayout_7;
-    QHBoxLayout *horizontalLayout_9;
     QGridLayout *gridLayout_8;
     QLabel *IR_1_label_6;
     QLabel *IR_2_label_4;
@@ -217,91 +211,26 @@ public:
     QLineEdit *MPU_Az;
     QLineEdit *AcLineallineEdit;
     QLabel *HB_LABEL_3;
+    QWidget *widget3;
     QVBoxLayout *verticalLayout_30;
-    QVBoxLayout *verticalLayout_25;
-    QLabel *label_4;
-    QGridLayout *gridLayout_5;
-    QLabel *IR_8_label;
-    QLineEdit *IR_5_LineEdit;
-    QLineEdit *IR_8_LineEdit;
-    QLineEdit *IR_6_LineEdit;
-    QLineEdit *IR_7_LineEdit;
-    QLabel *IR_4_label;
-    QLineEdit *IR_3_LineEdit;
-    QLineEdit *IR_4_LineEdit;
-    QLabel *IR_5_label;
-    QLineEdit *IR_2_LineEdit;
-    QLabel *IR_7_label;
-    QLabel *IR_6_label;
-    QLabel *IR_3_label;
-    QLabel *IR_2_label;
-    QLineEdit *IR_1_LineEdit;
-    QLabel *IR_1_label;
-    QHBoxLayout *horizontalLayout_4;
-    QVBoxLayout *verticalLayout_6;
-    QLabel *IR_1_label_14;
-    QLabel *IR_1_label_12;
-    QLabel *IR_1_label_13;
-    QVBoxLayout *verticalLayout_3;
-    QLabel *IR_1_label_11;
-    QLineEdit *vel_x;
-    QLineEdit *vel_y;
-    QVBoxLayout *verticalLayout;
-    QLabel *IR_1_label_10;
-    QLineEdit *PosXLineEdit;
-    QLineEdit *PosYLineEdit;
-    QLineEdit *CurrrentDegressTextEdit;
-    QLabel *HB_LABEL_2;
-    QHBoxLayout *horizontalLayout_2;
-    QVBoxLayout *verticalLayout_19;
-    QLabel *IR_1_label_15;
-    QLineEdit *MODE_LABEL;
-    QVBoxLayout *verticalLayout_20;
-    QLabel *IR_1_label_16;
-    QLineEdit *INFORMATION_LABEL;
+    QLabel *label_6;
+    QHBoxLayout *horizontalLayout_32;
+    QProgressBar *IR4_progressBar;
+    QProgressBar *IR3_progressBar;
+    QProgressBar *IR2_progressBar;
+    QProgressBar *IR1_progressBar;
+    QWidget *PaginaComandosAvanzados;
+    QLabel *advancedTitleLabel;
+    QWidget *layoutWidget2;
+    QVBoxLayout *verticalLayout_43;
+    QGroupBox *accelLogBox;
+    QVBoxLayout *accelLogLayout;
     QVBoxLayout *verticalLayout_21;
-    QLabel *HB_LABEL;
+    QLabel *HB_LABEL_2;
     QHBoxLayout *horizontalLayout_3;
     QLineEdit *HB_FRECUENCY_LineEdit;
     QPushButton *SET_FRECUENCY_HB_BUTTON;
-    QTextEdit *textEdit;
-    QPushButton *Screen2PushButton;
-    QWidget *PaginaComandosAvanzados;
-    QLabel *advancedTitleLabel;
-    QGroupBox *accelRunawayBox;
-    QGridLayout *accelRunawayLayout;
-    QLabel *accelRunawayDeltaLabel;
-    QDoubleSpinBox *accelRunawayDeltaSpin;
-    QLabel *accelRunawayAbsLabel;
-    QDoubleSpinBox *accelRunawayAbsSpin;
-    QLabel *accelRunawayTrendLimitLabel;
-    QDoubleSpinBox *accelRunawayTrendLimitSpin;
-    QLabel *accelRunawayAbsLimitLabel;
-    QDoubleSpinBox *accelRunawayAbsLimitSpin;
-    QLabel *accelAdaptiveStepLabel;
-    QDoubleSpinBox *accelAdaptiveStepSpin;
-    QLabel *accelAdaptiveLimitLabel;
-    QDoubleSpinBox *accelAdaptiveLimitSpin;
-    QLabel *accelAdaptiveResetAbsLabel;
-    QDoubleSpinBox *accelAdaptiveResetAbsSpin;
-    QLabel *accelAdaptiveResetCountLabel;
-    QDoubleSpinBox *accelAdaptiveResetCountSpin;
-    QLabel *velocityTrendThresholdLabel;
-    QDoubleSpinBox *velocityTrendThresholdSpin;
-    QLabel *velocityTrendIndicatorLabel;
-    QPushButton *accelRunawayModeButton;
-    QPushButton *accelRunawayApplyButton;
-    QWidget *pitchRecoveryWidget;
-    QVBoxLayout *pitchRecoveryLayout;
-    QHBoxLayout *pitchRecoveryThresholdLayout;
-    QLabel *pitchRecoveryThresholdLabel;
-    QDoubleSpinBox *pitchRecoveryThresholdSpin;
-    QHBoxLayout *pitchRecoveryBrakeLayout;
-    QLabel *pitchRecoveryBrakeMsLabel;
-    QDoubleSpinBox *pitchRecoveryBrakeMsSpin;
-    QPushButton *pitchRecoveryApplyButton;
-    QGroupBox *accelLogBox;
-    QVBoxLayout *accelLogLayout;
+    QLabel *irRightLogStatusLabel_3;
     QHBoxLayout *accelLogButtonsLayout;
     QPushButton *accelLogStartButton;
     QPushButton *accelLogCopyButton;
@@ -310,6 +239,7 @@ public:
     QTextEdit *accelLogTextEdit;
     QGroupBox *irRightLogBox;
     QVBoxLayout *irRightLogLayout;
+    QLabel *irRightLogStatusLabel_2;
     QHBoxLayout *irRightLogControlsLayout;
     QLabel *irRightDistanceLabel;
     QVBoxLayout *verticalLayout_40;
@@ -321,6 +251,42 @@ public:
     QPushButton *irRightSaveButton;
     QLabel *irRightLogStatusLabel;
     QTextEdit *irRightLogTextEdit;
+    QWidget *layoutWidget3;
+    QVBoxLayout *verticalLayout_44;
+    QVBoxLayout *verticalLayout_42;
+    QLabel *irRightLogStatusLabel_4;
+    QGroupBox *accelRunawayBox;
+    QGridLayout *accelRunawayLayout;
+    QDoubleSpinBox *accelRunawayAbsSpin;
+    QLabel *accelAdaptiveResetCountLabel;
+    QLabel *accelRunawayDeltaLabel;
+    QLabel *velocityTrendThresholdLabel;
+    QLabel *velocityTrendIndicatorLabel;
+    QLabel *accelAdaptiveStepLabel;
+    QDoubleSpinBox *accelAdaptiveLimitSpin;
+    QDoubleSpinBox *accelRunawayDeltaSpin;
+    QDoubleSpinBox *accelRunawayAbsLimitSpin;
+    QDoubleSpinBox *accelAdaptiveResetAbsSpin;
+    QLabel *accelAdaptiveResetAbsLabel;
+    QDoubleSpinBox *accelAdaptiveResetCountSpin;
+    QPushButton *accelRunawayModeButton;
+    QDoubleSpinBox *accelAdaptiveStepSpin;
+    QDoubleSpinBox *velocityTrendThresholdSpin;
+    QDoubleSpinBox *accelRunawayTrendLimitSpin;
+    QLabel *accelRunawayTrendLimitLabel;
+    QLabel *accelRunawayAbsLimitLabel;
+    QLabel *accelAdaptiveLimitLabel;
+    QLabel *accelRunawayAbsLabel;
+    QPushButton *accelRunawayApplyButton;
+    QVBoxLayout *pitchRecoveryLayout;
+    QLabel *irRightLogStatusLabel_5;
+    QHBoxLayout *pitchRecoveryThresholdLayout;
+    QLabel *pitchRecoveryThresholdLabel;
+    QDoubleSpinBox *pitchRecoveryThresholdSpin;
+    QHBoxLayout *pitchRecoveryBrakeLayout;
+    QLabel *pitchRecoveryBrakeMsLabel;
+    QDoubleSpinBox *pitchRecoveryBrakeMsSpin;
+    QPushButton *pitchRecoveryApplyButton;
     QWidget *page_2;
     QGroupBox *yawConfigBox;
     QGridLayout *yawConfigLayout;
@@ -377,12 +343,13 @@ public:
     QLabel *yawKdLabel;
     QLineEdit *yawKpEdit;
     QLabel *yawKpLabel;
-    QPushButton *Screen2PushButton_3;
+    QWidget *widget4;
+    QHBoxLayout *horizontalLayout_18;
     QPushButton *Screen2PushButton_2;
+    QPushButton *Screen2PushButton_3;
     QHBoxLayout *horizontalLayout_30;
     QHBoxLayout *horizontalLayout_29;
     QPushButton *Home_pushButton;
-    QPushButton *Ejecucion_pushButton;
     QPushButton *ScreenCalibrar_pushbutton;
     QPushButton *SistemasDeControl_pushButton;
     QPushButton *SistemasDeControl_pushButton_2;
@@ -413,6 +380,47 @@ public:
     QPushButton *cleanRxPushButton;
     QPushButton *cleanInfoPushButton_2;
     QPushButton *cleanTxPushButton;
+    QPushButton *Screen2PushButton;
+    QWidget *layoutWidget4;
+    QVBoxLayout *verticalLayout_16;
+    QComboBox *IR_ComboBox;
+    QWidget *layoutWidget5;
+    QHBoxLayout *horizontalLayout_25;
+    QLabel *IR_1_label_32;
+    QWidget *layoutWidget6;
+    QVBoxLayout *verticalLayout_36;
+    QHBoxLayout *horizontalLayout_38;
+    QLabel *CHANGE_RC_SETPOINT_label;
+    QSpinBox *Ajust_RC_Setpoint_spinBox;
+    QHBoxLayout *horizontalLayout_39;
+    QLabel *IR_1_label_33;
+    QSpinBox *Limite_error_spinBox;
+    QPushButton *obstacleOledButton;
+    QWidget *widget5;
+    QHBoxLayout *horizontalLayout_2;
+    QVBoxLayout *verticalLayout_19;
+    QLabel *IR_1_label_15;
+    QLineEdit *MODE_LABEL;
+    QVBoxLayout *verticalLayout_20;
+    QLabel *IR_1_label_16;
+    QLineEdit *INFORMATION_LABEL;
+    QWidget *widget6;
+    QVBoxLayout *verticalLayout_6;
+    QLabel *IR_1_label_14;
+    QVBoxLayout *verticalLayout_3;
+    QVBoxLayout *verticalLayout;
+    QLabel *IR_1_label_11;
+    QLabel *IR_1_label_10;
+    QLineEdit *CurrrentDegressTextEdit;
+    QLineEdit *PosXLineEdit;
+    QLineEdit *PosYLineEdit;
+    QLineEdit *vel_x;
+    QLineEdit *vel_y;
+    QLabel *IR_1_label_12;
+    QLabel *IR_1_label_13;
+    QSpinBox *Setpoint_FL_spinBox;
+    QPushButton *Ejecucion_pushButton;
+    QPushButton *Screen1PushButton;
     QMenuBar *menubar;
     QStatusBar *statusbar;
     QToolBar *toolBar;
@@ -421,7 +429,7 @@ public:
     {
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName("MainWindow");
-        MainWindow->resize(1667, 927);
+        MainWindow->resize(1994, 1029);
         MainWindow->setMinimumSize(QSize(15, 15));
         MainWindow->setStyleSheet(QString::fromUtf8("\n"
 "*{\n"
@@ -555,13 +563,6 @@ public:
 ""));
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName("centralwidget");
-        obstacleOledButton = new QPushButton(centralwidget);
-        obstacleOledButton->setObjectName("obstacleOledButton");
-        obstacleOledButton->setGeometry(QRect(570, 800, 127, 29));
-        obstacleOledButton->setMinimumSize(QSize(0, 10));
-        Screen1PushButton = new QPushButton(centralwidget);
-        Screen1PushButton->setObjectName("Screen1PushButton");
-        Screen1PushButton->setGeometry(QRect(990, 800, 127, 29));
         layoutWidget = new QWidget(centralwidget);
         layoutWidget->setObjectName("layoutWidget");
         layoutWidget->setGeometry(QRect(0, 0, 1341, 671));
@@ -678,30 +679,31 @@ public:
         PaginaControl->setObjectName("PaginaControl");
         graphicsView = new QChartView(PaginaControl);
         graphicsView->setObjectName("graphicsView");
-        graphicsView->setGeometry(QRect(640, 160, 451, 391));
-        layoutWidget1 = new QWidget(PaginaControl);
-        layoutWidget1->setObjectName("layoutWidget1");
-        layoutWidget1->setGeometry(QRect(650, 20, 501, 143));
-        verticalLayout_26 = new QVBoxLayout(layoutWidget1);
+        graphicsView->setGeometry(QRect(470, 190, 671, 391));
+        widget = new QWidget(PaginaControl);
+        widget->setObjectName("widget");
+        widget->setGeometry(QRect(0, 190, 461, 271));
+        verticalLayout_26 = new QVBoxLayout(widget);
         verticalLayout_26->setObjectName("verticalLayout_26");
         verticalLayout_26->setContentsMargins(0, 0, 0, 0);
-        IR_1_label_20 = new QLabel(layoutWidget1);
+        IR_1_label_20 = new QLabel(widget);
         IR_1_label_20->setObjectName("IR_1_label_20");
-        IR_1_label_20->setMinimumSize(QSize(0, 30));
+        IR_1_label_20->setMinimumSize(QSize(0, 20));
         IR_1_label_20->setMaximumSize(QSize(16777215, 20));
 
         verticalLayout_26->addWidget(IR_1_label_20);
 
         horizontalLayout_34 = new QHBoxLayout();
         horizontalLayout_34->setObjectName("horizontalLayout_34");
-        IR_1_label_21 = new QLabel(layoutWidget1);
+        IR_1_label_21 = new QLabel(widget);
         IR_1_label_21->setObjectName("IR_1_label_21");
         IR_1_label_21->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_34->addWidget(IR_1_label_21);
 
-        SP_yaw_pushButton = new QPushButton(layoutWidget1);
+        SP_yaw_pushButton = new QPushButton(widget);
         SP_yaw_pushButton->setObjectName("SP_yaw_pushButton");
+        SP_yaw_pushButton->setMinimumSize(QSize(0, 20));
 
         horizontalLayout_34->addWidget(SP_yaw_pushButton);
 
@@ -710,13 +712,13 @@ public:
 
         horizontalLayout_35 = new QHBoxLayout();
         horizontalLayout_35->setObjectName("horizontalLayout_35");
-        IR_1_label_22 = new QLabel(layoutWidget1);
+        IR_1_label_22 = new QLabel(widget);
         IR_1_label_22->setObjectName("IR_1_label_22");
         IR_1_label_22->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_35->addWidget(IR_1_label_22);
 
-        Kd_yaw_LineEdit = new QLineEdit(layoutWidget1);
+        Kd_yaw_LineEdit = new QLineEdit(widget);
         Kd_yaw_LineEdit->setObjectName("Kd_yaw_LineEdit");
         QPalette palette;
         QBrush brush(QColor(6, 20, 27, 255));
@@ -756,8 +758,9 @@ public:
 
         horizontalLayout_35->addWidget(Kd_yaw_LineEdit);
 
-        Kd_yaw_pushButton = new QPushButton(layoutWidget1);
+        Kd_yaw_pushButton = new QPushButton(widget);
         Kd_yaw_pushButton->setObjectName("Kd_yaw_pushButton");
+        Kd_yaw_pushButton->setMinimumSize(QSize(0, 20));
 
         horizontalLayout_35->addWidget(Kd_yaw_pushButton);
 
@@ -766,13 +769,13 @@ public:
 
         horizontalLayout_8 = new QHBoxLayout();
         horizontalLayout_8->setObjectName("horizontalLayout_8");
-        IR_1_label_23 = new QLabel(layoutWidget1);
+        IR_1_label_23 = new QLabel(widget);
         IR_1_label_23->setObjectName("IR_1_label_23");
         IR_1_label_23->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_8->addWidget(IR_1_label_23);
 
-        Kp_yaw_LineEdit = new QLineEdit(layoutWidget1);
+        Kp_yaw_LineEdit = new QLineEdit(widget);
         Kp_yaw_LineEdit->setObjectName("Kp_yaw_LineEdit");
         QPalette palette1;
         palette1.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -806,24 +809,21 @@ public:
 
         horizontalLayout_8->addWidget(Kp_yaw_LineEdit);
 
-        Kp_yaw_pushButton = new QPushButton(layoutWidget1);
+        Kp_yaw_pushButton = new QPushButton(widget);
         Kp_yaw_pushButton->setObjectName("Kp_yaw_pushButton");
+        Kp_yaw_pushButton->setMinimumSize(QSize(0, 2));
 
         horizontalLayout_8->addWidget(Kp_yaw_pushButton);
 
 
         verticalLayout_26->addLayout(horizontalLayout_8);
 
-        layoutWidget2 = new QWidget(PaginaControl);
-        layoutWidget2->setObjectName("layoutWidget2");
-        layoutWidget2->setGeometry(QRect(0, 10, 621, 212));
-        verticalLayout_31 = new QVBoxLayout(layoutWidget2);
+        verticalLayout_31 = new QVBoxLayout();
         verticalLayout_31->setObjectName("verticalLayout_31");
-        verticalLayout_31->setContentsMargins(0, 0, 0, 0);
-        IR_1_label_25 = new QLabel(layoutWidget2);
+        IR_1_label_25 = new QLabel(widget);
         IR_1_label_25->setObjectName("IR_1_label_25");
-        IR_1_label_25->setMinimumSize(QSize(0, 40));
-        IR_1_label_25->setMaximumSize(QSize(16777215, 16777215));
+        IR_1_label_25->setMinimumSize(QSize(0, 25));
+        IR_1_label_25->setMaximumSize(QSize(16777215, 25));
         QFont font;
         font.setFamilies({QString::fromUtf8("Consolas")});
         font.setPointSize(10);
@@ -837,7 +837,7 @@ public:
 
         horizontalLayout_20 = new QHBoxLayout();
         horizontalLayout_20->setObjectName("horizontalLayout_20");
-        LDL_Label = new QLabel(layoutWidget2);
+        LDL_Label = new QLabel(widget);
         LDL_Label->setObjectName("LDL_Label");
         LDL_Label->setMaximumSize(QSize(16777215, 20));
         QPalette palette2;
@@ -877,7 +877,7 @@ public:
 
         horizontalLayout_20->addWidget(LDL_Label);
 
-        LDL_LineEdit = new QLineEdit(layoutWidget2);
+        LDL_LineEdit = new QLineEdit(widget);
         LDL_LineEdit->setObjectName("LDL_LineEdit");
         QPalette palette3;
         palette3.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -911,7 +911,7 @@ public:
 
         horizontalLayout_20->addWidget(LDL_LineEdit);
 
-        LDL_pushButton = new QPushButton(layoutWidget2);
+        LDL_pushButton = new QPushButton(widget);
         LDL_pushButton->setObjectName("LDL_pushButton");
 
         horizontalLayout_20->addWidget(LDL_pushButton);
@@ -921,13 +921,13 @@ public:
 
         horizontalLayout_16 = new QHBoxLayout();
         horizontalLayout_16->setObjectName("horizontalLayout_16");
-        RDL_Label = new QLabel(layoutWidget2);
+        RDL_Label = new QLabel(widget);
         RDL_Label->setObjectName("RDL_Label");
         RDL_Label->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_16->addWidget(RDL_Label);
 
-        RDL_LineEdit = new QLineEdit(layoutWidget2);
+        RDL_LineEdit = new QLineEdit(widget);
         RDL_LineEdit->setObjectName("RDL_LineEdit");
         QPalette palette4;
         palette4.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -961,7 +961,7 @@ public:
 
         horizontalLayout_16->addWidget(RDL_LineEdit);
 
-        RDL_pushButton = new QPushButton(layoutWidget2);
+        RDL_pushButton = new QPushButton(widget);
         RDL_pushButton->setObjectName("RDL_pushButton");
 
         horizontalLayout_16->addWidget(RDL_pushButton);
@@ -971,15 +971,15 @@ public:
 
         horizontalLayout_21 = new QHBoxLayout();
         horizontalLayout_21->setObjectName("horizontalLayout_21");
-        IR_1_label_26 = new QLabel(layoutWidget2);
+        IR_1_label_26 = new QLabel(widget);
         IR_1_label_26->setObjectName("IR_1_label_26");
         IR_1_label_26->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_21->addWidget(IR_1_label_26);
 
-        Setpoint_spinBox = new QSpinBox(layoutWidget2);
+        Setpoint_spinBox = new QSpinBox(widget);
         Setpoint_spinBox->setObjectName("Setpoint_spinBox");
-        Setpoint_spinBox->setMinimumSize(QSize(0, 40));
+        Setpoint_spinBox->setMinimumSize(QSize(0, 25));
         Setpoint_spinBox->setAutoFillBackground(false);
         Setpoint_spinBox->setWrapping(true);
         Setpoint_spinBox->setAlignment(Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter);
@@ -993,54 +993,35 @@ public:
 
         verticalLayout_31->addLayout(horizontalLayout_21);
 
-        horizontalLayout_25 = new QHBoxLayout();
-        horizontalLayout_25->setObjectName("horizontalLayout_25");
-        IR_1_label_32 = new QLabel(layoutWidget2);
-        IR_1_label_32->setObjectName("IR_1_label_32");
-        IR_1_label_32->setMaximumSize(QSize(16777215, 20));
 
-        horizontalLayout_25->addWidget(IR_1_label_32);
+        verticalLayout_26->addLayout(verticalLayout_31);
 
-        Setpoint_FL_spinBox = new QSpinBox(layoutWidget2);
-        Setpoint_FL_spinBox->setObjectName("Setpoint_FL_spinBox");
-        Setpoint_FL_spinBox->setMinimumSize(QSize(0, 40));
-        Setpoint_FL_spinBox->setAutoFillBackground(false);
-        Setpoint_FL_spinBox->setWrapping(true);
-        Setpoint_FL_spinBox->setAlignment(Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter);
-        Setpoint_FL_spinBox->setButtonSymbols(QAbstractSpinBox::ButtonSymbols::PlusMinus);
-        Setpoint_FL_spinBox->setProperty("showGroupSeparator", QVariant(false));
-        Setpoint_FL_spinBox->setMinimum(-999);
-        Setpoint_FL_spinBox->setMaximum(999);
-
-        horizontalLayout_25->addWidget(Setpoint_FL_spinBox);
-
-
-        verticalLayout_31->addLayout(horizontalLayout_25);
-
-        layoutWidget3 = new QWidget(PaginaControl);
-        layoutWidget3->setObjectName("layoutWidget3");
-        layoutWidget3->setGeometry(QRect(0, 230, 621, 182));
-        horizontalLayout_37 = new QHBoxLayout(layoutWidget3);
-        horizontalLayout_37->setObjectName("horizontalLayout_37");
-        horizontalLayout_37->setContentsMargins(0, 0, 0, 0);
-        verticalLayout_29 = new QVBoxLayout();
-        verticalLayout_29->setObjectName("verticalLayout_29");
-        IR_1_label_24 = new QLabel(layoutWidget3);
+        widget1 = new QWidget(PaginaControl);
+        widget1->setObjectName("widget1");
+        widget1->setGeometry(QRect(0, 10, 1131, 171));
+        verticalLayout_41 = new QVBoxLayout(widget1);
+        verticalLayout_41->setObjectName("verticalLayout_41");
+        verticalLayout_41->setContentsMargins(0, 0, 0, 0);
+        IR_1_label_24 = new QLabel(widget1);
         IR_1_label_24->setObjectName("IR_1_label_24");
         IR_1_label_24->setMinimumSize(QSize(0, 30));
         IR_1_label_24->setMaximumSize(QSize(16777215, 1221212));
 
-        verticalLayout_29->addWidget(IR_1_label_24);
+        verticalLayout_41->addWidget(IR_1_label_24);
 
+        horizontalLayout_13 = new QHBoxLayout();
+        horizontalLayout_13->setObjectName("horizontalLayout_13");
+        verticalLayout_29 = new QVBoxLayout();
+        verticalLayout_29->setObjectName("verticalLayout_29");
         horizontalLayout_12 = new QHBoxLayout();
         horizontalLayout_12->setObjectName("horizontalLayout_12");
-        IR_1_label_18 = new QLabel(layoutWidget3);
+        IR_1_label_18 = new QLabel(widget1);
         IR_1_label_18->setObjectName("IR_1_label_18");
         IR_1_label_18->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_12->addWidget(IR_1_label_18);
 
-        Ki_LineEdit = new QLineEdit(layoutWidget3);
+        Ki_LineEdit = new QLineEdit(widget1);
         Ki_LineEdit->setObjectName("Ki_LineEdit");
         QPalette palette5;
         palette5.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1074,7 +1055,7 @@ public:
 
         horizontalLayout_12->addWidget(Ki_LineEdit);
 
-        Ki_pushButton = new QPushButton(layoutWidget3);
+        Ki_pushButton = new QPushButton(widget1);
         Ki_pushButton->setObjectName("Ki_pushButton");
 
         horizontalLayout_12->addWidget(Ki_pushButton);
@@ -1084,13 +1065,13 @@ public:
 
         horizontalLayout_15 = new QHBoxLayout();
         horizontalLayout_15->setObjectName("horizontalLayout_15");
-        IR_1_label_19 = new QLabel(layoutWidget3);
+        IR_1_label_19 = new QLabel(widget1);
         IR_1_label_19->setObjectName("IR_1_label_19");
         IR_1_label_19->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_15->addWidget(IR_1_label_19);
 
-        Kd_LineEdit = new QLineEdit(layoutWidget3);
+        Kd_LineEdit = new QLineEdit(widget1);
         Kd_LineEdit->setObjectName("Kd_LineEdit");
         QPalette palette6;
         palette6.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1124,7 +1105,7 @@ public:
 
         horizontalLayout_15->addWidget(Kd_LineEdit);
 
-        Kd_pushButton = new QPushButton(layoutWidget3);
+        Kd_pushButton = new QPushButton(widget1);
         Kd_pushButton->setObjectName("Kd_pushButton");
 
         horizontalLayout_15->addWidget(Kd_pushButton);
@@ -1134,13 +1115,13 @@ public:
 
         horizontalLayout_7 = new QHBoxLayout();
         horizontalLayout_7->setObjectName("horizontalLayout_7");
-        IR_1_label_17 = new QLabel(layoutWidget3);
+        IR_1_label_17 = new QLabel(widget1);
         IR_1_label_17->setObjectName("IR_1_label_17");
         IR_1_label_17->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_7->addWidget(IR_1_label_17);
 
-        Kp_LineEdit = new QLineEdit(layoutWidget3);
+        Kp_LineEdit = new QLineEdit(widget1);
         Kp_LineEdit->setObjectName("Kp_LineEdit");
         QPalette palette7;
         palette7.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1174,7 +1155,7 @@ public:
 
         horizontalLayout_7->addWidget(Kp_LineEdit);
 
-        Kp_pushButton = new QPushButton(layoutWidget3);
+        Kp_pushButton = new QPushButton(widget1);
         Kp_pushButton->setObjectName("Kp_pushButton");
 
         horizontalLayout_7->addWidget(Kp_pushButton);
@@ -1184,13 +1165,13 @@ public:
 
         horizontalLayout_6 = new QHBoxLayout();
         horizontalLayout_6->setObjectName("horizontalLayout_6");
-        PID_Alpha_Label = new QLabel(layoutWidget3);
+        PID_Alpha_Label = new QLabel(widget1);
         PID_Alpha_Label->setObjectName("PID_Alpha_Label");
         PID_Alpha_Label->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_6->addWidget(PID_Alpha_Label);
 
-        PID_Alpha_LineEdit = new QLineEdit(layoutWidget3);
+        PID_Alpha_LineEdit = new QLineEdit(widget1);
         PID_Alpha_LineEdit->setObjectName("PID_Alpha_LineEdit");
         QPalette palette8;
         palette8.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1224,7 +1205,7 @@ public:
 
         horizontalLayout_6->addWidget(PID_Alpha_LineEdit);
 
-        PID_Alpha_pushButton = new QPushButton(layoutWidget3);
+        PID_Alpha_pushButton = new QPushButton(widget1);
         PID_Alpha_pushButton->setObjectName("PID_Alpha_pushButton");
 
         horizontalLayout_6->addWidget(PID_Alpha_pushButton);
@@ -1233,13 +1214,13 @@ public:
         verticalLayout_29->addLayout(horizontalLayout_6);
 
 
-        horizontalLayout_37->addLayout(verticalLayout_29);
+        horizontalLayout_13->addLayout(verticalLayout_29);
 
         verticalLayout_32 = new QVBoxLayout();
         verticalLayout_32->setObjectName("verticalLayout_32");
-        IR_1_label_27 = new QLabel(layoutWidget3);
+        IR_1_label_27 = new QLabel(widget1);
         IR_1_label_27->setObjectName("IR_1_label_27");
-        IR_1_label_27->setMinimumSize(QSize(0, 30));
+        IR_1_label_27->setMinimumSize(QSize(0, 19));
         IR_1_label_27->setMaximumSize(QSize(16777215, 1221212));
 
         verticalLayout_32->addWidget(IR_1_label_27);
@@ -1248,13 +1229,13 @@ public:
         verticalLayout_23->setObjectName("verticalLayout_23");
         horizontalLayout_17 = new QHBoxLayout();
         horizontalLayout_17->setObjectName("horizontalLayout_17");
-        IR_1_label_28 = new QLabel(layoutWidget3);
+        IR_1_label_28 = new QLabel(widget1);
         IR_1_label_28->setObjectName("IR_1_label_28");
         IR_1_label_28->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_17->addWidget(IR_1_label_28);
 
-        I_LineEdit_3 = new QLineEdit(layoutWidget3);
+        I_LineEdit_3 = new QLineEdit(widget1);
         I_LineEdit_3->setObjectName("I_LineEdit_3");
         QPalette palette9;
         palette9.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1293,13 +1274,13 @@ public:
 
         horizontalLayout_31 = new QHBoxLayout();
         horizontalLayout_31->setObjectName("horizontalLayout_31");
-        IR_1_label_29 = new QLabel(layoutWidget3);
+        IR_1_label_29 = new QLabel(widget1);
         IR_1_label_29->setObjectName("IR_1_label_29");
         IR_1_label_29->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_31->addWidget(IR_1_label_29);
 
-        D_LineEdit_4 = new QLineEdit(layoutWidget3);
+        D_LineEdit_4 = new QLineEdit(widget1);
         D_LineEdit_4->setObjectName("D_LineEdit_4");
         QPalette palette10;
         palette10.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1338,13 +1319,13 @@ public:
 
         horizontalLayout_33 = new QHBoxLayout();
         horizontalLayout_33->setObjectName("horizontalLayout_33");
-        IR_1_label_30 = new QLabel(layoutWidget3);
+        IR_1_label_30 = new QLabel(widget1);
         IR_1_label_30->setObjectName("IR_1_label_30");
         IR_1_label_30->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_33->addWidget(IR_1_label_30);
 
-        P_LineEdit = new QLineEdit(layoutWidget3);
+        P_LineEdit = new QLineEdit(widget1);
         P_LineEdit->setObjectName("P_LineEdit");
         QPalette palette11;
         palette11.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1383,13 +1364,13 @@ public:
 
         horizontalLayout_36 = new QHBoxLayout();
         horizontalLayout_36->setObjectName("horizontalLayout_36");
-        IR_1_label_31 = new QLabel(layoutWidget3);
+        IR_1_label_31 = new QLabel(widget1);
         IR_1_label_31->setObjectName("IR_1_label_31");
         IR_1_label_31->setMaximumSize(QSize(16777215, 20));
 
         horizontalLayout_36->addWidget(IR_1_label_31);
 
-        OUT_LineEdit_5 = new QLineEdit(layoutWidget3);
+        OUT_LineEdit_5 = new QLineEdit(widget1);
         OUT_LineEdit_5->setObjectName("OUT_LineEdit_5");
         QPalette palette12;
         palette12.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1430,163 +1411,26 @@ public:
         verticalLayout_32->addLayout(verticalLayout_23);
 
 
-        horizontalLayout_37->addLayout(verticalLayout_32);
-
-        layoutWidget4 = new QWidget(PaginaControl);
-        layoutWidget4->setObjectName("layoutWidget4");
-        layoutWidget4->setGeometry(QRect(0, 410, 621, 92));
-        verticalLayout_36 = new QVBoxLayout(layoutWidget4);
-        verticalLayout_36->setObjectName("verticalLayout_36");
-        verticalLayout_36->setContentsMargins(0, 0, 0, 0);
-        horizontalLayout_38 = new QHBoxLayout();
-        horizontalLayout_38->setObjectName("horizontalLayout_38");
-        CHANGE_RC_SETPOINT_label = new QLabel(layoutWidget4);
-        CHANGE_RC_SETPOINT_label->setObjectName("CHANGE_RC_SETPOINT_label");
-        CHANGE_RC_SETPOINT_label->setMinimumSize(QSize(0, 30));
-        CHANGE_RC_SETPOINT_label->setMaximumSize(QSize(16777215, 1221212));
-
-        horizontalLayout_38->addWidget(CHANGE_RC_SETPOINT_label);
-
-        Ajust_RC_Setpoint_spinBox = new QSpinBox(layoutWidget4);
-        Ajust_RC_Setpoint_spinBox->setObjectName("Ajust_RC_Setpoint_spinBox");
-        Ajust_RC_Setpoint_spinBox->setMinimumSize(QSize(0, 40));
-        Ajust_RC_Setpoint_spinBox->setAutoFillBackground(false);
-        Ajust_RC_Setpoint_spinBox->setWrapping(true);
-        Ajust_RC_Setpoint_spinBox->setAlignment(Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter);
-        Ajust_RC_Setpoint_spinBox->setButtonSymbols(QAbstractSpinBox::ButtonSymbols::PlusMinus);
-        Ajust_RC_Setpoint_spinBox->setProperty("showGroupSeparator", QVariant(false));
-        Ajust_RC_Setpoint_spinBox->setMinimum(0);
-        Ajust_RC_Setpoint_spinBox->setMaximum(200);
-        Ajust_RC_Setpoint_spinBox->setSingleStep(1);
-
-        horizontalLayout_38->addWidget(Ajust_RC_Setpoint_spinBox);
+        horizontalLayout_13->addLayout(verticalLayout_32);
 
 
-        verticalLayout_36->addLayout(horizontalLayout_38);
-
-        horizontalLayout_39 = new QHBoxLayout();
-        horizontalLayout_39->setObjectName("horizontalLayout_39");
-        IR_1_label_33 = new QLabel(layoutWidget4);
-        IR_1_label_33->setObjectName("IR_1_label_33");
-        IR_1_label_33->setMinimumSize(QSize(0, 30));
-        IR_1_label_33->setMaximumSize(QSize(16777215, 1221212));
-
-        horizontalLayout_39->addWidget(IR_1_label_33);
-
-        Limite_error_spinBox = new QSpinBox(layoutWidget4);
-        Limite_error_spinBox->setObjectName("Limite_error_spinBox");
-        Limite_error_spinBox->setMinimumSize(QSize(0, 40));
-        Limite_error_spinBox->setAutoFillBackground(false);
-        Limite_error_spinBox->setWrapping(true);
-        Limite_error_spinBox->setAlignment(Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter);
-        Limite_error_spinBox->setButtonSymbols(QAbstractSpinBox::ButtonSymbols::PlusMinus);
-        Limite_error_spinBox->setProperty("showGroupSeparator", QVariant(false));
-        Limite_error_spinBox->setMinimum(0);
-        Limite_error_spinBox->setMaximum(200);
-        Limite_error_spinBox->setSingleStep(1);
-
-        horizontalLayout_39->addWidget(Limite_error_spinBox);
-
-
-        verticalLayout_36->addLayout(horizontalLayout_39);
+        verticalLayout_41->addLayout(horizontalLayout_13);
 
         stackedWidget->addWidget(PaginaControl);
         page = new QWidget();
         page->setObjectName("page");
-        PitchQuickWidget = new QQuickWidget(page);
-        PitchQuickWidget->setObjectName("PitchQuickWidget");
-        PitchQuickWidget->setGeometry(QRect(480, 20, 631, 381));
-        PitchQuickWidget->setResizeMode(QQuickWidget::ResizeMode::SizeRootObjectToView);
-        IR8_progressBar = new QProgressBar(page);
-        IR8_progressBar->setObjectName("IR8_progressBar");
-        IR8_progressBar->setGeometry(QRect(0, 390, 50, 23));
-        IR8_progressBar->setMaximumSize(QSize(50, 16777215));
-        IR8_progressBar->setValue(24);
-        IR8_progressBar->setTextVisible(false);
-        IR8_progressBar->setInvertedAppearance(true);
-        IR7_progressBar = new QProgressBar(page);
-        IR7_progressBar->setObjectName("IR7_progressBar");
-        IR7_progressBar->setGeometry(QRect(320, 380, 50, 23));
-        IR7_progressBar->setMaximumSize(QSize(50, 16777215));
-        IR7_progressBar->setValue(24);
-        IR7_progressBar->setTextVisible(false);
-        layoutWidget5 = new QWidget(page);
-        layoutWidget5->setObjectName("layoutWidget5");
-        layoutWidget5->setGeometry(QRect(100, 10, 231, 95));
-        horizontalLayout_32 = new QHBoxLayout(layoutWidget5);
-        horizontalLayout_32->setObjectName("horizontalLayout_32");
-        horizontalLayout_32->setContentsMargins(0, 0, 0, 0);
-        IR4_progressBar = new QProgressBar(layoutWidget5);
-        IR4_progressBar->setObjectName("IR4_progressBar");
-        IR4_progressBar->setMinimumSize(QSize(50, 0));
-        IR4_progressBar->setValue(24);
-        IR4_progressBar->setTextVisible(false);
-        IR4_progressBar->setOrientation(Qt::Orientation::Vertical);
-
-        horizontalLayout_32->addWidget(IR4_progressBar);
-
-        IR3_progressBar = new QProgressBar(layoutWidget5);
-        IR3_progressBar->setObjectName("IR3_progressBar");
-        IR3_progressBar->setMinimumSize(QSize(50, 0));
-        IR3_progressBar->setValue(24);
-        IR3_progressBar->setTextVisible(false);
-        IR3_progressBar->setOrientation(Qt::Orientation::Vertical);
-
-        horizontalLayout_32->addWidget(IR3_progressBar);
-
-        IR2_progressBar = new QProgressBar(layoutWidget5);
-        IR2_progressBar->setObjectName("IR2_progressBar");
-        IR2_progressBar->setMinimumSize(QSize(50, 0));
-        IR2_progressBar->setValue(24);
-        IR2_progressBar->setTextVisible(false);
-        IR2_progressBar->setOrientation(Qt::Orientation::Vertical);
-
-        horizontalLayout_32->addWidget(IR2_progressBar);
-
-        IR1_progressBar = new QProgressBar(layoutWidget5);
-        IR1_progressBar->setObjectName("IR1_progressBar");
-        IR1_progressBar->setMinimumSize(QSize(50, 80));
-        IR1_progressBar->setValue(24);
-        IR1_progressBar->setTextVisible(false);
-        IR1_progressBar->setOrientation(Qt::Orientation::Vertical);
-
-        horizontalLayout_32->addWidget(IR1_progressBar);
-
-        VistaSuperiorQuickWidget = new QQuickWidget(page);
-        VistaSuperiorQuickWidget->setObjectName("VistaSuperiorQuickWidget");
-        VistaSuperiorQuickWidget->setGeometry(QRect(60, 390, 251, 181));
-        VistaSuperiorQuickWidget->setResizeMode(QQuickWidget::ResizeMode::SizeRootObjectToView);
-        IR6_progressBar = new QProgressBar(page);
-        IR6_progressBar->setObjectName("IR6_progressBar");
-        IR6_progressBar->setGeometry(QRect(280, 280, 25, 95));
-        IR6_progressBar->setValue(24);
-        IR6_progressBar->setTextVisible(false);
-        IR6_progressBar->setOrientation(Qt::Orientation::Vertical);
-        IR5_progressBar = new QProgressBar(page);
-        IR5_progressBar->setObjectName("IR5_progressBar");
-        IR5_progressBar->setGeometry(QRect(60, 280, 25, 95));
-        IR5_progressBar->setValue(24);
-        IR5_progressBar->setTextVisible(false);
-        IR5_progressBar->setOrientation(Qt::Orientation::Vertical);
         stackedWidget->addWidget(page);
-        layoutWidget->raise();
-        PitchQuickWidget->raise();
-        VistaSuperiorQuickWidget->raise();
-        IR6_progressBar->raise();
-        IR5_progressBar->raise();
-        IR7_progressBar->raise();
-        IR8_progressBar->raise();
         PaginaPrincipal = new QWidget();
         PaginaPrincipal->setObjectName("PaginaPrincipal");
-        layoutWidget6 = new QWidget(PaginaPrincipal);
-        layoutWidget6->setObjectName("layoutWidget6");
-        layoutWidget6->setGeometry(QRect(10, 0, 1121, 602));
-        horizontalLayout_28 = new QHBoxLayout(layoutWidget6);
+        layoutWidget1 = new QWidget(PaginaPrincipal);
+        layoutWidget1->setObjectName("layoutWidget1");
+        layoutWidget1->setGeometry(QRect(0, 0, 1141, 586));
+        horizontalLayout_28 = new QHBoxLayout(layoutWidget1);
         horizontalLayout_28->setObjectName("horizontalLayout_28");
         horizontalLayout_28->setContentsMargins(0, 0, 0, 0);
         verticalLayout_34 = new QVBoxLayout();
         verticalLayout_34->setObjectName("verticalLayout_34");
-        quickWidget = new QQuickWidget(layoutWidget6);
+        quickWidget = new QQuickWidget(layoutWidget1);
         quickWidget->setObjectName("quickWidget");
         quickWidget->setResizeMode(QQuickWidget::ResizeMode::SizeRootObjectToView);
 
@@ -1601,7 +1445,7 @@ public:
         verticalLayout_18->setObjectName("verticalLayout_18");
         verticalLayout_11 = new QVBoxLayout();
         verticalLayout_11->setObjectName("verticalLayout_11");
-        WifiPortLabel = new QLabel(layoutWidget6);
+        WifiPortLabel = new QLabel(layoutWidget1);
         WifiPortLabel->setObjectName("WifiPortLabel");
         WifiPortLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
@@ -1615,12 +1459,12 @@ public:
         verticalLayout_7->setObjectName("verticalLayout_7");
         horizontalLayout_5 = new QHBoxLayout();
         horizontalLayout_5->setObjectName("horizontalLayout_5");
-        label_8 = new QLabel(layoutWidget6);
+        label_8 = new QLabel(layoutWidget1);
         label_8->setObjectName("label_8");
 
         horizontalLayout_5->addWidget(label_8);
 
-        TypeIP_lineEdit = new QLineEdit(layoutWidget6);
+        TypeIP_lineEdit = new QLineEdit(layoutWidget1);
         TypeIP_lineEdit->setObjectName("TypeIP_lineEdit");
         QPalette palette13;
         palette13.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1659,12 +1503,12 @@ public:
 
         horizontalLayout_10 = new QHBoxLayout();
         horizontalLayout_10->setObjectName("horizontalLayout_10");
-        label_9 = new QLabel(layoutWidget6);
+        label_9 = new QLabel(layoutWidget1);
         label_9->setObjectName("label_9");
 
         horizontalLayout_10->addWidget(label_9);
 
-        TypePORT_lineEdit = new QLineEdit(layoutWidget6);
+        TypePORT_lineEdit = new QLineEdit(layoutWidget1);
         TypePORT_lineEdit->setObjectName("TypePORT_lineEdit");
         QPalette palette14;
         palette14.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1706,7 +1550,7 @@ public:
 
         verticalLayout_24 = new QVBoxLayout();
         verticalLayout_24->setObjectName("verticalLayout_24");
-        aliveUdpButton = new QPushButton(layoutWidget6);
+        aliveUdpButton = new QPushButton(layoutWidget1);
         aliveUdpButton->setObjectName("aliveUdpButton");
 
         verticalLayout_24->addWidget(aliveUdpButton);
@@ -1717,7 +1561,7 @@ public:
 
         verticalLayout_8->addLayout(horizontalLayout_11);
 
-        httpSoftApButton = new QPushButton(layoutWidget6);
+        httpSoftApButton = new QPushButton(layoutWidget1);
         httpSoftApButton->setObjectName("httpSoftApButton");
 
         verticalLayout_8->addWidget(httpSoftApButton);
@@ -1733,7 +1577,7 @@ public:
 
         verticalLayout_18->addLayout(verticalLayout_11);
 
-        SerialPort_Label = new QLabel(layoutWidget6);
+        SerialPort_Label = new QLabel(layoutWidget1);
         SerialPort_Label->setObjectName("SerialPort_Label");
         SerialPort_Label->setTextFormat(Qt::TextFormat::AutoText);
         SerialPort_Label->setAlignment(Qt::AlignmentFlag::AlignCenter);
@@ -1742,7 +1586,7 @@ public:
 
         horizontalLayout_24 = new QHBoxLayout();
         horizontalLayout_24->setObjectName("horizontalLayout_24");
-        SerialPort_Label_3 = new QLabel(layoutWidget6);
+        SerialPort_Label_3 = new QLabel(layoutWidget1);
         SerialPort_Label_3->setObjectName("SerialPort_Label_3");
         SerialPort_Label_3->setMaximumSize(QSize(125, 16777215));
         SerialPort_Label_3->setTextFormat(Qt::TextFormat::AutoText);
@@ -1750,7 +1594,7 @@ public:
 
         horizontalLayout_24->addWidget(SerialPort_Label_3);
 
-        OpenPortcomboBox = new QComboBox(layoutWidget6);
+        OpenPortcomboBox = new QComboBox(layoutWidget1);
         OpenPortcomboBox->addItem(QString());
         OpenPortcomboBox->addItem(QString());
         OpenPortcomboBox->addItem(QString());
@@ -1764,7 +1608,7 @@ public:
 
         horizontalLayout_24->addWidget(OpenPortcomboBox);
 
-        openPortPushButton = new QPushButton(layoutWidget6);
+        openPortPushButton = new QPushButton(layoutWidget1);
         openPortPushButton->setObjectName("openPortPushButton");
         openPortPushButton->setStyleSheet(QString::fromUtf8("QPushButton{\n"
 "	color-background: gray;\n"
@@ -1777,7 +1621,7 @@ public:
 
         horizontalLayout_23 = new QHBoxLayout();
         horizontalLayout_23->setObjectName("horizontalLayout_23");
-        WifiPortLabel_3 = new QLabel(layoutWidget6);
+        WifiPortLabel_3 = new QLabel(layoutWidget1);
         WifiPortLabel_3->setObjectName("WifiPortLabel_3");
         WifiPortLabel_3->setMaximumSize(QSize(125, 16777215));
 
@@ -1785,12 +1629,12 @@ public:
 
         verticalLayout_33 = new QVBoxLayout();
         verticalLayout_33->setObjectName("verticalLayout_33");
-        REDlineEdit = new QLineEdit(layoutWidget6);
+        REDlineEdit = new QLineEdit(layoutWidget1);
         REDlineEdit->setObjectName("REDlineEdit");
 
         verticalLayout_33->addWidget(REDlineEdit);
 
-        PASSWORDlineEdit = new QLineEdit(layoutWidget6);
+        PASSWORDlineEdit = new QLineEdit(layoutWidget1);
         PASSWORDlineEdit->setObjectName("PASSWORDlineEdit");
         QPalette palette15;
         palette15.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
@@ -1827,7 +1671,7 @@ public:
 
         horizontalLayout_23->addLayout(verticalLayout_33);
 
-        REDpushButton = new QPushButton(layoutWidget6);
+        REDpushButton = new QPushButton(layoutWidget1);
         REDpushButton->setObjectName("REDpushButton");
         REDpushButton->setMinimumSize(QSize(0, 45));
 
@@ -1841,7 +1685,7 @@ public:
 
         verticalLayout_5 = new QVBoxLayout();
         verticalLayout_5->setObjectName("verticalLayout_5");
-        SerialPort_Label_4 = new QLabel(layoutWidget6);
+        SerialPort_Label_4 = new QLabel(layoutWidget1);
         SerialPort_Label_4->setObjectName("SerialPort_Label_4");
         SerialPort_Label_4->setTextFormat(Qt::TextFormat::AutoText);
         SerialPort_Label_4->setAlignment(Qt::AlignmentFlag::AlignCenter);
@@ -1852,12 +1696,12 @@ public:
         horizontalLayout_22->setObjectName("horizontalLayout_22");
         verticalLayout_10 = new QVBoxLayout();
         verticalLayout_10->setObjectName("verticalLayout_10");
-        SerialPort_Label_2 = new QLabel(layoutWidget6);
+        SerialPort_Label_2 = new QLabel(layoutWidget1);
         SerialPort_Label_2->setObjectName("SerialPort_Label_2");
 
         verticalLayout_10->addWidget(SerialPort_Label_2);
 
-        InfoTextEdit = new QTextEdit(layoutWidget6);
+        InfoTextEdit = new QTextEdit(layoutWidget1);
         InfoTextEdit->setObjectName("InfoTextEdit");
 
         verticalLayout_10->addWidget(InfoTextEdit);
@@ -1867,12 +1711,12 @@ public:
 
         verticalLayout_27 = new QVBoxLayout();
         verticalLayout_27->setObjectName("verticalLayout_27");
-        SerialPort_Label_5 = new QLabel(layoutWidget6);
+        SerialPort_Label_5 = new QLabel(layoutWidget1);
         SerialPort_Label_5->setObjectName("SerialPort_Label_5");
 
         verticalLayout_27->addWidget(SerialPort_Label_5);
 
-        InfoTextEdit_2 = new QTextEdit(layoutWidget6);
+        InfoTextEdit_2 = new QTextEdit(layoutWidget1);
         InfoTextEdit_2->setObjectName("InfoTextEdit_2");
 
         verticalLayout_27->addWidget(InfoTextEdit_2);
@@ -1887,12 +1731,12 @@ public:
         horizontalLayout->setObjectName("horizontalLayout");
         verticalLayout_4 = new QVBoxLayout();
         verticalLayout_4->setObjectName("verticalLayout_4");
-        SerialPort_Label_7 = new QLabel(layoutWidget6);
+        SerialPort_Label_7 = new QLabel(layoutWidget1);
         SerialPort_Label_7->setObjectName("SerialPort_Label_7");
 
         verticalLayout_4->addWidget(SerialPort_Label_7);
 
-        RxTextEdit = new QTextEdit(layoutWidget6);
+        RxTextEdit = new QTextEdit(layoutWidget1);
         RxTextEdit->setObjectName("RxTextEdit");
 
         verticalLayout_4->addWidget(RxTextEdit);
@@ -1902,12 +1746,12 @@ public:
 
         verticalLayout_17 = new QVBoxLayout();
         verticalLayout_17->setObjectName("verticalLayout_17");
-        SerialPort_Label_6 = new QLabel(layoutWidget6);
+        SerialPort_Label_6 = new QLabel(layoutWidget1);
         SerialPort_Label_6->setObjectName("SerialPort_Label_6");
 
         verticalLayout_17->addWidget(SerialPort_Label_6);
 
-        TxTextEdit = new QTextEdit(layoutWidget6);
+        TxTextEdit = new QTextEdit(layoutWidget1);
         TxTextEdit->setObjectName("TxTextEdit");
 
         verticalLayout_17->addWidget(TxTextEdit);
@@ -1921,7 +1765,7 @@ public:
 
         verticalLayout_12->addLayout(verticalLayout_5);
 
-        cleanInfoPushButton = new QPushButton(layoutWidget6);
+        cleanInfoPushButton = new QPushButton(layoutWidget1);
         cleanInfoPushButton->setObjectName("cleanInfoPushButton");
 
         verticalLayout_12->addWidget(cleanInfoPushButton);
@@ -1932,108 +1776,76 @@ public:
         stackedWidget->addWidget(PaginaPrincipal);
         PaginaCalibracin = new QWidget();
         PaginaCalibracin->setObjectName("PaginaCalibracin");
-        layoutWidget7 = new QWidget(PaginaCalibracin);
-        layoutWidget7->setObjectName("layoutWidget7");
-        layoutWidget7->setGeometry(QRect(10, 30, 571, 559));
-        verticalLayout_22 = new QVBoxLayout(layoutWidget7);
+        textEdit = new QTextEdit(PaginaCalibracin);
+        textEdit->setObjectName("textEdit");
+        textEdit->setGeometry(QRect(0, 240, 191, 341));
+        PitchQuickWidget = new QQuickWidget(PaginaCalibracin);
+        PitchQuickWidget->setObjectName("PitchQuickWidget");
+        PitchQuickWidget->setGeometry(QRect(550, 10, 601, 551));
+        PitchQuickWidget->setResizeMode(QQuickWidget::ResizeMode::SizeRootObjectToView);
+        IR7_progressBar = new QProgressBar(PaginaCalibracin);
+        IR7_progressBar->setObjectName("IR7_progressBar");
+        IR7_progressBar->setGeometry(QRect(370, 490, 50, 23));
+        IR7_progressBar->setMaximumSize(QSize(50, 16777215));
+        IR7_progressBar->setValue(24);
+        IR7_progressBar->setTextVisible(false);
+        IR8_progressBar = new QProgressBar(PaginaCalibracin);
+        IR8_progressBar->setObjectName("IR8_progressBar");
+        IR8_progressBar->setGeometry(QRect(290, 490, 50, 23));
+        IR8_progressBar->setMaximumSize(QSize(50, 16777215));
+        IR8_progressBar->setValue(24);
+        IR8_progressBar->setTextVisible(false);
+        IR8_progressBar->setInvertedAppearance(true);
+        IR5_progressBar = new QProgressBar(PaginaCalibracin);
+        IR5_progressBar->setObjectName("IR5_progressBar");
+        IR5_progressBar->setGeometry(QRect(370, 520, 51, 21));
+        IR5_progressBar->setValue(24);
+        IR5_progressBar->setTextVisible(false);
+        IR5_progressBar->setOrientation(Qt::Orientation::Horizontal);
+        IR6_progressBar = new QProgressBar(PaginaCalibracin);
+        IR6_progressBar->setObjectName("IR6_progressBar");
+        IR6_progressBar->setGeometry(QRect(340, 390, 25, 95));
+        IR6_progressBar->setValue(24);
+        IR6_progressBar->setTextVisible(false);
+        IR6_progressBar->setOrientation(Qt::Orientation::Vertical);
+        widget2 = new QWidget(PaginaCalibracin);
+        widget2->setObjectName("widget2");
+        widget2->setGeometry(QRect(0, 0, 546, 232));
+        verticalLayout_14 = new QVBoxLayout(widget2);
+        verticalLayout_14->setObjectName("verticalLayout_14");
+        verticalLayout_14->setContentsMargins(0, 0, 0, 0);
+        verticalLayout_22 = new QVBoxLayout();
         verticalLayout_22->setObjectName("verticalLayout_22");
-        verticalLayout_22->setContentsMargins(0, 0, 0, 0);
         verticalLayout_13 = new QVBoxLayout();
         verticalLayout_13->setObjectName("verticalLayout_13");
-        verticalLayout_14 = new QVBoxLayout();
-        verticalLayout_14->setObjectName("verticalLayout_14");
-        horizontalLayout_13 = new QHBoxLayout();
-        horizontalLayout_13->setObjectName("horizontalLayout_13");
-        verticalLayout_16 = new QVBoxLayout();
-        verticalLayout_16->setObjectName("verticalLayout_16");
-        label_6 = new QLabel(layoutWidget7);
-        label_6->setObjectName("label_6");
+        verticalLayout_25 = new QVBoxLayout();
+        verticalLayout_25->setObjectName("verticalLayout_25");
+        label_4 = new QLabel(widget2);
+        label_4->setObjectName("label_4");
+        label_4->setMaximumSize(QSize(16777215, 20));
+        label_4->setAlignment(Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignVCenter);
 
-        verticalLayout_16->addWidget(label_6);
+        verticalLayout_25->addWidget(label_4);
 
-        IR_ComboBox = new QComboBox(layoutWidget7);
-        IR_ComboBox->addItem(QString());
-        IR_ComboBox->addItem(QString());
-        IR_ComboBox->addItem(QString());
-        IR_ComboBox->setObjectName("IR_ComboBox");
-
-        verticalLayout_16->addWidget(IR_ComboBox);
-
-
-        horizontalLayout_13->addLayout(verticalLayout_16);
-
-        verticalLayout_15 = new QVBoxLayout();
-        verticalLayout_15->setObjectName("verticalLayout_15");
-        StartCalibratePushButton = new QPushButton(layoutWidget7);
-        StartCalibratePushButton->setObjectName("StartCalibratePushButton");
-
-        verticalLayout_15->addWidget(StartCalibratePushButton);
-
-        StopCalibratePushButton = new QPushButton(layoutWidget7);
-        StopCalibratePushButton->setObjectName("StopCalibratePushButton");
-
-        verticalLayout_15->addWidget(StopCalibratePushButton);
-
-
-        horizontalLayout_13->addLayout(verticalLayout_15);
-
-
-        verticalLayout_14->addLayout(horizontalLayout_13);
-
-        horizontalLayout_19 = new QHBoxLayout();
-        horizontalLayout_19->setObjectName("horizontalLayout_19");
-        label_5 = new QLabel(layoutWidget7);
-        label_5->setObjectName("label_5");
-        label_5->setMaximumSize(QSize(16777215, 20));
-        label_5->setAlignment(Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignVCenter);
-
-        horizontalLayout_19->addWidget(label_5);
-
-        MPU_calibrate = new QPushButton(layoutWidget7);
-        MPU_calibrate->setObjectName("MPU_calibrate");
-        MPU_calibrate->setMaximumSize(QSize(70, 16777215));
-
-        horizontalLayout_19->addWidget(MPU_calibrate);
-
-
-        verticalLayout_14->addLayout(horizontalLayout_19);
-
-        horizontalLayout_18 = new QHBoxLayout();
-        horizontalLayout_18->setObjectName("horizontalLayout_18");
-        gridLayout_7 = new QGridLayout();
-        gridLayout_7->setObjectName("gridLayout_7");
         horizontalLayout_9 = new QHBoxLayout();
         horizontalLayout_9->setObjectName("horizontalLayout_9");
-        gridLayout_8 = new QGridLayout();
-        gridLayout_8->setObjectName("gridLayout_8");
-        IR_1_label_6 = new QLabel(layoutWidget7);
-        IR_1_label_6->setObjectName("IR_1_label_6");
+        StartCalibratePushButton = new QPushButton(widget2);
+        StartCalibratePushButton->setObjectName("StartCalibratePushButton");
 
-        gridLayout_8->addWidget(IR_1_label_6, 0, 3, 1, 1);
+        horizontalLayout_9->addWidget(StartCalibratePushButton);
 
-        IR_2_label_4 = new QLabel(layoutWidget7);
-        IR_2_label_4->setObjectName("IR_2_label_4");
+        StopCalibratePushButton = new QPushButton(widget2);
+        StopCalibratePushButton->setObjectName("StopCalibratePushButton");
 
-        gridLayout_8->addWidget(IR_2_label_4, 0, 5, 1, 1);
+        horizontalLayout_9->addWidget(StopCalibratePushButton);
 
-        Yaw_lineEdit = new QLineEdit(layoutWidget7);
-        Yaw_lineEdit->setObjectName("Yaw_lineEdit");
 
-        gridLayout_8->addWidget(Yaw_lineEdit, 1, 5, 1, 1);
+        verticalLayout_25->addLayout(horizontalLayout_9);
 
-        IR_3_label_4 = new QLabel(layoutWidget7);
-        IR_3_label_4->setObjectName("IR_3_label_4");
-
-        gridLayout_8->addWidget(IR_3_label_4, 0, 2, 1, 1);
-
-        IR_1_label_5 = new QLabel(layoutWidget7);
-        IR_1_label_5->setObjectName("IR_1_label_5");
-        IR_1_label_5->setMaximumSize(QSize(16777215, 20));
-
-        gridLayout_8->addWidget(IR_1_label_5, 0, 6, 1, 1);
-
-        AngleX_LineEdit = new QLineEdit(layoutWidget7);
-        AngleX_LineEdit->setObjectName("AngleX_LineEdit");
+        gridLayout_5 = new QGridLayout();
+        gridLayout_5->setObjectName("gridLayout_5");
+        IR_5_LineEdit = new QLineEdit(widget2);
+        IR_5_LineEdit->setObjectName("IR_5_LineEdit");
         QPalette palette16;
         palette16.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette16.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2062,12 +1874,12 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette16.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        AngleX_LineEdit->setPalette(palette16);
+        IR_5_LineEdit->setPalette(palette16);
 
-        gridLayout_8->addWidget(AngleX_LineEdit, 1, 6, 1, 1);
+        gridLayout_5->addWidget(IR_5_LineEdit, 1, 4, 1, 1);
 
-        Pitch_LineEdit = new QLineEdit(layoutWidget7);
-        Pitch_LineEdit->setObjectName("Pitch_LineEdit");
+        IR_4_LineEdit = new QLineEdit(widget2);
+        IR_4_LineEdit->setObjectName("IR_4_LineEdit");
         QPalette palette17;
         palette17.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette17.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2096,12 +1908,12 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette17.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        Pitch_LineEdit->setPalette(palette17);
+        IR_4_LineEdit->setPalette(palette17);
 
-        gridLayout_8->addWidget(Pitch_LineEdit, 1, 3, 1, 1);
+        gridLayout_5->addWidget(IR_4_LineEdit, 1, 3, 1, 1);
 
-        MPU_Ay = new QLineEdit(layoutWidget7);
-        MPU_Ay->setObjectName("MPU_Ay");
+        IR_7_LineEdit = new QLineEdit(widget2);
+        IR_7_LineEdit->setObjectName("IR_7_LineEdit");
         QPalette palette18;
         palette18.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette18.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2130,22 +1942,18 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette18.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        MPU_Ay->setPalette(palette18);
+        IR_7_LineEdit->setPalette(palette18);
 
-        gridLayout_8->addWidget(MPU_Ay, 1, 1, 1, 1);
+        gridLayout_5->addWidget(IR_7_LineEdit, 1, 6, 1, 1);
 
-        IR_1_label_7 = new QLabel(layoutWidget7);
-        IR_1_label_7->setObjectName("IR_1_label_7");
+        IR_6_label = new QLabel(widget2);
+        IR_6_label->setObjectName("IR_6_label");
+        IR_6_label->setMaximumSize(QSize(16777215, 25));
 
-        gridLayout_8->addWidget(IR_1_label_7, 0, 0, 1, 1);
+        gridLayout_5->addWidget(IR_6_label, 0, 5, 1, 1);
 
-        IR_2_label_3 = new QLabel(layoutWidget7);
-        IR_2_label_3->setObjectName("IR_2_label_3");
-
-        gridLayout_8->addWidget(IR_2_label_3, 0, 1, 1, 1);
-
-        MPU_Ax = new QLineEdit(layoutWidget7);
-        MPU_Ax->setObjectName("MPU_Ax");
+        IR_6_LineEdit = new QLineEdit(widget2);
+        IR_6_LineEdit->setObjectName("IR_6_LineEdit");
         QPalette palette19;
         palette19.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette19.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2174,12 +1982,36 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette19.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        MPU_Ax->setPalette(palette19);
+        IR_6_LineEdit->setPalette(palette19);
 
-        gridLayout_8->addWidget(MPU_Ax, 1, 0, 1, 1);
+        gridLayout_5->addWidget(IR_6_LineEdit, 1, 5, 1, 1);
 
-        MPU_Az = new QLineEdit(layoutWidget7);
-        MPU_Az->setObjectName("MPU_Az");
+        IR_8_label = new QLabel(widget2);
+        IR_8_label->setObjectName("IR_8_label");
+        IR_8_label->setMaximumSize(QSize(16777215, 25));
+
+        gridLayout_5->addWidget(IR_8_label, 0, 7, 1, 1);
+
+        IR_5_label = new QLabel(widget2);
+        IR_5_label->setObjectName("IR_5_label");
+        IR_5_label->setMaximumSize(QSize(16777215, 25));
+
+        gridLayout_5->addWidget(IR_5_label, 0, 4, 1, 1);
+
+        IR_2_label = new QLabel(widget2);
+        IR_2_label->setObjectName("IR_2_label");
+        IR_2_label->setMaximumSize(QSize(16777215, 25));
+
+        gridLayout_5->addWidget(IR_2_label, 0, 1, 1, 1);
+
+        IR_1_label = new QLabel(widget2);
+        IR_1_label->setObjectName("IR_1_label");
+        IR_1_label->setMaximumSize(QSize(16777215, 25));
+
+        gridLayout_5->addWidget(IR_1_label, 0, 0, 1, 1);
+
+        IR_8_LineEdit = new QLineEdit(widget2);
+        IR_8_LineEdit->setObjectName("IR_8_LineEdit");
         QPalette palette20;
         palette20.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette20.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2208,59 +2040,12 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette20.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        MPU_Az->setPalette(palette20);
+        IR_8_LineEdit->setPalette(palette20);
 
-        gridLayout_8->addWidget(MPU_Az, 1, 2, 1, 1);
+        gridLayout_5->addWidget(IR_8_LineEdit, 1, 7, 1, 1);
 
-        AcLineallineEdit = new QLineEdit(layoutWidget7);
-        AcLineallineEdit->setObjectName("AcLineallineEdit");
-
-        gridLayout_8->addWidget(AcLineallineEdit, 1, 7, 1, 1);
-
-        HB_LABEL_3 = new QLabel(layoutWidget7);
-        HB_LABEL_3->setObjectName("HB_LABEL_3");
-        HB_LABEL_3->setMaximumSize(QSize(16777215, 20));
-
-        gridLayout_8->addWidget(HB_LABEL_3, 0, 7, 1, 1);
-
-
-        horizontalLayout_9->addLayout(gridLayout_8);
-
-
-        gridLayout_7->addLayout(horizontalLayout_9, 2, 0, 1, 1);
-
-
-        horizontalLayout_18->addLayout(gridLayout_7);
-
-        verticalLayout_30 = new QVBoxLayout();
-        verticalLayout_30->setObjectName("verticalLayout_30");
-
-        horizontalLayout_18->addLayout(verticalLayout_30);
-
-
-        verticalLayout_14->addLayout(horizontalLayout_18);
-
-
-        verticalLayout_13->addLayout(verticalLayout_14);
-
-        verticalLayout_25 = new QVBoxLayout();
-        verticalLayout_25->setObjectName("verticalLayout_25");
-        label_4 = new QLabel(layoutWidget7);
-        label_4->setObjectName("label_4");
-        label_4->setMaximumSize(QSize(16777215, 20));
-        label_4->setAlignment(Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignVCenter);
-
-        verticalLayout_25->addWidget(label_4);
-
-        gridLayout_5 = new QGridLayout();
-        gridLayout_5->setObjectName("gridLayout_5");
-        IR_8_label = new QLabel(layoutWidget7);
-        IR_8_label->setObjectName("IR_8_label");
-
-        gridLayout_5->addWidget(IR_8_label, 0, 7, 1, 1);
-
-        IR_5_LineEdit = new QLineEdit(layoutWidget7);
-        IR_5_LineEdit->setObjectName("IR_5_LineEdit");
+        IR_2_LineEdit = new QLineEdit(widget2);
+        IR_2_LineEdit->setObjectName("IR_2_LineEdit");
         QPalette palette21;
         palette21.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette21.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2289,12 +2074,18 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette21.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        IR_5_LineEdit->setPalette(palette21);
+        IR_2_LineEdit->setPalette(palette21);
 
-        gridLayout_5->addWidget(IR_5_LineEdit, 1, 4, 1, 1);
+        gridLayout_5->addWidget(IR_2_LineEdit, 1, 1, 1, 1);
 
-        IR_8_LineEdit = new QLineEdit(layoutWidget7);
-        IR_8_LineEdit->setObjectName("IR_8_LineEdit");
+        IR_3_label = new QLabel(widget2);
+        IR_3_label->setObjectName("IR_3_label");
+        IR_3_label->setMaximumSize(QSize(16777215, 25));
+
+        gridLayout_5->addWidget(IR_3_label, 0, 2, 1, 1);
+
+        IR_3_LineEdit = new QLineEdit(widget2);
+        IR_3_LineEdit->setObjectName("IR_3_LineEdit");
         QPalette palette22;
         palette22.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette22.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2323,12 +2114,12 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette22.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        IR_8_LineEdit->setPalette(palette22);
+        IR_3_LineEdit->setPalette(palette22);
 
-        gridLayout_5->addWidget(IR_8_LineEdit, 1, 7, 1, 1);
+        gridLayout_5->addWidget(IR_3_LineEdit, 1, 2, 1, 1);
 
-        IR_6_LineEdit = new QLineEdit(layoutWidget7);
-        IR_6_LineEdit->setObjectName("IR_6_LineEdit");
+        IR_1_LineEdit = new QLineEdit(widget2);
+        IR_1_LineEdit->setObjectName("IR_1_LineEdit");
         QPalette palette23;
         palette23.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette23.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2357,12 +2148,85 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette23.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        IR_6_LineEdit->setPalette(palette23);
+        IR_1_LineEdit->setPalette(palette23);
 
-        gridLayout_5->addWidget(IR_6_LineEdit, 1, 5, 1, 1);
+        gridLayout_5->addWidget(IR_1_LineEdit, 1, 0, 1, 1);
 
-        IR_7_LineEdit = new QLineEdit(layoutWidget7);
-        IR_7_LineEdit->setObjectName("IR_7_LineEdit");
+        IR_4_label = new QLabel(widget2);
+        IR_4_label->setObjectName("IR_4_label");
+        IR_4_label->setMaximumSize(QSize(16777215, 25));
+
+        gridLayout_5->addWidget(IR_4_label, 0, 3, 1, 1);
+
+        IR_7_label = new QLabel(widget2);
+        IR_7_label->setObjectName("IR_7_label");
+        IR_7_label->setMaximumSize(QSize(502, 25));
+
+        gridLayout_5->addWidget(IR_7_label, 0, 6, 1, 1);
+
+
+        verticalLayout_25->addLayout(gridLayout_5);
+
+
+        verticalLayout_13->addLayout(verticalLayout_25);
+
+
+        verticalLayout_22->addLayout(verticalLayout_13);
+
+
+        verticalLayout_14->addLayout(verticalLayout_22);
+
+        verticalLayout_15 = new QVBoxLayout();
+        verticalLayout_15->setObjectName("verticalLayout_15");
+        horizontalLayout_4 = new QHBoxLayout();
+        horizontalLayout_4->setObjectName("horizontalLayout_4");
+        label_5 = new QLabel(widget2);
+        label_5->setObjectName("label_5");
+        label_5->setMaximumSize(QSize(16777215, 35));
+        label_5->setAlignment(Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignVCenter);
+
+        horizontalLayout_4->addWidget(label_5);
+
+        MPU_calibrate = new QPushButton(widget2);
+        MPU_calibrate->setObjectName("MPU_calibrate");
+        MPU_calibrate->setMinimumSize(QSize(1, 0));
+        MPU_calibrate->setMaximumSize(QSize(699, 16777215));
+
+        horizontalLayout_4->addWidget(MPU_calibrate);
+
+
+        verticalLayout_15->addLayout(horizontalLayout_4);
+
+        gridLayout_8 = new QGridLayout();
+        gridLayout_8->setObjectName("gridLayout_8");
+        IR_1_label_6 = new QLabel(widget2);
+        IR_1_label_6->setObjectName("IR_1_label_6");
+
+        gridLayout_8->addWidget(IR_1_label_6, 0, 3, 1, 1);
+
+        IR_2_label_4 = new QLabel(widget2);
+        IR_2_label_4->setObjectName("IR_2_label_4");
+
+        gridLayout_8->addWidget(IR_2_label_4, 0, 5, 1, 1);
+
+        Yaw_lineEdit = new QLineEdit(widget2);
+        Yaw_lineEdit->setObjectName("Yaw_lineEdit");
+
+        gridLayout_8->addWidget(Yaw_lineEdit, 1, 5, 1, 1);
+
+        IR_3_label_4 = new QLabel(widget2);
+        IR_3_label_4->setObjectName("IR_3_label_4");
+
+        gridLayout_8->addWidget(IR_3_label_4, 0, 2, 1, 1);
+
+        IR_1_label_5 = new QLabel(widget2);
+        IR_1_label_5->setObjectName("IR_1_label_5");
+        IR_1_label_5->setMaximumSize(QSize(16777215, 20));
+
+        gridLayout_8->addWidget(IR_1_label_5, 0, 6, 1, 1);
+
+        AngleX_LineEdit = new QLineEdit(widget2);
+        AngleX_LineEdit->setObjectName("AngleX_LineEdit");
         QPalette palette24;
         palette24.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette24.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2391,17 +2255,12 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette24.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        IR_7_LineEdit->setPalette(palette24);
+        AngleX_LineEdit->setPalette(palette24);
 
-        gridLayout_5->addWidget(IR_7_LineEdit, 1, 6, 1, 1);
+        gridLayout_8->addWidget(AngleX_LineEdit, 1, 6, 1, 1);
 
-        IR_4_label = new QLabel(layoutWidget7);
-        IR_4_label->setObjectName("IR_4_label");
-
-        gridLayout_5->addWidget(IR_4_label, 0, 3, 1, 1);
-
-        IR_3_LineEdit = new QLineEdit(layoutWidget7);
-        IR_3_LineEdit->setObjectName("IR_3_LineEdit");
+        Pitch_LineEdit = new QLineEdit(widget2);
+        Pitch_LineEdit->setObjectName("Pitch_LineEdit");
         QPalette palette25;
         palette25.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette25.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2430,12 +2289,12 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette25.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        IR_3_LineEdit->setPalette(palette25);
+        Pitch_LineEdit->setPalette(palette25);
 
-        gridLayout_5->addWidget(IR_3_LineEdit, 1, 2, 1, 1);
+        gridLayout_8->addWidget(Pitch_LineEdit, 1, 3, 1, 1);
 
-        IR_4_LineEdit = new QLineEdit(layoutWidget7);
-        IR_4_LineEdit->setObjectName("IR_4_LineEdit");
+        MPU_Ay = new QLineEdit(widget2);
+        MPU_Ay->setObjectName("MPU_Ay");
         QPalette palette26;
         palette26.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette26.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2464,17 +2323,22 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette26.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        IR_4_LineEdit->setPalette(palette26);
+        MPU_Ay->setPalette(palette26);
 
-        gridLayout_5->addWidget(IR_4_LineEdit, 1, 3, 1, 1);
+        gridLayout_8->addWidget(MPU_Ay, 1, 1, 1, 1);
 
-        IR_5_label = new QLabel(layoutWidget7);
-        IR_5_label->setObjectName("IR_5_label");
+        IR_1_label_7 = new QLabel(widget2);
+        IR_1_label_7->setObjectName("IR_1_label_7");
 
-        gridLayout_5->addWidget(IR_5_label, 0, 4, 1, 1);
+        gridLayout_8->addWidget(IR_1_label_7, 0, 0, 1, 1);
 
-        IR_2_LineEdit = new QLineEdit(layoutWidget7);
-        IR_2_LineEdit->setObjectName("IR_2_LineEdit");
+        IR_2_label_3 = new QLabel(widget2);
+        IR_2_label_3->setObjectName("IR_2_label_3");
+
+        gridLayout_8->addWidget(IR_2_label_3, 0, 1, 1, 1);
+
+        MPU_Ax = new QLineEdit(widget2);
+        MPU_Ax->setObjectName("MPU_Ax");
         QPalette palette27;
         palette27.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette27.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2503,33 +2367,12 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette27.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        IR_2_LineEdit->setPalette(palette27);
+        MPU_Ax->setPalette(palette27);
 
-        gridLayout_5->addWidget(IR_2_LineEdit, 1, 1, 1, 1);
+        gridLayout_8->addWidget(MPU_Ax, 1, 0, 1, 1);
 
-        IR_7_label = new QLabel(layoutWidget7);
-        IR_7_label->setObjectName("IR_7_label");
-        IR_7_label->setMaximumSize(QSize(50, 50));
-
-        gridLayout_5->addWidget(IR_7_label, 0, 6, 1, 1);
-
-        IR_6_label = new QLabel(layoutWidget7);
-        IR_6_label->setObjectName("IR_6_label");
-
-        gridLayout_5->addWidget(IR_6_label, 0, 5, 1, 1);
-
-        IR_3_label = new QLabel(layoutWidget7);
-        IR_3_label->setObjectName("IR_3_label");
-
-        gridLayout_5->addWidget(IR_3_label, 0, 2, 1, 1);
-
-        IR_2_label = new QLabel(layoutWidget7);
-        IR_2_label->setObjectName("IR_2_label");
-
-        gridLayout_5->addWidget(IR_2_label, 0, 1, 1, 1);
-
-        IR_1_LineEdit = new QLineEdit(layoutWidget7);
-        IR_1_LineEdit->setObjectName("IR_1_LineEdit");
+        MPU_Az = new QLineEdit(widget2);
+        MPU_Az->setObjectName("MPU_Az");
         QPalette palette28;
         palette28.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette28.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2558,110 +2401,110 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette28.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        IR_1_LineEdit->setPalette(palette28);
+        MPU_Az->setPalette(palette28);
 
-        gridLayout_5->addWidget(IR_1_LineEdit, 1, 0, 1, 1);
+        gridLayout_8->addWidget(MPU_Az, 1, 2, 1, 1);
 
-        IR_1_label = new QLabel(layoutWidget7);
-        IR_1_label->setObjectName("IR_1_label");
+        AcLineallineEdit = new QLineEdit(widget2);
+        AcLineallineEdit->setObjectName("AcLineallineEdit");
 
-        gridLayout_5->addWidget(IR_1_label, 0, 0, 1, 1);
+        gridLayout_8->addWidget(AcLineallineEdit, 1, 7, 1, 1);
 
+        HB_LABEL_3 = new QLabel(widget2);
+        HB_LABEL_3->setObjectName("HB_LABEL_3");
+        HB_LABEL_3->setMaximumSize(QSize(16777215, 20));
 
-        verticalLayout_25->addLayout(gridLayout_5);
-
-
-        verticalLayout_13->addLayout(verticalLayout_25);
-
-        horizontalLayout_4 = new QHBoxLayout();
-        horizontalLayout_4->setObjectName("horizontalLayout_4");
-        verticalLayout_6 = new QVBoxLayout();
-        verticalLayout_6->setObjectName("verticalLayout_6");
-        IR_1_label_14 = new QLabel(layoutWidget7);
-        IR_1_label_14->setObjectName("IR_1_label_14");
-
-        verticalLayout_6->addWidget(IR_1_label_14);
-
-        IR_1_label_12 = new QLabel(layoutWidget7);
-        IR_1_label_12->setObjectName("IR_1_label_12");
-
-        verticalLayout_6->addWidget(IR_1_label_12);
-
-        IR_1_label_13 = new QLabel(layoutWidget7);
-        IR_1_label_13->setObjectName("IR_1_label_13");
-
-        verticalLayout_6->addWidget(IR_1_label_13);
+        gridLayout_8->addWidget(HB_LABEL_3, 0, 7, 1, 1);
 
 
-        horizontalLayout_4->addLayout(verticalLayout_6);
-
-        verticalLayout_3 = new QVBoxLayout();
-        verticalLayout_3->setObjectName("verticalLayout_3");
-        IR_1_label_11 = new QLabel(layoutWidget7);
-        IR_1_label_11->setObjectName("IR_1_label_11");
-
-        verticalLayout_3->addWidget(IR_1_label_11);
-
-        vel_x = new QLineEdit(layoutWidget7);
-        vel_x->setObjectName("vel_x");
-
-        verticalLayout_3->addWidget(vel_x);
-
-        vel_y = new QLineEdit(layoutWidget7);
-        vel_y->setObjectName("vel_y");
-
-        verticalLayout_3->addWidget(vel_y);
+        verticalLayout_15->addLayout(gridLayout_8);
 
 
-        horizontalLayout_4->addLayout(verticalLayout_3);
+        verticalLayout_14->addLayout(verticalLayout_15);
 
-        verticalLayout = new QVBoxLayout();
-        verticalLayout->setObjectName("verticalLayout");
-        IR_1_label_10 = new QLabel(layoutWidget7);
-        IR_1_label_10->setObjectName("IR_1_label_10");
-        IR_1_label_10->setMaximumSize(QSize(16777215, 20));
+        widget3 = new QWidget(PaginaCalibracin);
+        widget3->setObjectName("widget3");
+        widget3->setGeometry(QRect(200, 250, 282, 123));
+        verticalLayout_30 = new QVBoxLayout(widget3);
+        verticalLayout_30->setObjectName("verticalLayout_30");
+        verticalLayout_30->setContentsMargins(0, 0, 0, 0);
+        label_6 = new QLabel(widget3);
+        label_6->setObjectName("label_6");
+        label_6->setMaximumSize(QSize(16777215, 20));
+        label_6->setAlignment(Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignVCenter);
 
-        verticalLayout->addWidget(IR_1_label_10);
+        verticalLayout_30->addWidget(label_6);
 
-        PosXLineEdit = new QLineEdit(layoutWidget7);
-        PosXLineEdit->setObjectName("PosXLineEdit");
+        horizontalLayout_32 = new QHBoxLayout();
+        horizontalLayout_32->setObjectName("horizontalLayout_32");
+        IR4_progressBar = new QProgressBar(widget3);
+        IR4_progressBar->setObjectName("IR4_progressBar");
+        IR4_progressBar->setMinimumSize(QSize(50, 0));
+        IR4_progressBar->setValue(24);
+        IR4_progressBar->setTextVisible(false);
+        IR4_progressBar->setOrientation(Qt::Orientation::Vertical);
 
-        verticalLayout->addWidget(PosXLineEdit);
+        horizontalLayout_32->addWidget(IR4_progressBar);
 
-        PosYLineEdit = new QLineEdit(layoutWidget7);
-        PosYLineEdit->setObjectName("PosYLineEdit");
+        IR3_progressBar = new QProgressBar(widget3);
+        IR3_progressBar->setObjectName("IR3_progressBar");
+        IR3_progressBar->setMinimumSize(QSize(50, 0));
+        IR3_progressBar->setValue(24);
+        IR3_progressBar->setTextVisible(false);
+        IR3_progressBar->setOrientation(Qt::Orientation::Vertical);
 
-        verticalLayout->addWidget(PosYLineEdit);
+        horizontalLayout_32->addWidget(IR3_progressBar);
+
+        IR2_progressBar = new QProgressBar(widget3);
+        IR2_progressBar->setObjectName("IR2_progressBar");
+        IR2_progressBar->setMinimumSize(QSize(50, 0));
+        IR2_progressBar->setValue(24);
+        IR2_progressBar->setTextVisible(false);
+        IR2_progressBar->setOrientation(Qt::Orientation::Vertical);
+
+        horizontalLayout_32->addWidget(IR2_progressBar);
+
+        IR1_progressBar = new QProgressBar(widget3);
+        IR1_progressBar->setObjectName("IR1_progressBar");
+        IR1_progressBar->setMinimumSize(QSize(50, 80));
+        IR1_progressBar->setValue(24);
+        IR1_progressBar->setTextVisible(false);
+        IR1_progressBar->setOrientation(Qt::Orientation::Vertical);
+
+        horizontalLayout_32->addWidget(IR1_progressBar);
 
 
-        horizontalLayout_4->addLayout(verticalLayout);
+        verticalLayout_30->addLayout(horizontalLayout_32);
 
-
-        verticalLayout_13->addLayout(horizontalLayout_4);
-
-        CurrrentDegressTextEdit = new QLineEdit(layoutWidget7);
-        CurrrentDegressTextEdit->setObjectName("CurrrentDegressTextEdit");
-
-        verticalLayout_13->addWidget(CurrrentDegressTextEdit);
-
-        HB_LABEL_2 = new QLabel(layoutWidget7);
+        stackedWidget->addWidget(PaginaCalibracin);
+        PaginaComandosAvanzados = new QWidget();
+        PaginaComandosAvanzados->setObjectName("PaginaComandosAvanzados");
+        advancedTitleLabel = new QLabel(PaginaComandosAvanzados);
+        advancedTitleLabel->setObjectName("advancedTitleLabel");
+        advancedTitleLabel->setGeometry(QRect(20, 0, 1110, 21));
+        advancedTitleLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+        layoutWidget2 = new QWidget(PaginaComandosAvanzados);
+        layoutWidget2->setObjectName("layoutWidget2");
+        layoutWidget2->setGeometry(QRect(460, 30, 681, 531));
+        verticalLayout_43 = new QVBoxLayout(layoutWidget2);
+        verticalLayout_43->setObjectName("verticalLayout_43");
+        verticalLayout_43->setContentsMargins(0, 0, 0, 0);
+        accelLogBox = new QGroupBox(layoutWidget2);
+        accelLogBox->setObjectName("accelLogBox");
+        accelLogLayout = new QVBoxLayout(accelLogBox);
+        accelLogLayout->setObjectName("accelLogLayout");
+        verticalLayout_21 = new QVBoxLayout();
+        verticalLayout_21->setObjectName("verticalLayout_21");
+        HB_LABEL_2 = new QLabel(accelLogBox);
         HB_LABEL_2->setObjectName("HB_LABEL_2");
         HB_LABEL_2->setMaximumSize(QSize(16777215, 20));
 
-        verticalLayout_13->addWidget(HB_LABEL_2);
+        verticalLayout_21->addWidget(HB_LABEL_2);
 
-        horizontalLayout_2 = new QHBoxLayout();
-        horizontalLayout_2->setObjectName("horizontalLayout_2");
-        verticalLayout_19 = new QVBoxLayout();
-        verticalLayout_19->setObjectName("verticalLayout_19");
-        IR_1_label_15 = new QLabel(layoutWidget7);
-        IR_1_label_15->setObjectName("IR_1_label_15");
-        IR_1_label_15->setMaximumSize(QSize(16777215, 20));
-
-        verticalLayout_19->addWidget(IR_1_label_15);
-
-        MODE_LABEL = new QLineEdit(layoutWidget7);
-        MODE_LABEL->setObjectName("MODE_LABEL");
+        horizontalLayout_3 = new QHBoxLayout();
+        horizontalLayout_3->setObjectName("horizontalLayout_3");
+        HB_FRECUENCY_LineEdit = new QLineEdit(accelLogBox);
+        HB_FRECUENCY_LineEdit->setObjectName("HB_FRECUENCY_LineEdit");
         QPalette palette29;
         palette29.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
         palette29.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
@@ -2690,109 +2533,11 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
         palette29.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
 #endif
-        MODE_LABEL->setPalette(palette29);
-
-        verticalLayout_19->addWidget(MODE_LABEL);
-
-
-        horizontalLayout_2->addLayout(verticalLayout_19);
-
-        verticalLayout_20 = new QVBoxLayout();
-        verticalLayout_20->setObjectName("verticalLayout_20");
-        IR_1_label_16 = new QLabel(layoutWidget7);
-        IR_1_label_16->setObjectName("IR_1_label_16");
-        IR_1_label_16->setMaximumSize(QSize(16777215, 20));
-
-        verticalLayout_20->addWidget(IR_1_label_16);
-
-        INFORMATION_LABEL = new QLineEdit(layoutWidget7);
-        INFORMATION_LABEL->setObjectName("INFORMATION_LABEL");
-        QPalette palette30;
-        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
-        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
-        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Text, brush);
-        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::ButtonText, brush);
-        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Base, brush1);
-        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Window, brush1);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::PlaceholderText, brush2);
-#endif
-        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::WindowText, brush);
-        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Button, brush1);
-        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Text, brush);
-        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::ButtonText, brush);
-        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Base, brush1);
-        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Window, brush1);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::PlaceholderText, brush2);
-#endif
-        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::WindowText, brush);
-        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Button, brush1);
-        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Text, brush);
-        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::ButtonText, brush);
-        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Base, brush1);
-        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Window, brush1);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
-#endif
-        INFORMATION_LABEL->setPalette(palette30);
-
-        verticalLayout_20->addWidget(INFORMATION_LABEL);
-
-
-        horizontalLayout_2->addLayout(verticalLayout_20);
-
-
-        verticalLayout_13->addLayout(horizontalLayout_2);
-
-
-        verticalLayout_22->addLayout(verticalLayout_13);
-
-        verticalLayout_21 = new QVBoxLayout();
-        verticalLayout_21->setObjectName("verticalLayout_21");
-        HB_LABEL = new QLabel(layoutWidget7);
-        HB_LABEL->setObjectName("HB_LABEL");
-        HB_LABEL->setMaximumSize(QSize(16777215, 20));
-
-        verticalLayout_21->addWidget(HB_LABEL);
-
-        horizontalLayout_3 = new QHBoxLayout();
-        horizontalLayout_3->setObjectName("horizontalLayout_3");
-        HB_FRECUENCY_LineEdit = new QLineEdit(layoutWidget7);
-        HB_FRECUENCY_LineEdit->setObjectName("HB_FRECUENCY_LineEdit");
-        QPalette palette31;
-        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
-        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
-        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Text, brush);
-        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::ButtonText, brush);
-        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Base, brush1);
-        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Window, brush1);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::PlaceholderText, brush2);
-#endif
-        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::WindowText, brush);
-        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Button, brush1);
-        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Text, brush);
-        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::ButtonText, brush);
-        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Base, brush1);
-        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Window, brush1);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::PlaceholderText, brush2);
-#endif
-        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::WindowText, brush);
-        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Button, brush1);
-        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Text, brush);
-        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::ButtonText, brush);
-        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Base, brush1);
-        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Window, brush1);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
-#endif
-        HB_FRECUENCY_LineEdit->setPalette(palette31);
+        HB_FRECUENCY_LineEdit->setPalette(palette29);
 
         horizontalLayout_3->addWidget(HB_FRECUENCY_LineEdit);
 
-        SET_FRECUENCY_HB_BUTTON = new QPushButton(layoutWidget7);
+        SET_FRECUENCY_HB_BUTTON = new QPushButton(accelLogBox);
         SET_FRECUENCY_HB_BUTTON->setObjectName("SET_FRECUENCY_HB_BUTTON");
 
         horizontalLayout_3->addWidget(SET_FRECUENCY_HB_BUTTON);
@@ -2801,181 +2546,13 @@ public:
         verticalLayout_21->addLayout(horizontalLayout_3);
 
 
-        verticalLayout_22->addLayout(verticalLayout_21);
+        accelLogLayout->addLayout(verticalLayout_21);
 
-        textEdit = new QTextEdit(PaginaCalibracin);
-        textEdit->setObjectName("textEdit");
-        textEdit->setGeometry(QRect(610, 30, 481, 521));
-        Screen2PushButton = new QPushButton(PaginaCalibracin);
-        Screen2PushButton->setObjectName("Screen2PushButton");
-        Screen2PushButton->setGeometry(QRect(590, 560, 29, 29));
-        stackedWidget->addWidget(PaginaCalibracin);
-        PaginaComandosAvanzados = new QWidget();
-        PaginaComandosAvanzados->setObjectName("PaginaComandosAvanzados");
-        advancedTitleLabel = new QLabel(PaginaComandosAvanzados);
-        advancedTitleLabel->setObjectName("advancedTitleLabel");
-        advancedTitleLabel->setGeometry(QRect(20, 0, 1110, 21));
-        advancedTitleLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
-        accelRunawayBox = new QGroupBox(PaginaComandosAvanzados);
-        accelRunawayBox->setObjectName("accelRunawayBox");
-        accelRunawayBox->setGeometry(QRect(10, 20, 230, 491));
-        accelRunawayLayout = new QGridLayout(accelRunawayBox);
-        accelRunawayLayout->setObjectName("accelRunawayLayout");
-        accelRunawayDeltaLabel = new QLabel(accelRunawayBox);
-        accelRunawayDeltaLabel->setObjectName("accelRunawayDeltaLabel");
+        irRightLogStatusLabel_3 = new QLabel(accelLogBox);
+        irRightLogStatusLabel_3->setObjectName("irRightLogStatusLabel_3");
 
-        accelRunawayLayout->addWidget(accelRunawayDeltaLabel, 0, 0, 1, 1);
+        accelLogLayout->addWidget(irRightLogStatusLabel_3);
 
-        accelRunawayDeltaSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelRunawayDeltaSpin->setObjectName("accelRunawayDeltaSpin");
-
-        accelRunawayLayout->addWidget(accelRunawayDeltaSpin, 0, 1, 1, 1);
-
-        accelRunawayAbsLabel = new QLabel(accelRunawayBox);
-        accelRunawayAbsLabel->setObjectName("accelRunawayAbsLabel");
-
-        accelRunawayLayout->addWidget(accelRunawayAbsLabel, 1, 0, 1, 1);
-
-        accelRunawayAbsSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelRunawayAbsSpin->setObjectName("accelRunawayAbsSpin");
-
-        accelRunawayLayout->addWidget(accelRunawayAbsSpin, 1, 1, 1, 1);
-
-        accelRunawayTrendLimitLabel = new QLabel(accelRunawayBox);
-        accelRunawayTrendLimitLabel->setObjectName("accelRunawayTrendLimitLabel");
-
-        accelRunawayLayout->addWidget(accelRunawayTrendLimitLabel, 2, 0, 1, 1);
-
-        accelRunawayTrendLimitSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelRunawayTrendLimitSpin->setObjectName("accelRunawayTrendLimitSpin");
-
-        accelRunawayLayout->addWidget(accelRunawayTrendLimitSpin, 2, 1, 1, 1);
-
-        accelRunawayAbsLimitLabel = new QLabel(accelRunawayBox);
-        accelRunawayAbsLimitLabel->setObjectName("accelRunawayAbsLimitLabel");
-
-        accelRunawayLayout->addWidget(accelRunawayAbsLimitLabel, 3, 0, 1, 1);
-
-        accelRunawayAbsLimitSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelRunawayAbsLimitSpin->setObjectName("accelRunawayAbsLimitSpin");
-
-        accelRunawayLayout->addWidget(accelRunawayAbsLimitSpin, 3, 1, 1, 1);
-
-        accelAdaptiveStepLabel = new QLabel(accelRunawayBox);
-        accelAdaptiveStepLabel->setObjectName("accelAdaptiveStepLabel");
-
-        accelRunawayLayout->addWidget(accelAdaptiveStepLabel, 4, 0, 1, 1);
-
-        accelAdaptiveStepSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelAdaptiveStepSpin->setObjectName("accelAdaptiveStepSpin");
-
-        accelRunawayLayout->addWidget(accelAdaptiveStepSpin, 4, 1, 1, 1);
-
-        accelAdaptiveLimitLabel = new QLabel(accelRunawayBox);
-        accelAdaptiveLimitLabel->setObjectName("accelAdaptiveLimitLabel");
-
-        accelRunawayLayout->addWidget(accelAdaptiveLimitLabel, 5, 0, 1, 1);
-
-        accelAdaptiveLimitSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelAdaptiveLimitSpin->setObjectName("accelAdaptiveLimitSpin");
-        accelAdaptiveLimitSpin->setMaximum(9999.989999999999782);
-
-        accelRunawayLayout->addWidget(accelAdaptiveLimitSpin, 5, 1, 1, 1);
-
-        accelAdaptiveResetAbsLabel = new QLabel(accelRunawayBox);
-        accelAdaptiveResetAbsLabel->setObjectName("accelAdaptiveResetAbsLabel");
-
-        accelRunawayLayout->addWidget(accelAdaptiveResetAbsLabel, 6, 0, 1, 1);
-
-        accelAdaptiveResetAbsSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelAdaptiveResetAbsSpin->setObjectName("accelAdaptiveResetAbsSpin");
-
-        accelRunawayLayout->addWidget(accelAdaptiveResetAbsSpin, 6, 1, 1, 1);
-
-        accelAdaptiveResetCountLabel = new QLabel(accelRunawayBox);
-        accelAdaptiveResetCountLabel->setObjectName("accelAdaptiveResetCountLabel");
-
-        accelRunawayLayout->addWidget(accelAdaptiveResetCountLabel, 7, 0, 1, 1);
-
-        accelAdaptiveResetCountSpin = new QDoubleSpinBox(accelRunawayBox);
-        accelAdaptiveResetCountSpin->setObjectName("accelAdaptiveResetCountSpin");
-
-        accelRunawayLayout->addWidget(accelAdaptiveResetCountSpin, 7, 1, 1, 1);
-
-        velocityTrendThresholdLabel = new QLabel(accelRunawayBox);
-        velocityTrendThresholdLabel->setObjectName("velocityTrendThresholdLabel");
-
-        accelRunawayLayout->addWidget(velocityTrendThresholdLabel, 8, 0, 1, 1);
-
-        velocityTrendThresholdSpin = new QDoubleSpinBox(accelRunawayBox);
-        velocityTrendThresholdSpin->setObjectName("velocityTrendThresholdSpin");
-
-        accelRunawayLayout->addWidget(velocityTrendThresholdSpin, 8, 1, 1, 1);
-
-        velocityTrendIndicatorLabel = new QLabel(accelRunawayBox);
-        velocityTrendIndicatorLabel->setObjectName("velocityTrendIndicatorLabel");
-        velocityTrendIndicatorLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
-
-        accelRunawayLayout->addWidget(velocityTrendIndicatorLabel, 9, 0, 1, 2);
-
-        accelRunawayModeButton = new QPushButton(accelRunawayBox);
-        accelRunawayModeButton->setObjectName("accelRunawayModeButton");
-        accelRunawayModeButton->setCheckable(true);
-        accelRunawayModeButton->setChecked(false);
-
-        accelRunawayLayout->addWidget(accelRunawayModeButton, 10, 0, 1, 2);
-
-        accelRunawayApplyButton = new QPushButton(accelRunawayBox);
-        accelRunawayApplyButton->setObjectName("accelRunawayApplyButton");
-
-        accelRunawayLayout->addWidget(accelRunawayApplyButton, 11, 1, 1, 1);
-
-        pitchRecoveryWidget = new QWidget(PaginaComandosAvanzados);
-        pitchRecoveryWidget->setObjectName("pitchRecoveryWidget");
-        pitchRecoveryWidget->setGeometry(QRect(240, 40, 301, 107));
-        pitchRecoveryLayout = new QVBoxLayout(pitchRecoveryWidget);
-        pitchRecoveryLayout->setObjectName("pitchRecoveryLayout");
-        pitchRecoveryLayout->setContentsMargins(0, 0, 0, 0);
-        pitchRecoveryThresholdLayout = new QHBoxLayout();
-        pitchRecoveryThresholdLayout->setObjectName("pitchRecoveryThresholdLayout");
-        pitchRecoveryThresholdLabel = new QLabel(pitchRecoveryWidget);
-        pitchRecoveryThresholdLabel->setObjectName("pitchRecoveryThresholdLabel");
-
-        pitchRecoveryThresholdLayout->addWidget(pitchRecoveryThresholdLabel);
-
-        pitchRecoveryThresholdSpin = new QDoubleSpinBox(pitchRecoveryWidget);
-        pitchRecoveryThresholdSpin->setObjectName("pitchRecoveryThresholdSpin");
-
-        pitchRecoveryThresholdLayout->addWidget(pitchRecoveryThresholdSpin);
-
-
-        pitchRecoveryLayout->addLayout(pitchRecoveryThresholdLayout);
-
-        pitchRecoveryBrakeLayout = new QHBoxLayout();
-        pitchRecoveryBrakeLayout->setObjectName("pitchRecoveryBrakeLayout");
-        pitchRecoveryBrakeMsLabel = new QLabel(pitchRecoveryWidget);
-        pitchRecoveryBrakeMsLabel->setObjectName("pitchRecoveryBrakeMsLabel");
-
-        pitchRecoveryBrakeLayout->addWidget(pitchRecoveryBrakeMsLabel);
-
-        pitchRecoveryBrakeMsSpin = new QDoubleSpinBox(pitchRecoveryWidget);
-        pitchRecoveryBrakeMsSpin->setObjectName("pitchRecoveryBrakeMsSpin");
-
-        pitchRecoveryBrakeLayout->addWidget(pitchRecoveryBrakeMsSpin);
-
-
-        pitchRecoveryLayout->addLayout(pitchRecoveryBrakeLayout);
-
-        pitchRecoveryApplyButton = new QPushButton(pitchRecoveryWidget);
-        pitchRecoveryApplyButton->setObjectName("pitchRecoveryApplyButton");
-
-        pitchRecoveryLayout->addWidget(pitchRecoveryApplyButton);
-
-        accelLogBox = new QGroupBox(PaginaComandosAvanzados);
-        accelLogBox->setObjectName("accelLogBox");
-        accelLogBox->setGeometry(QRect(560, 20, 581, 211));
-        accelLogLayout = new QVBoxLayout(accelLogBox);
-        accelLogLayout->setObjectName("accelLogLayout");
         accelLogButtonsLayout = new QHBoxLayout();
         accelLogButtonsLayout->setObjectName("accelLogButtonsLayout");
         accelLogStartButton = new QPushButton(accelLogBox);
@@ -3007,11 +2584,18 @@ public:
 
         accelLogLayout->addWidget(accelLogTextEdit);
 
-        irRightLogBox = new QGroupBox(PaginaComandosAvanzados);
+
+        verticalLayout_43->addWidget(accelLogBox);
+
+        irRightLogBox = new QGroupBox(layoutWidget2);
         irRightLogBox->setObjectName("irRightLogBox");
-        irRightLogBox->setGeometry(QRect(570, 240, 571, 341));
         irRightLogLayout = new QVBoxLayout(irRightLogBox);
         irRightLogLayout->setObjectName("irRightLogLayout");
+        irRightLogStatusLabel_2 = new QLabel(irRightLogBox);
+        irRightLogStatusLabel_2->setObjectName("irRightLogStatusLabel_2");
+
+        irRightLogLayout->addWidget(irRightLogStatusLabel_2);
+
         irRightLogControlsLayout = new QHBoxLayout();
         irRightLogControlsLayout->setObjectName("irRightLogControlsLayout");
         irRightDistanceLabel = new QLabel(irRightLogBox);
@@ -3073,6 +2657,186 @@ public:
         irRightLogTextEdit->setReadOnly(true);
 
         irRightLogLayout->addWidget(irRightLogTextEdit);
+
+
+        verticalLayout_43->addWidget(irRightLogBox);
+
+        layoutWidget3 = new QWidget(PaginaComandosAvanzados);
+        layoutWidget3->setObjectName("layoutWidget3");
+        layoutWidget3->setGeometry(QRect(20, 30, 441, 610));
+        verticalLayout_44 = new QVBoxLayout(layoutWidget3);
+        verticalLayout_44->setObjectName("verticalLayout_44");
+        verticalLayout_44->setContentsMargins(0, 0, 0, 0);
+        verticalLayout_42 = new QVBoxLayout();
+        verticalLayout_42->setObjectName("verticalLayout_42");
+        irRightLogStatusLabel_4 = new QLabel(layoutWidget3);
+        irRightLogStatusLabel_4->setObjectName("irRightLogStatusLabel_4");
+
+        verticalLayout_42->addWidget(irRightLogStatusLabel_4);
+
+        accelRunawayBox = new QGroupBox(layoutWidget3);
+        accelRunawayBox->setObjectName("accelRunawayBox");
+        accelRunawayLayout = new QGridLayout(accelRunawayBox);
+        accelRunawayLayout->setObjectName("accelRunawayLayout");
+        accelRunawayAbsSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelRunawayAbsSpin->setObjectName("accelRunawayAbsSpin");
+
+        accelRunawayLayout->addWidget(accelRunawayAbsSpin, 1, 1, 1, 1);
+
+        accelAdaptiveResetCountLabel = new QLabel(accelRunawayBox);
+        accelAdaptiveResetCountLabel->setObjectName("accelAdaptiveResetCountLabel");
+
+        accelRunawayLayout->addWidget(accelAdaptiveResetCountLabel, 7, 0, 1, 1);
+
+        accelRunawayDeltaLabel = new QLabel(accelRunawayBox);
+        accelRunawayDeltaLabel->setObjectName("accelRunawayDeltaLabel");
+
+        accelRunawayLayout->addWidget(accelRunawayDeltaLabel, 0, 0, 1, 1);
+
+        velocityTrendThresholdLabel = new QLabel(accelRunawayBox);
+        velocityTrendThresholdLabel->setObjectName("velocityTrendThresholdLabel");
+
+        accelRunawayLayout->addWidget(velocityTrendThresholdLabel, 8, 0, 1, 1);
+
+        velocityTrendIndicatorLabel = new QLabel(accelRunawayBox);
+        velocityTrendIndicatorLabel->setObjectName("velocityTrendIndicatorLabel");
+        velocityTrendIndicatorLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
+
+        accelRunawayLayout->addWidget(velocityTrendIndicatorLabel, 9, 0, 1, 2);
+
+        accelAdaptiveStepLabel = new QLabel(accelRunawayBox);
+        accelAdaptiveStepLabel->setObjectName("accelAdaptiveStepLabel");
+
+        accelRunawayLayout->addWidget(accelAdaptiveStepLabel, 4, 0, 1, 1);
+
+        accelAdaptiveLimitSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelAdaptiveLimitSpin->setObjectName("accelAdaptiveLimitSpin");
+        accelAdaptiveLimitSpin->setMaximum(9999.989999999999782);
+
+        accelRunawayLayout->addWidget(accelAdaptiveLimitSpin, 5, 1, 1, 1);
+
+        accelRunawayDeltaSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelRunawayDeltaSpin->setObjectName("accelRunawayDeltaSpin");
+
+        accelRunawayLayout->addWidget(accelRunawayDeltaSpin, 0, 1, 1, 1);
+
+        accelRunawayAbsLimitSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelRunawayAbsLimitSpin->setObjectName("accelRunawayAbsLimitSpin");
+
+        accelRunawayLayout->addWidget(accelRunawayAbsLimitSpin, 3, 1, 1, 1);
+
+        accelAdaptiveResetAbsSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelAdaptiveResetAbsSpin->setObjectName("accelAdaptiveResetAbsSpin");
+
+        accelRunawayLayout->addWidget(accelAdaptiveResetAbsSpin, 6, 1, 1, 1);
+
+        accelAdaptiveResetAbsLabel = new QLabel(accelRunawayBox);
+        accelAdaptiveResetAbsLabel->setObjectName("accelAdaptiveResetAbsLabel");
+
+        accelRunawayLayout->addWidget(accelAdaptiveResetAbsLabel, 6, 0, 1, 1);
+
+        accelAdaptiveResetCountSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelAdaptiveResetCountSpin->setObjectName("accelAdaptiveResetCountSpin");
+
+        accelRunawayLayout->addWidget(accelAdaptiveResetCountSpin, 7, 1, 1, 1);
+
+        accelRunawayModeButton = new QPushButton(accelRunawayBox);
+        accelRunawayModeButton->setObjectName("accelRunawayModeButton");
+        accelRunawayModeButton->setCheckable(true);
+        accelRunawayModeButton->setChecked(false);
+
+        accelRunawayLayout->addWidget(accelRunawayModeButton, 10, 0, 1, 2);
+
+        accelAdaptiveStepSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelAdaptiveStepSpin->setObjectName("accelAdaptiveStepSpin");
+
+        accelRunawayLayout->addWidget(accelAdaptiveStepSpin, 4, 1, 1, 1);
+
+        velocityTrendThresholdSpin = new QDoubleSpinBox(accelRunawayBox);
+        velocityTrendThresholdSpin->setObjectName("velocityTrendThresholdSpin");
+
+        accelRunawayLayout->addWidget(velocityTrendThresholdSpin, 8, 1, 1, 1);
+
+        accelRunawayTrendLimitSpin = new QDoubleSpinBox(accelRunawayBox);
+        accelRunawayTrendLimitSpin->setObjectName("accelRunawayTrendLimitSpin");
+
+        accelRunawayLayout->addWidget(accelRunawayTrendLimitSpin, 2, 1, 1, 1);
+
+        accelRunawayTrendLimitLabel = new QLabel(accelRunawayBox);
+        accelRunawayTrendLimitLabel->setObjectName("accelRunawayTrendLimitLabel");
+
+        accelRunawayLayout->addWidget(accelRunawayTrendLimitLabel, 2, 0, 1, 1);
+
+        accelRunawayAbsLimitLabel = new QLabel(accelRunawayBox);
+        accelRunawayAbsLimitLabel->setObjectName("accelRunawayAbsLimitLabel");
+
+        accelRunawayLayout->addWidget(accelRunawayAbsLimitLabel, 3, 0, 1, 1);
+
+        accelAdaptiveLimitLabel = new QLabel(accelRunawayBox);
+        accelAdaptiveLimitLabel->setObjectName("accelAdaptiveLimitLabel");
+
+        accelRunawayLayout->addWidget(accelAdaptiveLimitLabel, 5, 0, 1, 1);
+
+        accelRunawayAbsLabel = new QLabel(accelRunawayBox);
+        accelRunawayAbsLabel->setObjectName("accelRunawayAbsLabel");
+
+        accelRunawayLayout->addWidget(accelRunawayAbsLabel, 1, 0, 1, 1);
+
+        accelRunawayApplyButton = new QPushButton(accelRunawayBox);
+        accelRunawayApplyButton->setObjectName("accelRunawayApplyButton");
+
+        accelRunawayLayout->addWidget(accelRunawayApplyButton, 11, 0, 1, 1);
+
+
+        verticalLayout_42->addWidget(accelRunawayBox);
+
+
+        verticalLayout_44->addLayout(verticalLayout_42);
+
+        pitchRecoveryLayout = new QVBoxLayout();
+        pitchRecoveryLayout->setObjectName("pitchRecoveryLayout");
+        irRightLogStatusLabel_5 = new QLabel(layoutWidget3);
+        irRightLogStatusLabel_5->setObjectName("irRightLogStatusLabel_5");
+
+        pitchRecoveryLayout->addWidget(irRightLogStatusLabel_5);
+
+        pitchRecoveryThresholdLayout = new QHBoxLayout();
+        pitchRecoveryThresholdLayout->setObjectName("pitchRecoveryThresholdLayout");
+        pitchRecoveryThresholdLabel = new QLabel(layoutWidget3);
+        pitchRecoveryThresholdLabel->setObjectName("pitchRecoveryThresholdLabel");
+
+        pitchRecoveryThresholdLayout->addWidget(pitchRecoveryThresholdLabel);
+
+        pitchRecoveryThresholdSpin = new QDoubleSpinBox(layoutWidget3);
+        pitchRecoveryThresholdSpin->setObjectName("pitchRecoveryThresholdSpin");
+
+        pitchRecoveryThresholdLayout->addWidget(pitchRecoveryThresholdSpin);
+
+
+        pitchRecoveryLayout->addLayout(pitchRecoveryThresholdLayout);
+
+        pitchRecoveryBrakeLayout = new QHBoxLayout();
+        pitchRecoveryBrakeLayout->setObjectName("pitchRecoveryBrakeLayout");
+        pitchRecoveryBrakeMsLabel = new QLabel(layoutWidget3);
+        pitchRecoveryBrakeMsLabel->setObjectName("pitchRecoveryBrakeMsLabel");
+
+        pitchRecoveryBrakeLayout->addWidget(pitchRecoveryBrakeMsLabel);
+
+        pitchRecoveryBrakeMsSpin = new QDoubleSpinBox(layoutWidget3);
+        pitchRecoveryBrakeMsSpin->setObjectName("pitchRecoveryBrakeMsSpin");
+
+        pitchRecoveryBrakeLayout->addWidget(pitchRecoveryBrakeMsSpin);
+
+
+        pitchRecoveryLayout->addLayout(pitchRecoveryBrakeLayout);
+
+        pitchRecoveryApplyButton = new QPushButton(layoutWidget3);
+        pitchRecoveryApplyButton->setObjectName("pitchRecoveryApplyButton");
+
+        pitchRecoveryLayout->addWidget(pitchRecoveryApplyButton);
+
+
+        verticalLayout_44->addLayout(pitchRecoveryLayout);
 
         stackedWidget->addWidget(PaginaComandosAvanzados);
         page_2 = new QWidget();
@@ -3345,13 +3109,23 @@ public:
 
         yawPdQuickLayout->addWidget(yawKpLabel, 0, 0, 1, 1);
 
-        Screen2PushButton_3 = new QPushButton(page_2);
-        Screen2PushButton_3->setObjectName("Screen2PushButton_3");
-        Screen2PushButton_3->setGeometry(QRect(556, 531, 29, 29));
-        Screen2PushButton_2 = new QPushButton(page_2);
+        widget4 = new QWidget(page_2);
+        widget4->setObjectName("widget4");
+        widget4->setGeometry(QRect(521, 531, 66, 31));
+        horizontalLayout_18 = new QHBoxLayout(widget4);
+        horizontalLayout_18->setObjectName("horizontalLayout_18");
+        horizontalLayout_18->setContentsMargins(0, 0, 0, 0);
+        Screen2PushButton_2 = new QPushButton(widget4);
         Screen2PushButton_2->setObjectName("Screen2PushButton_2");
-        Screen2PushButton_2->setGeometry(QRect(521, 531, 29, 29));
         Screen2PushButton_2->setMinimumSize(QSize(0, 10));
+
+        horizontalLayout_18->addWidget(Screen2PushButton_2);
+
+        Screen2PushButton_3 = new QPushButton(widget4);
+        Screen2PushButton_3->setObjectName("Screen2PushButton_3");
+
+        horizontalLayout_18->addWidget(Screen2PushButton_3);
+
         stackedWidget->addWidget(page_2);
 
         verticalLayout_35->addWidget(stackedWidget);
@@ -3365,12 +3139,6 @@ public:
         Home_pushButton->setMinimumSize(QSize(100, 50));
 
         horizontalLayout_29->addWidget(Home_pushButton);
-
-        Ejecucion_pushButton = new QPushButton(layoutWidget);
-        Ejecucion_pushButton->setObjectName("Ejecucion_pushButton");
-        Ejecucion_pushButton->setMinimumSize(QSize(100, 50));
-
-        horizontalLayout_29->addWidget(Ejecucion_pushButton);
 
         ScreenCalibrar_pushbutton = new QPushButton(layoutWidget);
         ScreenCalibrar_pushbutton->setObjectName("ScreenCalibrar_pushbutton");
@@ -3573,10 +3341,282 @@ public:
         cleanTxPushButton = new QPushButton(centralwidget);
         cleanTxPushButton->setObjectName("cleanTxPushButton");
         cleanTxPushButton->setGeometry(QRect(200, 810, 497, 29));
+        Screen2PushButton = new QPushButton(centralwidget);
+        Screen2PushButton->setObjectName("Screen2PushButton");
+        Screen2PushButton->setGeometry(QRect(730, 750, 29, 29));
+        layoutWidget4 = new QWidget(centralwidget);
+        layoutWidget4->setObjectName("layoutWidget4");
+        layoutWidget4->setGeometry(QRect(1200, 760, 279, 58));
+        verticalLayout_16 = new QVBoxLayout(layoutWidget4);
+        verticalLayout_16->setObjectName("verticalLayout_16");
+        verticalLayout_16->setContentsMargins(0, 0, 0, 0);
+        IR_ComboBox = new QComboBox(layoutWidget4);
+        IR_ComboBox->addItem(QString());
+        IR_ComboBox->addItem(QString());
+        IR_ComboBox->addItem(QString());
+        IR_ComboBox->setObjectName("IR_ComboBox");
+
+        verticalLayout_16->addWidget(IR_ComboBox);
+
+        layoutWidget5 = new QWidget(centralwidget);
+        layoutWidget5->setObjectName("layoutWidget5");
+        layoutWidget5->setGeometry(QRect(480, 710, 619, 42));
+        horizontalLayout_25 = new QHBoxLayout(layoutWidget5);
+        horizontalLayout_25->setObjectName("horizontalLayout_25");
+        horizontalLayout_25->setContentsMargins(0, 0, 0, 0);
+        IR_1_label_32 = new QLabel(layoutWidget5);
+        IR_1_label_32->setObjectName("IR_1_label_32");
+        IR_1_label_32->setMaximumSize(QSize(16777215, 20));
+
+        horizontalLayout_25->addWidget(IR_1_label_32);
+
+        layoutWidget6 = new QWidget(centralwidget);
+        layoutWidget6->setObjectName("layoutWidget6");
+        layoutWidget6->setGeometry(QRect(310, 770, 828, 92));
+        verticalLayout_36 = new QVBoxLayout(layoutWidget6);
+        verticalLayout_36->setObjectName("verticalLayout_36");
+        verticalLayout_36->setContentsMargins(0, 0, 0, 0);
+        horizontalLayout_38 = new QHBoxLayout();
+        horizontalLayout_38->setObjectName("horizontalLayout_38");
+        CHANGE_RC_SETPOINT_label = new QLabel(layoutWidget6);
+        CHANGE_RC_SETPOINT_label->setObjectName("CHANGE_RC_SETPOINT_label");
+        CHANGE_RC_SETPOINT_label->setMinimumSize(QSize(0, 30));
+        CHANGE_RC_SETPOINT_label->setMaximumSize(QSize(16777215, 1221212));
+
+        horizontalLayout_38->addWidget(CHANGE_RC_SETPOINT_label);
+
+        Ajust_RC_Setpoint_spinBox = new QSpinBox(layoutWidget6);
+        Ajust_RC_Setpoint_spinBox->setObjectName("Ajust_RC_Setpoint_spinBox");
+        Ajust_RC_Setpoint_spinBox->setMinimumSize(QSize(0, 40));
+        Ajust_RC_Setpoint_spinBox->setAutoFillBackground(false);
+        Ajust_RC_Setpoint_spinBox->setWrapping(true);
+        Ajust_RC_Setpoint_spinBox->setAlignment(Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter);
+        Ajust_RC_Setpoint_spinBox->setButtonSymbols(QAbstractSpinBox::ButtonSymbols::PlusMinus);
+        Ajust_RC_Setpoint_spinBox->setProperty("showGroupSeparator", QVariant(false));
+        Ajust_RC_Setpoint_spinBox->setMinimum(0);
+        Ajust_RC_Setpoint_spinBox->setMaximum(200);
+        Ajust_RC_Setpoint_spinBox->setSingleStep(1);
+
+        horizontalLayout_38->addWidget(Ajust_RC_Setpoint_spinBox);
+
+
+        verticalLayout_36->addLayout(horizontalLayout_38);
+
+        horizontalLayout_39 = new QHBoxLayout();
+        horizontalLayout_39->setObjectName("horizontalLayout_39");
+        IR_1_label_33 = new QLabel(layoutWidget6);
+        IR_1_label_33->setObjectName("IR_1_label_33");
+        IR_1_label_33->setMinimumSize(QSize(0, 30));
+        IR_1_label_33->setMaximumSize(QSize(16777215, 1221212));
+
+        horizontalLayout_39->addWidget(IR_1_label_33);
+
+        Limite_error_spinBox = new QSpinBox(layoutWidget6);
+        Limite_error_spinBox->setObjectName("Limite_error_spinBox");
+        Limite_error_spinBox->setMinimumSize(QSize(0, 40));
+        Limite_error_spinBox->setAutoFillBackground(false);
+        Limite_error_spinBox->setWrapping(true);
+        Limite_error_spinBox->setAlignment(Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter);
+        Limite_error_spinBox->setButtonSymbols(QAbstractSpinBox::ButtonSymbols::PlusMinus);
+        Limite_error_spinBox->setProperty("showGroupSeparator", QVariant(false));
+        Limite_error_spinBox->setMinimum(0);
+        Limite_error_spinBox->setMaximum(200);
+        Limite_error_spinBox->setSingleStep(1);
+
+        horizontalLayout_39->addWidget(Limite_error_spinBox);
+
+
+        verticalLayout_36->addLayout(horizontalLayout_39);
+
+        obstacleOledButton = new QPushButton(centralwidget);
+        obstacleOledButton->setObjectName("obstacleOledButton");
+        obstacleOledButton->setGeometry(QRect(1015, 760, 29, 29));
+        obstacleOledButton->setMinimumSize(QSize(0, 10));
+        widget5 = new QWidget(centralwidget);
+        widget5->setObjectName("widget5");
+        widget5->setGeometry(QRect(870, 850, 697, 57));
+        horizontalLayout_2 = new QHBoxLayout(widget5);
+        horizontalLayout_2->setObjectName("horizontalLayout_2");
+        horizontalLayout_2->setContentsMargins(0, 0, 0, 0);
+        verticalLayout_19 = new QVBoxLayout();
+        verticalLayout_19->setObjectName("verticalLayout_19");
+        IR_1_label_15 = new QLabel(widget5);
+        IR_1_label_15->setObjectName("IR_1_label_15");
+        IR_1_label_15->setMaximumSize(QSize(16777215, 20));
+
+        verticalLayout_19->addWidget(IR_1_label_15);
+
+        MODE_LABEL = new QLineEdit(widget5);
+        MODE_LABEL->setObjectName("MODE_LABEL");
+        QPalette palette30;
+        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
+        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
+        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Text, brush);
+        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::ButtonText, brush);
+        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Base, brush1);
+        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Window, brush1);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+        palette30.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::PlaceholderText, brush2);
+#endif
+        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::WindowText, brush);
+        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Button, brush1);
+        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Text, brush);
+        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::ButtonText, brush);
+        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Base, brush1);
+        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Window, brush1);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+        palette30.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::PlaceholderText, brush2);
+#endif
+        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::WindowText, brush);
+        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Button, brush1);
+        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Text, brush);
+        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::ButtonText, brush);
+        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Base, brush1);
+        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Window, brush1);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+        palette30.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
+#endif
+        MODE_LABEL->setPalette(palette30);
+
+        verticalLayout_19->addWidget(MODE_LABEL);
+
+
+        horizontalLayout_2->addLayout(verticalLayout_19);
+
+        verticalLayout_20 = new QVBoxLayout();
+        verticalLayout_20->setObjectName("verticalLayout_20");
+        IR_1_label_16 = new QLabel(widget5);
+        IR_1_label_16->setObjectName("IR_1_label_16");
+        IR_1_label_16->setMaximumSize(QSize(16777215, 20));
+
+        verticalLayout_20->addWidget(IR_1_label_16);
+
+        INFORMATION_LABEL = new QLineEdit(widget5);
+        INFORMATION_LABEL->setObjectName("INFORMATION_LABEL");
+        QPalette palette31;
+        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::WindowText, brush);
+        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Button, brush1);
+        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Text, brush);
+        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::ButtonText, brush);
+        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Base, brush1);
+        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::Window, brush1);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+        palette31.setBrush(QPalette::ColorGroup::Active, QPalette::ColorRole::PlaceholderText, brush2);
+#endif
+        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::WindowText, brush);
+        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Button, brush1);
+        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Text, brush);
+        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::ButtonText, brush);
+        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Base, brush1);
+        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::Window, brush1);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+        palette31.setBrush(QPalette::ColorGroup::Inactive, QPalette::ColorRole::PlaceholderText, brush2);
+#endif
+        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::WindowText, brush);
+        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Button, brush1);
+        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Text, brush);
+        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::ButtonText, brush);
+        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Base, brush1);
+        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Window, brush1);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+        palette31.setBrush(QPalette::ColorGroup::Disabled, QPalette::ColorRole::PlaceholderText, brush2);
+#endif
+        INFORMATION_LABEL->setPalette(palette31);
+
+        verticalLayout_20->addWidget(INFORMATION_LABEL);
+
+
+        horizontalLayout_2->addLayout(verticalLayout_20);
+
+        widget6 = new QWidget(centralwidget);
+        widget6->setObjectName("widget6");
+        widget6->setGeometry(QRect(1350, 530, 695, 307));
+        verticalLayout_6 = new QVBoxLayout(widget6);
+        verticalLayout_6->setObjectName("verticalLayout_6");
+        verticalLayout_6->setContentsMargins(0, 0, 0, 0);
+        IR_1_label_14 = new QLabel(widget6);
+        IR_1_label_14->setObjectName("IR_1_label_14");
+
+        verticalLayout_6->addWidget(IR_1_label_14);
+
+        verticalLayout_3 = new QVBoxLayout();
+        verticalLayout_3->setObjectName("verticalLayout_3");
+        verticalLayout = new QVBoxLayout();
+        verticalLayout->setObjectName("verticalLayout");
+        IR_1_label_11 = new QLabel(widget6);
+        IR_1_label_11->setObjectName("IR_1_label_11");
+
+        verticalLayout->addWidget(IR_1_label_11);
+
+        IR_1_label_10 = new QLabel(widget6);
+        IR_1_label_10->setObjectName("IR_1_label_10");
+        IR_1_label_10->setMaximumSize(QSize(16777215, 20));
+
+        verticalLayout->addWidget(IR_1_label_10);
+
+        CurrrentDegressTextEdit = new QLineEdit(widget6);
+        CurrrentDegressTextEdit->setObjectName("CurrrentDegressTextEdit");
+
+        verticalLayout->addWidget(CurrrentDegressTextEdit);
+
+        PosXLineEdit = new QLineEdit(widget6);
+        PosXLineEdit->setObjectName("PosXLineEdit");
+
+        verticalLayout->addWidget(PosXLineEdit);
+
+        PosYLineEdit = new QLineEdit(widget6);
+        PosYLineEdit->setObjectName("PosYLineEdit");
+
+        verticalLayout->addWidget(PosYLineEdit);
+
+
+        verticalLayout_3->addLayout(verticalLayout);
+
+        vel_x = new QLineEdit(widget6);
+        vel_x->setObjectName("vel_x");
+
+        verticalLayout_3->addWidget(vel_x);
+
+        vel_y = new QLineEdit(widget6);
+        vel_y->setObjectName("vel_y");
+
+        verticalLayout_3->addWidget(vel_y);
+
+
+        verticalLayout_6->addLayout(verticalLayout_3);
+
+        IR_1_label_12 = new QLabel(widget6);
+        IR_1_label_12->setObjectName("IR_1_label_12");
+
+        verticalLayout_6->addWidget(IR_1_label_12);
+
+        IR_1_label_13 = new QLabel(widget6);
+        IR_1_label_13->setObjectName("IR_1_label_13");
+
+        verticalLayout_6->addWidget(IR_1_label_13);
+
+        Setpoint_FL_spinBox = new QSpinBox(centralwidget);
+        Setpoint_FL_spinBox->setObjectName("Setpoint_FL_spinBox");
+        Setpoint_FL_spinBox->setGeometry(QRect(800, 750, 305, 40));
+        Setpoint_FL_spinBox->setMinimumSize(QSize(0, 40));
+        Setpoint_FL_spinBox->setAutoFillBackground(false);
+        Setpoint_FL_spinBox->setWrapping(true);
+        Setpoint_FL_spinBox->setAlignment(Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter);
+        Setpoint_FL_spinBox->setButtonSymbols(QAbstractSpinBox::ButtonSymbols::PlusMinus);
+        Setpoint_FL_spinBox->setProperty("showGroupSeparator", QVariant(false));
+        Setpoint_FL_spinBox->setMinimum(-999);
+        Setpoint_FL_spinBox->setMaximum(999);
+        Ejecucion_pushButton = new QPushButton(centralwidget);
+        Ejecucion_pushButton->setObjectName("Ejecucion_pushButton");
+        Ejecucion_pushButton->setGeometry(QRect(30, 740, 100, 50));
+        Ejecucion_pushButton->setMinimumSize(QSize(100, 50));
+        Screen1PushButton = new QPushButton(centralwidget);
+        Screen1PushButton->setObjectName("Screen1PushButton");
+        Screen1PushButton->setGeometry(QRect(440, 680, 29, 29));
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
-        menubar->setGeometry(QRect(0, 0, 1667, 20));
+        menubar->setGeometry(QRect(0, 0, 1994, 20));
         MainWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName("statusbar");
@@ -3596,10 +3636,8 @@ public:
     void retranslateUi(QMainWindow *MainWindow)
     {
         MainWindow->setWindowTitle(QCoreApplication::translate("MainWindow", "MainWindow", nullptr));
-        obstacleOledButton->setText(QCoreApplication::translate("MainWindow", "8", nullptr));
-        Screen1PushButton->setText(QCoreApplication::translate("MainWindow", "1", nullptr));
         IR_1_label_20->setText(QCoreApplication::translate("MainWindow", "Sistema de Giro: Control Basado en el Yaw", nullptr));
-        IR_1_label_21->setText(QCoreApplication::translate("MainWindow", "Setpoint de Seguimiento", nullptr));
+        IR_1_label_21->setText(QCoreApplication::translate("MainWindow", "Setpoint de Seguimiento (OBSOLETO)", nullptr));
         SP_yaw_pushButton->setText(QCoreApplication::translate("MainWindow", "Punto Equilibrado Ajustar", nullptr));
         IR_1_label_22->setText(QCoreApplication::translate("MainWindow", "T\303\251rmino Derivativo     ", nullptr));
         Kd_yaw_LineEdit->setText(QCoreApplication::translate("MainWindow", "2.5", nullptr));
@@ -3615,7 +3653,6 @@ public:
         RDL_LineEdit->setText(QCoreApplication::translate("MainWindow", "500", nullptr));
         RDL_pushButton->setText(QCoreApplication::translate("MainWindow", "PushButton", nullptr));
         IR_1_label_26->setText(QCoreApplication::translate("MainWindow", "Ajustar Setpoint", nullptr));
-        IR_1_label_32->setText(QCoreApplication::translate("MainWindow", "Ajustar Setpoint de FL", nullptr));
         IR_1_label_24->setText(QCoreApplication::translate("MainWindow", "Sistema Balanceador: Control basado en el Pitch", nullptr));
         IR_1_label_18->setText(QCoreApplication::translate("MainWindow", "T\303\251rmino Integrador  ", nullptr));
         Ki_LineEdit->setText(QCoreApplication::translate("MainWindow", "0.5", nullptr));
@@ -3638,8 +3675,6 @@ public:
         P_LineEdit->setText(QCoreApplication::translate("MainWindow", "500", nullptr));
         IR_1_label_31->setText(QCoreApplication::translate("MainWindow", "Salida PID", nullptr));
         OUT_LineEdit_5->setText(QCoreApplication::translate("MainWindow", "500", nullptr));
-        CHANGE_RC_SETPOINT_label->setText(QCoreApplication::translate("MainWindow", "Cambiar Ajuste de setpoint al inclinar", nullptr));
-        IR_1_label_33->setText(QCoreApplication::translate("MainWindow", "Cambiar el Limite de Inclinaci\303\263n para mover el robot", nullptr));
         WifiPortLabel->setText(QCoreApplication::translate("MainWindow", "Conexi\303\263n Inalambrica ", nullptr));
         label_8->setText(QCoreApplication::translate("MainWindow", "Type   IP", nullptr));
         TypeIP_lineEdit->setText(QCoreApplication::translate("MainWindow", "192.168.1.10", nullptr));
@@ -3673,71 +3708,62 @@ public:
         SerialPort_Label_7->setText(QCoreApplication::translate("MainWindow", "Rx Inalambrico", nullptr));
         SerialPort_Label_6->setText(QCoreApplication::translate("MainWindow", "Tx Inalambrico", nullptr));
         cleanInfoPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Info", nullptr));
-        label_6->setText(QCoreApplication::translate("MainWindow", "SENSOR IR SELECTED TO SET ", nullptr));
-        IR_ComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "1", nullptr));
-        IR_ComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "2", nullptr));
-        IR_ComboBox->setItemText(2, QCoreApplication::translate("MainWindow", "3", nullptr));
-
-        StartCalibratePushButton->setText(QCoreApplication::translate("MainWindow", "INICIAR CALIBRACI\303\223N DE LOS IR", nullptr));
-        StopCalibratePushButton->setText(QCoreApplication::translate("MainWindow", "FINALIZAR CALIBRACI\303\223N DE LOS IR", nullptr));
-        label_5->setText(QCoreApplication::translate("MainWindow", "MPU 6050", nullptr));
-        MPU_calibrate->setText(QCoreApplication::translate("MainWindow", "Calibrar", nullptr));
-        IR_1_label_6->setText(QCoreApplication::translate("MainWindow", " Gx(PITCH)", nullptr));
-        IR_2_label_4->setText(QCoreApplication::translate("MainWindow", "   Gz(YAW)", nullptr));
-        IR_3_label_4->setText(QCoreApplication::translate("MainWindow", "   Az", nullptr));
-        IR_1_label_5->setText(QCoreApplication::translate("MainWindow", "\303\201ngulo X", nullptr));
-        IR_1_label_7->setText(QCoreApplication::translate("MainWindow", "   Ax", nullptr));
-        IR_2_label_3->setText(QCoreApplication::translate("MainWindow", "   Ay", nullptr));
-        HB_LABEL_3->setText(QCoreApplication::translate("MainWindow", "A.Lineal", nullptr));
-        label_4->setText(QCoreApplication::translate("MainWindow", "                            IR SENSORS", nullptr));
-        IR_8_label->setText(QCoreApplication::translate("MainWindow", "IR8", nullptr));
-        IR_4_label->setText(QCoreApplication::translate("MainWindow", "IR4", nullptr));
-        IR_5_label->setText(QCoreApplication::translate("MainWindow", "IR5", nullptr));
-        IR_7_label->setText(QCoreApplication::translate("MainWindow", "IR7", nullptr));
+        label_4->setText(QCoreApplication::translate("MainWindow", "                            IR SENSORS - Calibraci\303\263n y Datos en crudo", nullptr));
+        StartCalibratePushButton->setText(QCoreApplication::translate("MainWindow", "INICIAR CALIBRACI\303\223N DE LOS IR FL", nullptr));
+        StopCalibratePushButton->setText(QCoreApplication::translate("MainWindow", "FINALIZAR CALIBRACI\303\223N DE LOS IR FL", nullptr));
         IR_6_label->setText(QCoreApplication::translate("MainWindow", "IR6", nullptr));
-        IR_3_label->setText(QCoreApplication::translate("MainWindow", "IR3", nullptr));
+        IR_8_label->setText(QCoreApplication::translate("MainWindow", "IR8", nullptr));
+        IR_5_label->setText(QCoreApplication::translate("MainWindow", "IR5", nullptr));
         IR_2_label->setText(QCoreApplication::translate("MainWindow", "IR2", nullptr));
         IR_1_label->setText(QCoreApplication::translate("MainWindow", "IR1", nullptr));
-        IR_1_label_14->setText(QCoreApplication::translate("MainWindow", "Eje", nullptr));
-        IR_1_label_12->setText(QCoreApplication::translate("MainWindow", "X", nullptr));
-        IR_1_label_13->setText(QCoreApplication::translate("MainWindow", "Y", nullptr));
-        IR_1_label_11->setText(QCoreApplication::translate("MainWindow", "Velocidad", nullptr));
-        IR_1_label_10->setText(QCoreApplication::translate("MainWindow", "Posicion", nullptr));
+        IR_3_label->setText(QCoreApplication::translate("MainWindow", "IR3", nullptr));
+        IR_4_label->setText(QCoreApplication::translate("MainWindow", "IR4", nullptr));
+        IR_7_label->setText(QCoreApplication::translate("MainWindow", "IR7", nullptr));
+        label_5->setText(QCoreApplication::translate("MainWindow", "MPU 6050 - Calibraci\303\263n y Datos en crudo", nullptr));
+        MPU_calibrate->setText(QCoreApplication::translate("MainWindow", "(Obsoleto) Calibrar", nullptr));
+        IR_1_label_6->setText(QCoreApplication::translate("MainWindow", "Gy(PITCH)", nullptr));
+        IR_2_label_4->setText(QCoreApplication::translate("MainWindow", "Gz(YAW)", nullptr));
+        IR_3_label_4->setText(QCoreApplication::translate("MainWindow", "Az", nullptr));
+        IR_1_label_5->setText(QCoreApplication::translate("MainWindow", "\303\201ngulo X", nullptr));
+        IR_1_label_7->setText(QCoreApplication::translate("MainWindow", "Ax", nullptr));
+        IR_2_label_3->setText(QCoreApplication::translate("MainWindow", "Ay", nullptr));
+        HB_LABEL_3->setText(QCoreApplication::translate("MainWindow", "A.Lineal", nullptr));
+        label_6->setText(QCoreApplication::translate("MainWindow", "Visualizaci\303\263n de los Sensores IR", nullptr));
+        advancedTitleLabel->setText(QCoreApplication::translate("MainWindow", "Comandos avanzados y Loggers", nullptr));
+        accelLogBox->setTitle(QString());
         HB_LABEL_2->setText(QCoreApplication::translate("MainWindow", "Heart Bit", nullptr));
-        IR_1_label_15->setText(QCoreApplication::translate("MainWindow", "MODE", nullptr));
-        IR_1_label_16->setText(QCoreApplication::translate("MainWindow", "INFORMATION", nullptr));
-        HB_LABEL->setText(QCoreApplication::translate("MainWindow", "Heart Bit", nullptr));
         SET_FRECUENCY_HB_BUTTON->setText(QCoreApplication::translate("MainWindow", "Set HeartBit Frecuency", nullptr));
-        Screen2PushButton->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
-        advancedTitleLabel->setText(QCoreApplication::translate("MainWindow", "Comandos avanzados de red, yaw y maniobras", nullptr));
-        accelRunawayBox->setTitle(QCoreApplication::translate("MainWindow", "Accel runaway", nullptr));
-        accelRunawayDeltaLabel->setText(QCoreApplication::translate("MainWindow", "Delta th", nullptr));
-        accelRunawayAbsLabel->setText(QCoreApplication::translate("MainWindow", "Abs th", nullptr));
-        accelRunawayTrendLimitLabel->setText(QCoreApplication::translate("MainWindow", "Trend cnt", nullptr));
-        accelRunawayAbsLimitLabel->setText(QCoreApplication::translate("MainWindow", "Abs cnt", nullptr));
-        accelAdaptiveStepLabel->setText(QCoreApplication::translate("MainWindow", "Offset step", nullptr));
-        accelAdaptiveLimitLabel->setText(QCoreApplication::translate("MainWindow", "Offset lim", nullptr));
-        accelAdaptiveResetAbsLabel->setText(QCoreApplication::translate("MainWindow", "Reset abs", nullptr));
-        accelAdaptiveResetCountLabel->setText(QCoreApplication::translate("MainWindow", "Reset cnt", nullptr));
-        velocityTrendThresholdLabel->setText(QCoreApplication::translate("MainWindow", "Vel th", nullptr));
-        velocityTrendIndicatorLabel->setText(QCoreApplication::translate("MainWindow", "Vel trend: IDLE", nullptr));
-        accelRunawayModeButton->setText(QCoreApplication::translate("MainWindow", "Detection OFF", nullptr));
-        accelRunawayApplyButton->setText(QCoreApplication::translate("MainWindow", "APPLY", nullptr));
-        pitchRecoveryThresholdLabel->setText(QCoreApplication::translate("MainWindow", "Recovery deg", nullptr));
-        pitchRecoveryBrakeMsLabel->setText(QCoreApplication::translate("MainWindow", "Brake ms", nullptr));
-        pitchRecoveryApplyButton->setText(QCoreApplication::translate("MainWindow", "APPLY RECOVERY", nullptr));
-        accelLogBox->setTitle(QCoreApplication::translate("MainWindow", "Accel / Pitch RAM log", nullptr));
+        irRightLogStatusLabel_3->setText(QCoreApplication::translate("MainWindow", "Logger de la Aceleraci\303\263n en X vs Angulo Pitch para cada instante de tiempo ", nullptr));
         accelLogStartButton->setText(QCoreApplication::translate("MainWindow", "START", nullptr));
         accelLogCopyButton->setText(QCoreApplication::translate("MainWindow", "COPY CSV", nullptr));
         accelLogSaveButton->setText(QCoreApplication::translate("MainWindow", "SAVE CSV", nullptr));
         accelLogStatusLabel->setText(QCoreApplication::translate("MainWindow", "Idle", nullptr));
-        irRightLogBox->setTitle(QCoreApplication::translate("MainWindow", "IR sensor 4 - caracterizacion", nullptr));
+        irRightLogBox->setTitle(QString());
+        irRightLogStatusLabel_2->setText(QCoreApplication::translate("MainWindow", "Logger de normalizado de los sensores IR", nullptr));
         irRightDistanceLabel->setText(QCoreApplication::translate("MainWindow", "Dist mm", nullptr));
         irRightCaptureButton->setText(QCoreApplication::translate("MainWindow", "CAPTURAR 50", nullptr));
         irRightTransmitButton->setText(QCoreApplication::translate("MainWindow", "DESCARGAR", nullptr));
         irRightClearButton->setText(QCoreApplication::translate("MainWindow", "LIMPIAR", nullptr));
         irRightSaveButton->setText(QCoreApplication::translate("MainWindow", "CSV", nullptr));
         irRightLogStatusLabel->setText(QCoreApplication::translate("MainWindow", "Idle", nullptr));
+        irRightLogStatusLabel_4->setText(QCoreApplication::translate("MainWindow", "Control de Velocidad por Tendencia del Movimiento ", nullptr));
+        accelRunawayBox->setTitle(QString());
+        accelAdaptiveResetCountLabel->setText(QCoreApplication::translate("MainWindow", "Reset cnt", nullptr));
+        accelRunawayDeltaLabel->setText(QCoreApplication::translate("MainWindow", "Delta th", nullptr));
+        velocityTrendThresholdLabel->setText(QCoreApplication::translate("MainWindow", "Vel th", nullptr));
+        velocityTrendIndicatorLabel->setText(QCoreApplication::translate("MainWindow", "Vel trend: IDLE", nullptr));
+        accelAdaptiveStepLabel->setText(QCoreApplication::translate("MainWindow", "Offset step", nullptr));
+        accelAdaptiveResetAbsLabel->setText(QCoreApplication::translate("MainWindow", "Reset abs", nullptr));
+        accelRunawayModeButton->setText(QCoreApplication::translate("MainWindow", "Detection OFF", nullptr));
+        accelRunawayTrendLimitLabel->setText(QCoreApplication::translate("MainWindow", "Trend cnt", nullptr));
+        accelRunawayAbsLimitLabel->setText(QCoreApplication::translate("MainWindow", "Abs cnt", nullptr));
+        accelAdaptiveLimitLabel->setText(QCoreApplication::translate("MainWindow", "Offset lim", nullptr));
+        accelRunawayAbsLabel->setText(QCoreApplication::translate("MainWindow", "Abs th", nullptr));
+        accelRunawayApplyButton->setText(QCoreApplication::translate("MainWindow", "APPLY", nullptr));
+        irRightLogStatusLabel_5->setText(QCoreApplication::translate("MainWindow", "[OBSOLETO]Control de velocidad por Frenado de Rueda", nullptr));
+        pitchRecoveryThresholdLabel->setText(QCoreApplication::translate("MainWindow", "Recovery deg", nullptr));
+        pitchRecoveryBrakeMsLabel->setText(QCoreApplication::translate("MainWindow", "Brake ms", nullptr));
+        pitchRecoveryApplyButton->setText(QCoreApplication::translate("MainWindow", "APPLY RECOVERY", nullptr));
         yawConfigBox->setTitle(QString());
         yawCfgMulLabel->setText(QCoreApplication::translate("MainWindow", "SpeedRed", nullptr));
         turnStartButton->setText(QCoreApplication::translate("MainWindow", "TURN", nullptr));
@@ -3772,11 +3798,10 @@ public:
         yawKdLabel->setText(QCoreApplication::translate("MainWindow", "KdY", nullptr));
         yawKpEdit->setText(QCoreApplication::translate("MainWindow", "100.0", nullptr));
         yawKpLabel->setText(QCoreApplication::translate("MainWindow", "KpY", nullptr));
-        Screen2PushButton_3->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
         Screen2PushButton_2->setText(QCoreApplication::translate("MainWindow", "3", nullptr));
+        Screen2PushButton_3->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
         Home_pushButton->setText(QCoreApplication::translate("MainWindow", "HOME", nullptr));
-        Ejecucion_pushButton->setText(QCoreApplication::translate("MainWindow", "EJECUCION", nullptr));
-        ScreenCalibrar_pushbutton->setText(QCoreApplication::translate("MainWindow", "Calibraci\303\263n ", nullptr));
+        ScreenCalibrar_pushbutton->setText(QCoreApplication::translate("MainWindow", "Calibraci\303\263n y Muestreo", nullptr));
         SistemasDeControl_pushButton->setText(QCoreApplication::translate("MainWindow", "Sistemas de Control", nullptr));
         SistemasDeControl_pushButton_2->setText(QCoreApplication::translate("MainWindow", "Esquivar Obst\303\241culos", nullptr));
         Advanced_pushButton->setText(QCoreApplication::translate("MainWindow", "AVANZADO", nullptr));
@@ -3799,6 +3824,24 @@ public:
         cleanRxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Rx", nullptr));
         cleanInfoPushButton_2->setText(QCoreApplication::translate("MainWindow", "CLEAN Info", nullptr));
         cleanTxPushButton->setText(QCoreApplication::translate("MainWindow", "CLEAN Tx", nullptr));
+        Screen2PushButton->setText(QCoreApplication::translate("MainWindow", "2", nullptr));
+        IR_ComboBox->setItemText(0, QCoreApplication::translate("MainWindow", "1", nullptr));
+        IR_ComboBox->setItemText(1, QCoreApplication::translate("MainWindow", "2", nullptr));
+        IR_ComboBox->setItemText(2, QCoreApplication::translate("MainWindow", "3", nullptr));
+
+        IR_1_label_32->setText(QCoreApplication::translate("MainWindow", "Ajustar Setpoint de FL", nullptr));
+        CHANGE_RC_SETPOINT_label->setText(QCoreApplication::translate("MainWindow", "Cambiar Ajuste de setpoint al inclinar", nullptr));
+        IR_1_label_33->setText(QCoreApplication::translate("MainWindow", "Cambiar el Limite de Inclinaci\303\263n para mover el robot", nullptr));
+        obstacleOledButton->setText(QCoreApplication::translate("MainWindow", "8", nullptr));
+        IR_1_label_15->setText(QCoreApplication::translate("MainWindow", "MODE", nullptr));
+        IR_1_label_16->setText(QCoreApplication::translate("MainWindow", "INFORMATION", nullptr));
+        IR_1_label_14->setText(QCoreApplication::translate("MainWindow", "Eje", nullptr));
+        IR_1_label_11->setText(QCoreApplication::translate("MainWindow", "Velocidad", nullptr));
+        IR_1_label_10->setText(QCoreApplication::translate("MainWindow", "Posicion", nullptr));
+        IR_1_label_12->setText(QCoreApplication::translate("MainWindow", "X", nullptr));
+        IR_1_label_13->setText(QCoreApplication::translate("MainWindow", "Y", nullptr));
+        Ejecucion_pushButton->setText(QCoreApplication::translate("MainWindow", "EJECUCION", nullptr));
+        Screen1PushButton->setText(QCoreApplication::translate("MainWindow", "1", nullptr));
         toolBar->setWindowTitle(QCoreApplication::translate("MainWindow", "toolBar", nullptr));
     } // retranslateUi
 

@@ -7,45 +7,45 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
   1 .text         00019200  080001a0  080001a0  000011a0  2**4
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-  2 .rodata       00001814  080193a0  080193a0  0001a3a0  2**3
+  2 .rodata       000017fc  080193a0  080193a0  0001a3a0  2**3
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-  3 .ARM.extab    00000000  0801abb4  0801abb4  0001c2c8  2**0
+  3 .ARM.extab    00000000  0801ab9c  0801ab9c  0001c2c8  2**0
                   CONTENTS, READONLY
-  4 .ARM          00000008  0801abb4  0801abb4  0001bbb4  2**2
+  4 .ARM          00000008  0801ab9c  0801ab9c  0001bb9c  2**2
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-  5 .preinit_array 00000000  0801abbc  0801abbc  0001c2c8  2**0
+  5 .preinit_array 00000000  0801aba4  0801aba4  0001c2c8  2**0
                   CONTENTS, ALLOC, LOAD, DATA
-  6 .init_array   00000004  0801abbc  0801abbc  0001bbbc  2**2
+  6 .init_array   00000004  0801aba4  0801aba4  0001bba4  2**2
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-  7 .fini_array   00000004  0801abc0  0801abc0  0001bbc0  2**2
+  7 .fini_array   00000004  0801aba8  0801aba8  0001bba8  2**2
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-  8 .data         000002c8  20000000  0801abc4  0001c000  2**2
+  8 .data         000002c8  20000000  0801abac  0001c000  2**2
                   CONTENTS, ALLOC, LOAD, DATA
-  9 .bss          00002b68  200002c8  0801ae8c  0001c2c8  2**2
+  9 .bss          00002b68  200002c8  0801ae74  0001c2c8  2**2
                   ALLOC
- 10 ._user_heap_stack 00000600  20002e30  0801ae8c  0001ce30  2**0
+ 10 ._user_heap_stack 00000600  20002e30  0801ae74  0001ce30  2**0
                   ALLOC
  11 .ARM.attributes 00000030  00000000  00000000  0001c2c8  2**0
                   CONTENTS, READONLY
- 12 .debug_info   0001b05e  00000000  00000000  0001c2f8  2**0
+ 12 .debug_info   0001b064  00000000  00000000  0001c2f8  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 00003d63  00000000  00000000  00037356  2**0
+ 13 .debug_abbrev 00003d50  00000000  00000000  0003735c  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 00001710  00000000  00000000  0003b0c0  2**3
+ 14 .debug_aranges 00001710  00000000  00000000  0003b0b0  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_rnglists 00001273  00000000  00000000  0003c7d0  2**0
+ 15 .debug_rnglists 00001273  00000000  00000000  0003c7c0  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  0001b13e  00000000  00000000  0003da43  2**0
+ 16 .debug_macro  0001b13e  00000000  00000000  0003da33  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0001e895  00000000  00000000  00058b81  2**0
+ 17 .debug_line   0001e895  00000000  00000000  00058b71  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000a449a  00000000  00000000  00077416  2**0
+ 18 .debug_str    000a448b  00000000  00000000  00077406  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  0011b8b0  2**0
+ 19 .comment      00000043  00000000  00000000  0011b891  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00007964  00000000  00000000  0011b8f4  2**2
+ 20 .debug_frame  00007964  00000000  00000000  0011b8d4  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 21 .debug_line_str 0000005e  00000000  00000000  00123258  2**0
+ 21 .debug_line_str 0000005e  00000000  00000000  00123238  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -1342,11 +1342,11 @@ Disassembly of section .text:
  800102e:	bf00      	nop
 
 08001030 <ESP01_SetWIFI>:
-//const char CIFSRAPMAC[] = "+CIFSR:APMAC\r";
 //const char CIFSRSTAIP[] = "+CIFSR:STAIP\r";
 //const char CIFSRSTAMAC[] = "+CIFSR:STAMAC\r";
 
 
+// Carga credenciales WiFi y reinicia la maquina AT para reconectar el ESP01.
 void ESP01_SetWIFI(const char *ssid, const char *password){
  8001030:	b580      	push	{r7, lr}
  8001032:	b082      	sub	sp, #8
@@ -1411,6 +1411,7 @@ void ESP01_SetWIFI(const char *ssid, const char *password){
 0800109c <ESP01_StartUDP>:
 
 
+// Prepara el transporte UDP usado para intercambiar comandos y telemetria.
 _eESP01STATUS ESP01_StartUDP(const char *RemoteIP, uint16_t RemotePORT, uint16_t LocalPORT){
  800109c:	b580      	push	{r7, lr}
  800109e:	b082      	sub	sp, #8
@@ -1544,11 +1545,11 @@ char *ESP01_GetLocalIP(){
  8001178:	20000378 	.word	0x20000378
 
 0800117c <ESP01_WriteRX>:
-	else
 		return ESP01_UDPTCP_DISCONNECTED;
 }
 
 
+// Guarda cada byte recibido por UART en el anillo del parser AT.
 void ESP01_WriteRX(uint8_t value){
  800117c:	b480      	push	{r7}
  800117e:	b083      	sub	sp, #12
@@ -1588,6 +1589,7 @@ void ESP01_WriteRX(uint8_t value){
 
 080011bc <ESP01_Send>:
 
+// Encola un envio AT+CIPSEND seguido del payload hacia el enlace UDP/TCP activo.
 _eESP01STATUS ESP01_Send(uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint16_t sizeRingBuf){
  80011bc:	b580      	push	{r7, lr}
  80011be:	b088      	sub	sp, #32
@@ -1776,7 +1778,7 @@ _eESP01STATUS ESP01_Send(uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint
  80012ee:	bd80      	pop	{r7, pc}
  80012f0:	20000520 	.word	0x20000520
  80012f4:	200002e8 	.word	0x200002e8
- 80012f8:	08019a0c 	.word	0x08019a0c
+ 80012f8:	080199f4 	.word	0x080199f4
  80012fc:	080193a0 	.word	0x080193a0
  8001300:	2000051a 	.word	0x2000051a
  8001304:	20000414 	.word	0x20000414
@@ -1913,6 +1915,7 @@ void ESP01_Timeout10ms(){
 
 080013f4 <ESP01_Task>:
 
+// Ejecuta el parser AT, la maquina de conexion y el vaciado del buffer TX.
 void ESP01_Task(){
  80013f4:	b580      	push	{r7, lr}
  80013f6:	af00      	add	r7, sp, #0
@@ -2059,6 +2062,7 @@ int ESP01_UART_Transmit(uint8_t val)
 
 080014d8 <ESP01_Data_Received>:
 
+// Entrega el payload +IPD al anillo UNER que procesa el lazo principal.
 void ESP01_Data_Received(uint8_t value)
 {
  80014d8:	b480      	push	{r7}
@@ -2121,6 +2125,7 @@ void ESP01_Data_Received(uint8_t value)
 
 08001540 <onESP01ChangeState>:
 
+// Sincroniza las banderas de aplicacion con los cambios de estado del ESP01.
 void onESP01ChangeState(_eESP01STATUS esp01State)
 {
  8001540:	b580      	push	{r7, lr}
@@ -2479,6 +2484,7 @@ _eESP01STATUS ESP01_StartTransport(void)
 
 080017c0 <ESP01_App_Task>:
 
+// Envia ACK pendientes cuando el transporte esta conectado y libre.
 void ESP01_App_Task(void)
 {
  80017c0:	b580      	push	{r7, lr}
@@ -2545,6 +2551,7 @@ void ESP01_App_Task(void)
 
 
 /* Private Functions */
+// Decodifica respuestas AT y extrae payloads +IPD byte a byte.
 static void ESP01ATDecode(){
  8001834:	b580      	push	{r7, lr}
  8001836:	b082      	sub	sp, #8
@@ -2842,7 +2849,7 @@ static void ESP01ATDecode(){
  8001a4c:	2000038e 	.word	0x2000038e
  8001a50:	2000052c 	.word	0x2000052c
  8001a54:	2000052d 	.word	0x2000052d
- 8001a58:	08019b3c 	.word	0x08019b3c
+ 8001a58:	08019b24 	.word	0x08019b24
  8001a5c:	20000390 	.word	0x20000390
  8001a60:	200002e8 	.word	0x200002e8
  8001a64:	200002f4 	.word	0x200002f4
@@ -3215,7 +3222,7 @@ static void ESP01ATDecode(){
  8001d00:	e05c      	b.n	8001dbc <ESP01ATDecode+0x588>
  8001d02:	bf00      	nop
  8001d04:	2000052c 	.word	0x2000052c
- 8001d08:	08019b3c 	.word	0x08019b3c
+ 8001d08:	08019b24 	.word	0x08019b24
  8001d0c:	20000390 	.word	0x20000390
  8001d10:	2000052d 	.word	0x2000052d
  8001d14:	2000038e 	.word	0x2000038e
@@ -3687,6 +3694,7 @@ static void ESP01ATDecode(){
 
 08001fec <ESP01DOConnection>:
 
+// Maquina de estados de conexion WiFi y apertura del socket UDP/TCP.
 static void ESP01DOConnection(){
  8001fec:	b580      	push	{r7, lr}
  8001fee:	af00      	add	r7, sp, #0
@@ -4098,19 +4106,19 @@ static void ESP01DOConnection(){
  8002288:	080194c8 	.word	0x080194c8
  800228c:	2000051c 	.word	0x2000051c
  8002290:	200002e8 	.word	0x200002e8
- 8002294:	080199ac 	.word	0x080199ac
+ 8002294:	08019994 	.word	0x08019994
  8002298:	080194e0 	.word	0x080194e0
- 800229c:	080199c4 	.word	0x080199c4
+ 800229c:	080199ac 	.word	0x080199ac
  80022a0:	080194f0 	.word	0x080194f0
- 80022a4:	080199b4 	.word	0x080199b4
+ 80022a4:	0801999c 	.word	0x0801999c
  80022a8:	08019504 	.word	0x08019504
  80022ac:	20000300 	.word	0x20000300
- 80022b0:	080199d4 	.word	0x080199d4
+ 80022b0:	080199bc 	.word	0x080199bc
  80022b4:	20000340 	.word	0x20000340
  80022b8:	08019518 	.word	0x08019518
  80022bc:	08019458 	.word	0x08019458
  80022c0:	20000378 	.word	0x20000378
- 80022c4:	080199e0 	.word	0x080199e0
+ 80022c4:	080199c8 	.word	0x080199c8
  80022c8:	0801952c 	.word	0x0801952c
 	case ESP01ATCIPCLOSE:
 		if(esp01RemoteIP[0] == '\0')
@@ -4290,11 +4298,11 @@ static void ESP01DOConnection(){
  80023e8:	bf00      	nop
  80023ea:	bd80      	pop	{r7, pc}
  80023ec:	20000360 	.word	0x20000360
- 80023f0:	080199fc 	.word	0x080199fc
+ 80023f0:	080199e4 	.word	0x080199e4
  80023f4:	200002fc 	.word	0x200002fc
  80023f8:	08019540 	.word	0x08019540
  80023fc:	200002e4 	.word	0x200002e4
- 8002400:	080199ec 	.word	0x080199ec
+ 8002400:	080199d4 	.word	0x080199d4
  8002404:	20000000 	.word	0x20000000
  8002408:	20000370 	.word	0x20000370
  800240c:	20000388 	.word	0x20000388
@@ -4304,6 +4312,7 @@ static void ESP01DOConnection(){
 
 0800241c <ESP01SENDData>:
 
+// Transmite bytes pendientes por UART y espera el prompt '>' antes del payload.
 static void ESP01SENDData(){
  800241c:	b580      	push	{r7, lr}
  800241e:	b082      	sub	sp, #8
@@ -5190,10 +5199,10 @@ static void KEY_HandleLongPress(void)
  80029d8:	20000533 	.word	0x20000533
 
 080029dc <FollowLine_ResetStateInternal>:
-static uint32_t fl_entry_turn_start_tick = 0U;
 static float fl_entry_start_yaw_deg = 0.0f;
 static float fl_entry_steering_slow = 0.0f;
 
+// Limpia el estado dinamico del seguimiento de linea y del PID de yaw.
 static void FollowLine_ResetStateInternal(void)
 {
  80029dc:	b480      	push	{r7}
@@ -5515,6 +5524,7 @@ static int16_t sign_preserving_limit(float value, float limit)
 
 08002c44 <TurnManeuver_ApplyOneWheelMix>:
 
+// Mezcla balanceo y giro cuando la maniobra usa una rueda activa y otra de pivote.
 static void TurnManeuver_ApplyOneWheelMix(int16_t pitch_output, int16_t steering)
 {
  8002c44:	b580      	push	{r7, lr}
@@ -5598,6 +5608,7 @@ static void TurnManeuver_ApplyOneWheelMix(int16_t pitch_output, int16_t steering
 
 08002cfc <PID_PITCH_ResetState>:
 
+// Reinicia acumuladores y salidas internas del lazo de balanceo.
 void PID_PITCH_ResetState(void)
 {
  8002cfc:	b480      	push	{r7}
@@ -5730,6 +5741,7 @@ void PID_PITCH_ResetState(void)
 
 08002e10 <Control_SetMotorsEnabled>:
 
+// Centraliza el encendido logico de motores y limpia consignas al apagarlos.
 void Control_SetMotorsEnabled(uint8_t enabled)
 {
  8002e10:	b580      	push	{r7, lr}
@@ -5802,6 +5814,7 @@ void Control_SetMotorsEnabled(uint8_t enabled)
 
 08002e84 <PID_PITCH>:
 
+// Lazo principal de balanceo: combina setpoint, yaw/steering y salida PWM de motores.
 void PID_PITCH(void)
 {
  8002e84:	b580      	push	{r7, lr}
@@ -5900,6 +5913,7 @@ void PID_PITCH(void)
  8002f28:	f000 bc22 	b.w	8003770 <PID_PITCH+0x8ec>
     }
 
+    // Cada modo aporta una consigna de avance y una correccion diferencial de giro.
     switch (currentMode) {
  8002f2c:	4b88      	ldr	r3, [pc, #544]	@ (8003150 <PID_PITCH+0x2cc>)
  8002f2e:	781b      	ldrb	r3, [r3, #0]
@@ -6096,6 +6110,7 @@ void PID_PITCH(void)
  8003088:	bf00      	nop
     }
 
+    // Las maniobras de giro tienen prioridad sobre el steering normal del modo activo.
     if (turn_maneuver_active) {
  800308a:	4b30      	ldr	r3, [pc, #192]	@ (800314c <PID_PITCH+0x2c8>)
  800308c:	781b      	ldrb	r3, [r3, #0]
@@ -6239,6 +6254,7 @@ void PID_PITCH(void)
  80031d8:	701a      	strb	r2, [r3, #0]
     }
 
+    // La ventana de aceleracion ajusta el equilibrio adaptativo cuando esta habilitada.
     if (accel_runaway_enabled && accel_runaway_cycle_count >= ACCEL_RUNAWAY_WINDOW_CYCLES) {
  80031da:	4ba6      	ldr	r3, [pc, #664]	@ (8003474 <PID_PITCH+0x5f0>)
  80031dc:	781b      	ldrb	r3, [r3, #0]
@@ -6681,6 +6697,7 @@ void PID_PITCH(void)
  8003586:	ee77 7a67 	vsub.f32	s15, s14, s15
  800358a:	edc7 7a0d 	vstr	s15, [r7, #52]	@ 0x34
 
+    // PID de pitch: el angulo estimado se compara contra la inclinacion objetivo.
     error = angle_y - target_setpoint;
  800358e:	4b82      	ldr	r3, [pc, #520]	@ (8003798 <PID_PITCH+0x914>)
  8003590:	ed93 7a00 	vldr	s14, [r3]
@@ -6923,6 +6940,7 @@ void PID_PITCH(void)
 
 080037e0 <FollowLine_Task>:
 
+// Calcula el steering de seguimiento de linea y gestiona entradas especiales de pista.
 void FollowLine_Task(void)
 {
  80037e0:	b580      	push	{r7, lr}
@@ -7057,6 +7075,7 @@ void FollowLine_Task(void)
  80038a8:	e30b      	b.n	8003ec2 <FollowLine_Task+0x6e2>
     }
 
+    // Secuencia de ingreso a 90 grados: estabiliza, gira y vuelve a alinear con la linea.
     if (fl_entry_state != LINE_FOLLOW_NORMAL) {
  80038aa:	4b81      	ldr	r3, [pc, #516]	@ (8003ab0 <FollowLine_Task+0x2d0>)
  80038ac:	781b      	ldrb	r3, [r3, #0]
@@ -7611,6 +7630,7 @@ void FollowLine_Task(void)
  8003ce8:	e0eb      	b.n	8003ec2 <FollowLine_Task+0x6e2>
     }
 
+    // Con linea detectada usa PID de yaw; sin linea conserva el ultimo sentido conocido.
     if (AIRAB) {
  8003cea:	4b26      	ldr	r3, [pc, #152]	@ (8003d84 <FollowLine_Task+0x5a4>)
  8003cec:	781b      	ldrb	r3, [r3, #0]
@@ -7812,6 +7832,7 @@ void FollowLine_Task(void)
 
 08003edc <Calcular_PID_YAW>:
 
+// PID de yaw para convertir error lateral de linea en correccion diferencial.
 int16_t Calcular_PID_YAW(float error_linea)
 {
  8003edc:	b480      	push	{r7}
@@ -7878,7 +7899,7 @@ int16_t Calcular_PID_YAW(float error_linea)
  8003f80:	20002284 	.word	0x20002284
 
 08003f84 <TurnManeuver_StartInternal>:
-
+// Inicializa una maniobra de giro con referencia de yaw y modo de ruedas seleccionado.
 static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
                                           uint8_t wheel_mode,
                                           uint8_t wheel_select,
@@ -8496,6 +8517,7 @@ void TurnManeuver_Cancel(void)
 
 08004424 <TurnManeuver_Task>:
 
+// Avanza la maquina de estados de una maniobra de giro basada en yaw.
 void TurnManeuver_Task(void)
 {
  8004424:	b580      	push	{r7, lr}
@@ -9013,6 +9035,7 @@ void TurnManeuver_Task(void)
 0800487c <Filtrar_Sensores_IR>:
 #include "line_sensors.h"
 
+// Suaviza las lecturas ADC de los sensores IR antes de usarlas en control.
 void Filtrar_Sensores_IR(void)
 {
  800487c:	b480      	push	{r7}
@@ -9072,6 +9095,7 @@ void Filtrar_Sensores_IR(void)
 
 080048ec <ObstacleSensor_Task>:
 
+// Detecta presencia de obstaculo frontal con umbrales derivados de una linea base.
 void ObstacleSensor_Task(void)
 {
  80048ec:	b480      	push	{r7}
@@ -9305,10 +9329,10 @@ void ObstacleSensor_Task(void)
  8004a60:	200005fa 	.word	0x200005fa
 
 08004a64 <Iniciar_Calibracion_Linea>:
-    obstacle_event_pending = 0U;
     return 1U;
 }
 
+// Inicia la captura de minimos y maximos para calibrar los sensores de linea.
 void Iniciar_Calibracion_Linea(void)
 {
  8004a64:	b480      	push	{r7}
@@ -9359,6 +9383,7 @@ void Iniciar_Calibracion_Linea(void)
 
 08004abc <Procesar_Calibracion_Linea>:
 
+// Actualiza extremos observados durante el recorrido de calibracion sobre la pista.
 void Procesar_Calibracion_Linea(void)
 {
  8004abc:	b480      	push	{r7}
@@ -9438,6 +9463,7 @@ void Procesar_Calibracion_Linea(void)
 
 08004b50 <Leer_Linea_Digital>:
 
+// Convierte valores filtrados a estados digitales y actualiza el error lateral.
 void Leer_Linea_Digital(void)
 {
  8004b50:	b580      	push	{r7, lr}
@@ -9553,6 +9579,7 @@ void Leer_Linea_Digital(void)
 
 08004c24 <Finalizar_Calibracion_Linea>:
 
+// Calcula umbrales finales de linea a partir de los extremos medidos.
 void Finalizar_Calibracion_Linea(void)
 {
  8004c24:	b480      	push	{r7}
@@ -9647,14 +9674,14 @@ void Finalizar_Calibracion_Linea(void)
  8004cc8:	200022a0 	.word	0x200022a0
  8004ccc:	20002298 	.word	0x20002298
  8004cd0:	200022a8 	.word	0x200022a8
- 8004cd4:	0801a2f8 	.word	0x0801a2f8
+ 8004cd4:	0801a2e0 	.word	0x0801a2e0
  8004cd8:	2000085b 	.word	0x2000085b
 
 08004cdc <calcularErrorYawContinuo>:
-
     return numerador / denominador;
 }
 
+// Estima el desplazamiento lateral usando la intensidad relativa de cada sensor.
 float calcularErrorYawContinuo(void)
 {
  8004cdc:	b480      	push	{r7}
@@ -9850,7 +9877,7 @@ float calcularErrorYawContinuo(void)
  8004e74:	200022a0 	.word	0x200022a0
  8004e78:	20002298 	.word	0x20002298
  8004e7c:	20000088 	.word	0x20000088
- 8004e80:	0801a300 	.word	0x0801a300
+ 8004e80:	0801a2e8 	.word	0x0801a2e8
  8004e84:	20002288 	.word	0x20002288
 
 08004e88 <ForwardMotion_Generate>:
@@ -9963,10 +9990,10 @@ float ForwardMotion_Generate(float motion_setpoint,
  8004f44:	2000009c 	.word	0x2000009c
 
 08004f48 <Telemetry_UpdateMPU>:
-/* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+// Actualiza la estimacion IMU consumiendo la ultima muestra recibida por DMA.
 void Telemetry_UpdateMPU(void)
 {
  8004f48:	b580      	push	{r7, lr}
@@ -9979,6 +10006,7 @@ void Telemetry_UpdateMPU(void)
 
 08004f54 <MPU6050_ParseSample>:
 
+// Interpreta los 14 bytes del MPU6050 y actualiza angulos, giros y aceleracion frontal.
 static void MPU6050_ParseSample(const uint8_t *buffer)
 {
  8004f54:	b580      	push	{r7, lr}
@@ -10249,6 +10277,7 @@ static void MPU6050_ParseSample(const uint8_t *buffer)
 
 08005204 <MPU6050_ConsumeReadDMA>:
 
+// Copia de forma atomica la muestra lista para procesarla fuera del callback I2C.
 static uint8_t MPU6050_ConsumeReadDMA(void)
 {
  8005204:	b590      	push	{r4, r7, lr}
@@ -10328,6 +10357,7 @@ __STATIC_FORCEINLINE void __disable_irq(void)
 
 08005268 <MPU6050_StartReadDMA>:
 
+// Lanza una lectura I2C por DMA del bloque completo del MPU6050 para el ciclo de control.
 static void MPU6050_StartReadDMA(void)
 {
  8005268:	b580      	push	{r7, lr}
@@ -14182,6 +14212,7 @@ void OLED_Service(void)
  80070d0:	20002349 	.word	0x20002349
 
 080070d4 <UNER_HandlePacket>:
+// Aplica comandos recibidos por UNER y actualiza modos, parametros y tareas auxiliares.
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len)
 {
  80070d4:	b580      	push	{r7, lr}
@@ -17272,6 +17303,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
  80088e2:	bf00      	nop
 
 080088e4 <Robot_Drive>:
+// Traduce comandos firmados de motor a direccion GPIO y duty PWM para cada puente H.
 void Robot_Drive(int16_t speed_L, int16_t speed_R) {
  80088e4:	b580      	push	{r7, lr}
  80088e6:	b082      	sub	sp, #8
@@ -17562,11 +17594,11 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
  8008b2c:	20002594 	.word	0x20002594
 
 08008b30 <ESP01_Generic_Functions>:
-	    HAL_GPIO_WritePin(GPIOA, MOT1_IN1_Pin, GPIO_PIN_SET);
 	    HAL_GPIO_WritePin(GPIOA, MOT1_IN2_Pin, GPIO_PIN_SET);
 	    HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_SET);
 	    HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_SET);
 }
+// Mantiene tareas periodicas asociadas al enlace ESP01 y al envio de telemetria.
 void ESP01_Generic_Functions(uint32_t now){
  8008b30:	b580      	push	{r7, lr}
  8008b32:	b082      	sub	sp, #8
@@ -17640,6 +17672,7 @@ void ESP01_Generic_Functions(uint32_t now){
  8008bb0:	200023c4 	.word	0x200023c4
 
 08008bb4 <HAL_TIM_PeriodElapsedCallback>:
+// TIM4 marca la base temporal de 10 ms que sincroniza control y tareas periodicas.
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
  8008bb4:	b580      	push	{r7, lr}
  8008bb6:	b082      	sub	sp, #8
@@ -17783,6 +17816,7 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
 
 08008cb0 <HAL_I2C_MemRxCpltCallback>:
 
+// Callback de fin de lectura DMA del MPU6050: deja la muestra lista para el lazo principal.
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
  8008cb0:	b490      	push	{r4, r7}
@@ -17837,6 +17871,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 
 08008d10 <HAL_I2C_ErrorCallback>:
 
+// Recupera banderas de estado cuando una transferencia I2C termina con error.
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
 {
  8008d10:	b480      	push	{r7}
@@ -17909,6 +17944,7 @@ void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
  8008d88:	20002348 	.word	0x20002348
 
 08008d8c <HAL_UART_RxCpltCallback>:
+// Recibe bytes del ESP01 por USART1 y los deriva al parser AT/UNER.
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
  8008d8c:	b580      	push	{r7, lr}
  8008d8e:	b086      	sub	sp, #24
@@ -18030,6 +18066,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
  8008e5c:	2000266c 	.word	0x2000266c
 
 08008e60 <HAL_UART_ErrorCallback>:
+// Rearma la recepcion UART despues de una condicion de error en USART1.
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
  8008e60:	b580      	push	{r7, lr}
  8008e62:	b084      	sub	sp, #16
@@ -18115,6 +18152,7 @@ int main(void)
   MX_ADC1_Init();
  8008ed2:	f000 f99b 	bl	800920c <MX_ADC1_Init>
   /* USER CODE BEGIN 2 */
+      // Arranque de perifericos de aplicacion: OLED, IMU, ADC, PWM y enlace ESP01.
       /* ================= [ ESP01 AT OFICIAL ] ================= */
       memset(ip_address, 0, sizeof(ip_address));
  8008ed6:	2210      	movs	r2, #16
@@ -18233,6 +18271,7 @@ int main(void)
  8008fa4:	2300      	movs	r3, #0
  8008fa6:	71fb      	strb	r3, [r7, #7]
 
+		// El flag de TIM4 habilita una ranura de control y dispara una nueva lectura del IMU.
 		if (flag10ms) {
  8008fa8:	4b57      	ldr	r3, [pc, #348]	@ (8009108 <main+0x260>)
  8008faa:	781b      	ldrb	r3, [r3, #0]
@@ -18272,6 +18311,7 @@ int main(void)
  8008fe0:	701a      	strb	r2, [r3, #0]
 		}
 
+		// Los sensores IR se actualizan rapido para linea, obstaculos y calibracion.
 		if (((now - last_ir_update) >= 1U) || run_control) {
  8008fe2:	4b4d      	ldr	r3, [pc, #308]	@ (8009118 <main+0x270>)
  8008fe4:	681b      	ldr	r3, [r3, #0]
@@ -18299,6 +18339,7 @@ int main(void)
  800900c:	d001      	beq.n	8009012 <main+0x16a>
  800900e:	f7fb fd55 	bl	8004abc <Procesar_Calibracion_Linea>
 		}
+		// La ranura de 10 ms concentra control de movimiento, estimacion IMU y registros.
 		if(run_control){
  8009012:	79fb      	ldrb	r3, [r7, #7]
  8009014:	2b00      	cmp	r3, #0
@@ -18362,6 +18403,7 @@ int main(void)
  800907c:	6013      	str	r3, [r2, #0]
 		}
 
+	  	// Tareas cooperativas de comunicacion, comandos, logs y refresco de pantalla.
 	  	ESP01_App_Task();
  800907e:	f7f8 fb9f 	bl	80017c0 <ESP01_App_Task>
 	    KEY_CalibrationTask();
@@ -19661,6 +19703,7 @@ void Error_Handler(void)
 0800983c <MPU6050_Init>:
 #include "mpu6050_app.h"
 
+// Configura el MPU6050 para lectura continua de acelerometro y giroscopio.
 void MPU6050_Init(I2C_HandleTypeDef *hi2c)
 {
  800983c:	b580      	push	{r7, lr}
@@ -19826,6 +19869,7 @@ static float ObstacleFollow_ClampFloat(float value, float limit)
 
 08009970 <ObstacleFollow_EstimateDistanceMm>:
 
+// Interpola la tabla ADC-distancia para obtener una distancia aproximada en milimetros.
 static uint16_t ObstacleFollow_EstimateDistanceMm(uint16_t adc, const uint16_t *adc_table)
 {
  8009970:	b480      	push	{r7}
@@ -19935,7 +19979,7 @@ static uint16_t ObstacleFollow_EstimateDistanceMm(uint16_t adc, const uint16_t *
  8009a1c:	46bd      	mov	sp, r7
  8009a1e:	f85d 7b04 	ldr.w	r7, [sp], #4
  8009a22:	4770      	bx	lr
- 8009a24:	0801a330 	.word	0x0801a330
+ 8009a24:	0801a318 	.word	0x0801a318
 
 08009a28 <ObstacleFollow_ApplyRearAdcOffset>:
 
@@ -20153,10 +20197,10 @@ static void ObstacleFollow_UpdateValidSteeringHistory(float side_steering)
  8009ba8:	200027d0 	.word	0x200027d0
 
 08009bac <ObstacleFollow_UpdateRightSensor>:
-    obstacle_follow_fixed_corner_active = 1U;
     obstacle_follow_corner_exit_count = 0U;
 }
 
+// Actualiza y filtra los IR derechos usados para seguir la cara del obstaculo.
 static void ObstacleFollow_UpdateRightSensor(void)
 {
  8009bac:	b580      	push	{r7, lr}
@@ -20408,9 +20452,9 @@ static void ObstacleFollow_UpdateRightSensor(void)
  8009d50:	20002790 	.word	0x20002790
  8009d54:	cccccccd 	.word	0xcccccccd
  8009d58:	20000088 	.word	0x20000088
- 8009d5c:	0801a310 	.word	0x0801a310
+ 8009d5c:	0801a2f8 	.word	0x0801a2f8
  8009d60:	200000e2 	.word	0x200000e2
- 8009d64:	0801a320 	.word	0x0801a320
+ 8009d64:	0801a308 	.word	0x0801a308
  8009d68:	200000e4 	.word	0x200000e4
  8009d6c:	200000e0 	.word	0x200000e0
  8009d70:	2000278a 	.word	0x2000278a
@@ -20550,6 +20594,7 @@ static void ObstacleFollow_ClearOutput(void)
 
 08009e70 <ObstacleFollow_Start>:
 
+// Activa el modo de seguimiento de obstaculo y toma la referencia inicial de yaw.
 uint8_t ObstacleFollow_Start(uint8_t side)
 {
  8009e70:	b580      	push	{r7, lr}
@@ -20687,6 +20732,7 @@ uint8_t ObstacleFollow_Start(uint8_t side)
 
 08009f60 <ObstacleFollow_Stop>:
 
+// Detiene el modo de obstaculo y limpia sus salidas de control.
 void ObstacleFollow_Stop(void)
 {
  8009f60:	b580      	push	{r7, lr}
@@ -20706,11 +20752,11 @@ void ObstacleFollow_Stop(void)
  8009f78:	20002788 	.word	0x20002788
 
 08009f7c <ObstacleFollow_Task>:
-uint8_t ObstacleFollow_IsActive(void)
 {
     return obstacle_follow_active;
 }
 
+// Maquina de estados para alinearse, seguir la pared y retornar a la linea.
 void ObstacleFollow_Task(void){
  8009f7c:	b580      	push	{r7, lr}
  8009f7e:	b088      	sub	sp, #32
@@ -21195,6 +21241,7 @@ void ObstacleFollow_Task(void){
  800a2dc:	2200      	movs	r2, #0
  800a2de:	701a      	strb	r2, [r3, #0]
 
+        // La correccion combina paralelismo de sensores y distancia media al obstaculo.
         proportional_correction = (obstacle_follow_wall_kp * (float)obstacle_follow_parallel_error_mm) -
  800a2e0:	4b79      	ldr	r3, [pc, #484]	@ (800a4c8 <ObstacleFollow_Task+0x54c>)
  800a2e2:	881b      	ldrh	r3, [r3, #0]
@@ -25211,10 +25258,10 @@ void SystemInit(void)
  800bb40:	e000ed00 	.word	0xe000ed00
 
 0800bb44 <UNER_Crc16Ccitt>:
-extern float angle_roll;
 extern float angle_yaw;
 extern float error_linea;
 
+// Calcula el CRC de las tramas UNER v1 antes de transmitir o aceptar paquetes.
 uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len)
 {
  800bb44:	b480      	push	{r7}
@@ -25297,6 +25344,7 @@ uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len)
 
 0800bbc8 <UNER_SendV1>:
 
+// Arma una trama UNER v1 y la encola para salida por el transporte ESP01.
 uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t payload_len)
 {
  800bbc8:	b580      	push	{r7, lr}
@@ -25598,6 +25646,7 @@ uint8_t UNER_QueueTx(const uint8_t *data, uint16_t len)
 
 0800be24 <UNER_Tx_Task>:
 
+// Despacha la cola de tramas UNER cuando el enlace UDP esta disponible.
 void UNER_Tx_Task(void)
 {
  800be24:	b580      	push	{r7, lr}
@@ -25786,8 +25835,8 @@ void UNER_Tx_Task(void)
  800bf74:	200005fc 	.word	0x200005fc
  800bf78:	200023b4 	.word	0x200023b4
  800bf7c:	200023bc 	.word	0x200023bc
- 800bf80:	08019988 	.word	0x08019988
- 800bf84:	08019994 	.word	0x08019994
+ 800bf80:	0801997c 	.word	0x0801997c
+ 800bf84:	08019988 	.word	0x08019988
  800bf88:	200023a5 	.word	0x200023a5
  800bf8c:	200023ac 	.word	0x200023ac
 
@@ -25832,6 +25881,7 @@ uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status)
 
 0800bfc8 <UNER_SendTelemetryV1>:
 
+// Empaqueta telemetria de IMU, modo, sensores IR y steering actual.
 uint8_t UNER_SendTelemetryV1(void)
 {
  800bfc8:	b580      	push	{r7, lr}
@@ -26146,10 +26196,10 @@ uint8_t UNER_SendTelemetryV1(void)
  800c260:	20000088 	.word	0x20000088
 
 0800c264 <UNER_Rx_Task>:
-
     return UNER_SendV1(cmd, 0, payload, 2);
 }
 
+// Consume el anillo de recepcion cargado desde el ESP01 y alimenta el parser.
 void UNER_Rx_Task(void)
 {
  800c264:	b580      	push	{r7, lr}
@@ -26213,6 +26263,7 @@ void UNER_Rx_Task(void)
 
 0800c2d0 <UNER_ProcessByteV1>:
 
+// Parser byte a byte de UNER v1 con cabecera, longitud, payload y CRC.
 void UNER_ProcessByteV1(uint8_t b)
 {
  800c2d0:	b580      	push	{r7, lr}
@@ -26793,7 +26844,7 @@ LoopFillZerobss:
   ldr r1, =_edata
  800c608:	200002c8 	.word	0x200002c8
   ldr r2, =_sidata
- 800c60c:	0801abc4 	.word	0x0801abc4
+ 800c60c:	0801abac 	.word	0x0801abac
   ldr r2, =_sbss
  800c610:	200002c8 	.word	0x200002c8
   ldr r4, =_ebss
@@ -30676,7 +30727,7 @@ static uint32_t DMA_CalcBaseAndBitshift(DMA_HandleTypeDef *hdma)
  800daac:	4770      	bx	lr
  800daae:	bf00      	nop
  800dab0:	aaaaaaab 	.word	0xaaaaaaab
- 800dab4:	0801a358 	.word	0x0801a358
+ 800dab4:	0801a340 	.word	0x0801a340
 
 0800dab8 <DMA_CheckFifoParam>:
   * @param  hdma       pointer to a DMA_HandleTypeDef structure that contains
@@ -42221,7 +42272,7 @@ HAL_StatusTypeDef HAL_RCC_ClockConfig(const RCC_ClkInitTypeDef  *RCC_ClkInitStru
  8011d46:	bf00      	nop
  8011d48:	40023c00 	.word	0x40023c00
  8011d4c:	40023800 	.word	0x40023800
- 8011d50:	0801a340 	.word	0x0801a340
+ 8011d50:	0801a328 	.word	0x0801a328
  8011d54:	200000f4 	.word	0x200000f4
  8011d58:	200000f8 	.word	0x200000f8
 
@@ -42478,7 +42529,7 @@ uint32_t HAL_RCC_GetPCLK1Freq(void)
  8011f1c:	4618      	mov	r0, r3
  8011f1e:	bd80      	pop	{r7, pc}
  8011f20:	40023800 	.word	0x40023800
- 8011f24:	0801a350 	.word	0x0801a350
+ 8011f24:	0801a338 	.word	0x0801a338
 
 08011f28 <HAL_RCC_GetPCLK2Freq>:
   * @note   Each time PCLK2 changes, this function must be called to update the
@@ -42504,7 +42555,7 @@ uint32_t HAL_RCC_GetPCLK2Freq(void)
  8011f44:	4618      	mov	r0, r3
  8011f46:	bd80      	pop	{r7, pc}
  8011f48:	40023800 	.word	0x40023800
- 8011f4c:	0801a350 	.word	0x0801a350
+ 8011f4c:	0801a338 	.word	0x0801a338
 
 08011f50 <HAL_TIM_Base_Init>:
   *         Ex: call @ref HAL_TIM_Base_DeInit() before HAL_TIM_Base_Init()
@@ -47623,7 +47674,7 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8013e48:	f801 5901 	strb.w	r5, [r1], #-1
  8013e4c:	e7f4      	b.n	8013e38 <__utoa+0x68>
  8013e4e:	bf00      	nop
- 8013e50:	0801a360 	.word	0x0801a360
+ 8013e50:	0801a348 	.word	0x0801a348
 
 08013e54 <__cvt>:
  8013e54:	e92d 47ff 	stmdb	sp!, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, sl, lr}
@@ -48046,11 +48097,11 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8014258:	e7ee      	b.n	8014238 <_printf_float+0x2a4>
  801425a:	bf00      	nop
  801425c:	7fefffff 	.word	0x7fefffff
- 8014260:	0801a389 	.word	0x0801a389
- 8014264:	0801a385 	.word	0x0801a385
- 8014268:	0801a391 	.word	0x0801a391
- 801426c:	0801a38d 	.word	0x0801a38d
- 8014270:	0801a395 	.word	0x0801a395
+ 8014260:	0801a371 	.word	0x0801a371
+ 8014264:	0801a36d 	.word	0x0801a36d
+ 8014268:	0801a379 	.word	0x0801a379
+ 801426c:	0801a375 	.word	0x0801a375
+ 8014270:	0801a37d 	.word	0x0801a37d
  8014274:	6da3      	ldr	r3, [r4, #88]	@ 0x58
  8014276:	f8dd a028 	ldr.w	sl, [sp, #40]	@ 0x28
  801427a:	4553      	cmp	r3, sl
@@ -48528,8 +48579,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  80146f0:	2500      	movs	r5, #0
  80146f2:	f104 0619 	add.w	r6, r4, #25
  80146f6:	e7f5      	b.n	80146e4 <_printf_i+0x220>
- 80146f8:	0801a397 	.word	0x0801a397
- 80146fc:	0801a3a8 	.word	0x0801a3a8
+ 80146f8:	0801a37f 	.word	0x0801a37f
+ 80146fc:	0801a390 	.word	0x0801a390
 
 08014700 <_scanf_float>:
  8014700:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
@@ -48924,8 +48975,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8014b0e:	2700      	movs	r7, #0
  8014b10:	e62e      	b.n	8014770 <_scanf_float+0x70>
  8014b12:	bf00      	nop
- 8014b14:	0801a3b9 	.word	0x0801a3b9
- 8014b18:	0801a4fa 	.word	0x0801a4fa
+ 8014b14:	0801a3a1 	.word	0x0801a3a1
+ 8014b18:	0801a4e2 	.word	0x0801a4e2
 
 08014b1c <std>:
  8014b1c:	2300      	movs	r3, #0
@@ -49401,10 +49452,10 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8014f36:	4798      	blx	r3
  8014f38:	3601      	adds	r6, #1
  8014f3a:	e7f2      	b.n	8014f22 <__libc_init_array+0x1e>
- 8014f3c:	0801abbc 	.word	0x0801abbc
- 8014f40:	0801abbc 	.word	0x0801abbc
- 8014f44:	0801abbc 	.word	0x0801abbc
- 8014f48:	0801abc0 	.word	0x0801abc0
+ 8014f3c:	0801aba4 	.word	0x0801aba4
+ 8014f40:	0801aba4 	.word	0x0801aba4
+ 8014f44:	0801aba4 	.word	0x0801aba4
+ 8014f48:	0801aba8 	.word	0x0801aba8
 
 08014f4c <__retarget_lock_init_recursive>:
  8014f4c:	4770      	bx	lr
@@ -49820,15 +49871,15 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8015354:	3fc68a28 	.word	0x3fc68a28
  8015358:	509f79fb 	.word	0x509f79fb
  801535c:	3fd34413 	.word	0x3fd34413
- 8015360:	0801a3cb 	.word	0x0801a3cb
- 8015364:	0801a3e2 	.word	0x0801a3e2
+ 8015360:	0801a3b3 	.word	0x0801a3b3
+ 8015364:	0801a3ca 	.word	0x0801a3ca
  8015368:	7ff00000 	.word	0x7ff00000
- 801536c:	0801a396 	.word	0x0801a396
+ 801536c:	0801a37e 	.word	0x0801a37e
  8015370:	3ff80000 	.word	0x3ff80000
- 8015374:	0801a590 	.word	0x0801a590
- 8015378:	0801a43a 	.word	0x0801a43a
- 801537c:	0801a3c7 	.word	0x0801a3c7
- 8015380:	0801a395 	.word	0x0801a395
+ 8015374:	0801a578 	.word	0x0801a578
+ 8015378:	0801a422 	.word	0x0801a422
+ 801537c:	0801a3af 	.word	0x0801a3af
+ 8015380:	0801a37d 	.word	0x0801a37d
  8015384:	f8d9 301c 	ldr.w	r3, [r9, #28]
  8015388:	6018      	str	r0, [r3, #0]
  801538a:	9b03      	ldr	r3, [sp, #12]
@@ -50057,8 +50108,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8015608:	e9cd 0104 	strd	r0, r1, [sp, #16]
  801560c:	e7c4      	b.n	8015598 <_dtoa_r+0x508>
  801560e:	bf00      	nop
- 8015610:	0801a590 	.word	0x0801a590
- 8015614:	0801a568 	.word	0x0801a568
+ 8015610:	0801a578 	.word	0x0801a578
+ 8015614:	0801a550 	.word	0x0801a550
  8015618:	3ff00000 	.word	0x3ff00000
  801561c:	40240000 	.word	0x40240000
  8015620:	401c0000 	.word	0x401c0000
@@ -50687,8 +50738,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8015c20:	f000 f968 	bl	8015ef4 <__multadd>
  8015c24:	9002      	str	r0, [sp, #8]
  8015c26:	e7eb      	b.n	8015c00 <_dtoa_r+0xb70>
- 8015c28:	0801a43a 	.word	0x0801a43a
- 8015c2c:	0801a3be 	.word	0x0801a3be
+ 8015c28:	0801a422 	.word	0x0801a422
+ 8015c2c:	0801a3a6 	.word	0x0801a3a6
 
 08015c30 <_free_r>:
  8015c30:	b538      	push	{r3, r4, r5, lr}
@@ -50972,8 +51023,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8015ea0:	e9c0 3303 	strd	r3, r3, [r0, #12]
  8015ea4:	e7f7      	b.n	8015e96 <_Balloc+0x66>
  8015ea6:	bf00      	nop
- 8015ea8:	0801a3cb 	.word	0x0801a3cb
- 8015eac:	0801a44b 	.word	0x0801a44b
+ 8015ea8:	0801a3b3 	.word	0x0801a3b3
+ 8015eac:	0801a433 	.word	0x0801a433
 
 08015eb0 <_Bfree>:
  8015eb0:	b570      	push	{r4, r5, r6, lr}
@@ -51001,8 +51052,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8015ee4:	6021      	str	r1, [r4, #0]
  8015ee6:	f843 4022 	str.w	r4, [r3, r2, lsl #2]
  8015eea:	bd70      	pop	{r4, r5, r6, pc}
- 8015eec:	0801a3cb 	.word	0x0801a3cb
- 8015ef0:	0801a44b 	.word	0x0801a44b
+ 8015eec:	0801a3b3 	.word	0x0801a3b3
+ 8015ef0:	0801a433 	.word	0x0801a433
 
 08015ef4 <__multadd>:
  8015ef4:	e92d 41f0 	stmdb	sp!, {r4, r5, r6, r7, r8, lr}
@@ -51056,8 +51107,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8015f70:	6125      	str	r5, [r4, #16]
  8015f72:	4620      	mov	r0, r4
  8015f74:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
- 8015f78:	0801a43a 	.word	0x0801a43a
- 8015f7c:	0801a44b 	.word	0x0801a44b
+ 8015f78:	0801a422 	.word	0x0801a422
+ 8015f7c:	0801a433 	.word	0x0801a433
 
 08015f80 <__s2b>:
  8015f80:	e92d 43f8 	stmdb	sp!, {r3, r4, r5, r6, r7, r8, r9, lr}
@@ -51118,8 +51169,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8016004:	f7ff ff76 	bl	8015ef4 <__multadd>
  8016008:	e7ee      	b.n	8015fe8 <__s2b+0x68>
  801600a:	bf00      	nop
- 801600c:	0801a43a 	.word	0x0801a43a
- 8016010:	0801a44b 	.word	0x0801a44b
+ 801600c:	0801a422 	.word	0x0801a422
+ 8016010:	0801a433 	.word	0x0801a433
 
 08016014 <__hi0bits>:
  8016014:	f5b0 3f80 	cmp.w	r0, #65536	@ 0x10000
@@ -51209,8 +51260,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  80160ca:	6103      	str	r3, [r0, #16]
  80160cc:	bd10      	pop	{r4, pc}
  80160ce:	bf00      	nop
- 80160d0:	0801a43a 	.word	0x0801a43a
- 80160d4:	0801a44b 	.word	0x0801a44b
+ 80160d0:	0801a422 	.word	0x0801a422
+ 80160d4:	0801a433 	.word	0x0801a433
 
 080160d8 <__multiply>:
  80160d8:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
@@ -51329,8 +51380,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  801620e:	e79f      	b.n	8016150 <__multiply+0x78>
  8016210:	3e01      	subs	r6, #1
  8016212:	e7a1      	b.n	8016158 <__multiply+0x80>
- 8016214:	0801a43a 	.word	0x0801a43a
- 8016218:	0801a44b 	.word	0x0801a44b
+ 8016214:	0801a422 	.word	0x0801a422
+ 8016218:	0801a433 	.word	0x0801a433
 
 0801621c <__pow5mult>:
  801621c:	e92d 43f8 	stmdb	sp!, {r3, r4, r5, r6, r7, r8, r9, lr}
@@ -51398,9 +51449,9 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  80162bc:	4630      	mov	r0, r6
  80162be:	e8bd 83f8 	ldmia.w	sp!, {r3, r4, r5, r6, r7, r8, r9, pc}
  80162c2:	bf00      	nop
- 80162c4:	0801a55c 	.word	0x0801a55c
- 80162c8:	0801a3cb 	.word	0x0801a3cb
- 80162cc:	0801a44b 	.word	0x0801a44b
+ 80162c4:	0801a544 	.word	0x0801a544
+ 80162c8:	0801a3b3 	.word	0x0801a3b3
+ 80162cc:	0801a433 	.word	0x0801a433
 
 080162d0 <__lshift>:
  80162d0:	e92d 47f0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, lr}
@@ -51479,8 +51530,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  801639a:	d8f9      	bhi.n	8016390 <__lshift+0xc0>
  801639c:	e7ea      	b.n	8016374 <__lshift+0xa4>
  801639e:	bf00      	nop
- 80163a0:	0801a43a 	.word	0x0801a43a
- 80163a4:	0801a44b 	.word	0x0801a44b
+ 80163a0:	0801a422 	.word	0x0801a422
+ 80163a4:	0801a433 	.word	0x0801a433
 
 080163a8 <__mcmp>:
  80163a8:	690a      	ldr	r2, [r1, #16]
@@ -51616,8 +51667,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  80164fa:	3f01      	subs	r7, #1
  80164fc:	e7e7      	b.n	80164ce <__mdiff+0xee>
  80164fe:	bf00      	nop
- 8016500:	0801a43a 	.word	0x0801a43a
- 8016504:	0801a44b 	.word	0x0801a44b
+ 8016500:	0801a422 	.word	0x0801a422
+ 8016504:	0801a433 	.word	0x0801a433
 
 08016508 <__ulp>:
  8016508:	b082      	sub	sp, #8
@@ -51767,8 +51818,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8016686:	f7ff fcc5 	bl	8016014 <__hi0bits>
  801668a:	ebc0 1042 	rsb	r0, r0, r2, lsl #5
  801668e:	e7e5      	b.n	801665c <__d2b+0x74>
- 8016690:	0801a43a 	.word	0x0801a43a
- 8016694:	0801a44b 	.word	0x0801a44b
+ 8016690:	0801a422 	.word	0x0801a422
+ 8016694:	0801a433 	.word	0x0801a433
 
 08016698 <__ratio>:
  8016698:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
@@ -52166,8 +52217,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8016a48:	e782      	b.n	8016950 <_strtod_l+0x190>
  8016a4a:	f04f 0c01 	mov.w	ip, #1
  8016a4e:	e7f8      	b.n	8016a42 <_strtod_l+0x282>
- 8016a50:	0801a66c 	.word	0x0801a66c
- 8016a54:	0801a4a4 	.word	0x0801a4a4
+ 8016a50:	0801a654 	.word	0x0801a654
+ 8016a54:	0801a48c 	.word	0x0801a48c
  8016a58:	7ff00000 	.word	0x7ff00000
  8016a5c:	9a19      	ldr	r2, [sp, #100]	@ 0x64
  8016a5e:	1c51      	adds	r1, r2, #1
@@ -52457,13 +52508,13 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8016d34:	f04f 0b00 	mov.w	fp, #0
  8016d38:	6013      	str	r3, [r2, #0]
  8016d3a:	e76b      	b.n	8016c14 <_strtod_l+0x454>
- 8016d3c:	0801a392 	.word	0x0801a392
- 8016d40:	0801a658 	.word	0x0801a658
- 8016d44:	0801a38a 	.word	0x0801a38a
- 8016d48:	0801a3c1 	.word	0x0801a3c1
- 8016d4c:	0801a4fa 	.word	0x0801a4fa
- 8016d50:	0801a590 	.word	0x0801a590
- 8016d54:	0801a568 	.word	0x0801a568
+ 8016d3c:	0801a37a 	.word	0x0801a37a
+ 8016d40:	0801a640 	.word	0x0801a640
+ 8016d44:	0801a372 	.word	0x0801a372
+ 8016d48:	0801a3a9 	.word	0x0801a3a9
+ 8016d4c:	0801a4e2 	.word	0x0801a4e2
+ 8016d50:	0801a578 	.word	0x0801a578
+ 8016d54:	0801a550 	.word	0x0801a550
  8016d58:	7ff00000 	.word	0x7ff00000
  8016d5c:	7ca00000 	.word	0x7ca00000
  8016d60:	7fefffff 	.word	0x7fefffff
@@ -52749,7 +52800,7 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  801700e:	2322      	movs	r3, #34	@ 0x22
  8017010:	6013      	str	r3, [r2, #0]
  8017012:	e603      	b.n	8016c1c <_strtod_l+0x45c>
- 8017014:	0801a680 	.word	0x0801a680
+ 8017014:	0801a668 	.word	0x0801a668
  8017018:	fffffc02 	.word	0xfffffc02
  801701c:	39500000 	.word	0x39500000
  8017020:	7ff00000 	.word	0x7ff00000
@@ -53175,7 +53226,7 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  801747c:	d1f6      	bne.n	801746c <_strtol_l.isra.0+0xd8>
  801747e:	f8c8 1000 	str.w	r1, [r8]
  8017482:	e794      	b.n	80173ae <_strtol_l.isra.0+0x1a>
- 8017484:	0801a6a9 	.word	0x0801a6a9
+ 8017484:	0801a691 	.word	0x0801a691
 
 08017488 <_strtol_r>:
  8017488:	f7ff bf84 	b.w	8017394 <_strtol_l.isra.0>
@@ -53455,11 +53506,11 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8017720:	4638      	mov	r0, r7
  8017722:	f7fc fecf 	bl	80144c4 <_printf_i>
  8017726:	e7ed      	b.n	8017704 <_svfiprintf_r+0x1c0>
- 8017728:	0801a4a6 	.word	0x0801a4a6
- 801772c:	0801a4b0 	.word	0x0801a4b0
+ 8017728:	0801a48e 	.word	0x0801a48e
+ 801772c:	0801a498 	.word	0x0801a498
  8017730:	08013f95 	.word	0x08013f95
  8017734:	0801748d 	.word	0x0801748d
- 8017738:	0801a4ac 	.word	0x0801a4ac
+ 8017738:	0801a494 	.word	0x0801a494
 
 0801773c <__sflush_r>:
  801773c:	f9b1 200c 	ldrsh.w	r2, [r1, #12]
@@ -53663,9 +53714,9 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  80178f0:	e7f3      	b.n	80178da <__assert_func+0x12>
  80178f2:	bf00      	nop
  80178f4:	2000010c 	.word	0x2000010c
- 80178f8:	0801a4bf 	.word	0x0801a4bf
- 80178fc:	0801a4cc 	.word	0x0801a4cc
- 8017900:	0801a4fa 	.word	0x0801a4fa
+ 80178f8:	0801a4a7 	.word	0x0801a4a7
+ 80178fc:	0801a4b4 	.word	0x0801a4b4
+ 8017900:	0801a4e2 	.word	0x0801a4e2
 
 08017904 <_calloc_r>:
  8017904:	b570      	push	{r4, r5, r6, lr}
@@ -54053,9 +54104,9 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8017ca6:	2b00      	cmp	r3, #0
  8017ca8:	d1dd      	bne.n	8017c66 <__gethex+0x26a>
  8017caa:	e7ee      	b.n	8017c8a <__gethex+0x28e>
- 8017cac:	0801a4a4 	.word	0x0801a4a4
- 8017cb0:	0801a43a 	.word	0x0801a43a
- 8017cb4:	0801a4fb 	.word	0x0801a4fb
+ 8017cac:	0801a48c 	.word	0x0801a48c
+ 8017cb0:	0801a422 	.word	0x0801a422
+ 8017cb4:	0801a4e3 	.word	0x0801a4e3
  8017cb8:	1e6f      	subs	r7, r5, #1
  8017cba:	f1b9 0f00 	cmp.w	r9, #0
  8017cbe:	d130      	bne.n	8017d22 <__gethex+0x326>
@@ -54190,7 +54241,7 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8017e12:	42b0      	cmp	r0, r6
  8017e14:	dbe7      	blt.n	8017de6 <__gethex+0x3ea>
  8017e16:	e7f0      	b.n	8017dfa <__gethex+0x3fe>
- 8017e18:	0801a43a 	.word	0x0801a43a
+ 8017e18:	0801a422 	.word	0x0801a422
 
 08017e1c <L_shift>:
  8017e1c:	f1c2 0208 	rsb	r2, r2, #8
@@ -54724,11 +54775,11 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  80182e0:	4630      	mov	r0, r6
  80182e2:	f7fc f8ef 	bl	80144c4 <_printf_i>
  80182e6:	e7e4      	b.n	80182b2 <_vfiprintf_r+0x1e6>
- 80182e8:	0801a4a6 	.word	0x0801a4a6
- 80182ec:	0801a4b0 	.word	0x0801a4b0
+ 80182e8:	0801a48e 	.word	0x0801a48e
+ 80182ec:	0801a498 	.word	0x0801a498
  80182f0:	08013f95 	.word	0x08013f95
  80182f4:	080180a9 	.word	0x080180a9
- 80182f8:	0801a4ac 	.word	0x0801a4ac
+ 80182f8:	0801a494 	.word	0x0801a494
 
 080182fc <__swbuf_r>:
  80182fc:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
@@ -55329,8 +55380,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8018928:	c0490fdb 	.word	0xc0490fdb
  801892c:	bfc90fdb 	.word	0xbfc90fdb
  8018930:	3fc90fdb 	.word	0x3fc90fdb
- 8018934:	0801a7b8 	.word	0x0801a7b8
- 8018938:	0801a7ac 	.word	0x0801a7ac
+ 8018934:	0801a7a0 	.word	0x0801a7a0
+ 8018938:	0801a794 	.word	0x0801a794
  801893c:	33bbbd2e 	.word	0x33bbbd2e
  8018940:	40490fdb 	.word	0x40490fdb
  8018944:	00000000 	.word	0x00000000
@@ -55516,11 +55567,11 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8018b8c:	2e85a308 	.word	0x2e85a308
  8018b90:	43490f80 	.word	0x43490f80
  8018b94:	3f22f984 	.word	0x3f22f984
- 8018b98:	0801a7c4 	.word	0x0801a7c4
+ 8018b98:	0801a7ac 	.word	0x0801a7ac
  8018b9c:	2e85a300 	.word	0x2e85a300
  8018ba0:	248d3132 	.word	0x248d3132
  8018ba4:	43800000 	.word	0x43800000
- 8018ba8:	0801a844 	.word	0x0801a844
+ 8018ba8:	0801a82c 	.word	0x0801a82c
 
 08018bac <atanf>:
  8018bac:	b538      	push	{r3, r4, r5, lr}
@@ -55645,8 +55696,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8018d40:	bde38e38 	.word	0xbde38e38
  8018d44:	be4ccccd 	.word	0xbe4ccccd
  8018d48:	401bffff 	.word	0x401bffff
- 8018d4c:	0801ab6c 	.word	0x0801ab6c
- 8018d50:	0801ab5c 	.word	0x0801ab5c
+ 8018d4c:	0801ab54 	.word	0x0801ab54
+ 8018d50:	0801ab44 	.word	0x0801ab44
 
 08018d54 <fabsf>:
  8018d54:	ee10 3a10 	vmov	r3, s0
@@ -55916,8 +55967,8 @@ static void UART_SetConfig(UART_HandleTypeDef *huart)
  8019044:	3401      	adds	r4, #1
  8019046:	eee6 7a87 	vfma.f32	s15, s13, s14
  801904a:	e7f0      	b.n	801902e <__kernel_rem_pio2f+0x2ca>
- 801904c:	0801aba8 	.word	0x0801aba8
- 8019050:	0801ab7c 	.word	0x0801ab7c
+ 801904c:	0801ab90 	.word	0x0801ab90
+ 8019050:	0801ab64 	.word	0x0801ab64
  8019054:	43800000 	.word	0x43800000
  8019058:	3b800000 	.word	0x3b800000
  801905c:	00000000 	.word	0x00000000

@@ -505,11 +505,13 @@ static void AccelLog_ServiceTx(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+// Actualiza la estimacion IMU consumiendo la ultima muestra recibida por DMA.
 void Telemetry_UpdateMPU(void)
 {
     (void)MPU6050_ConsumeReadDMA();
 }
 
+// Interpreta los 14 bytes del MPU6050 y actualiza angulos, giros y aceleracion frontal.
 static void MPU6050_ParseSample(const uint8_t *buffer)
 {
     axRaw = (int16_t)((buffer[0] << 8) | buffer[1]);
@@ -538,6 +540,7 @@ static void MPU6050_ParseSample(const uint8_t *buffer)
     imu_last_update_tick = HAL_GetTick();
 }
 
+// Copia de forma atomica la muestra lista para procesarla fuera del callback I2C.
 static uint8_t MPU6050_ConsumeReadDMA(void)
 {
     uint8_t snapshot[MPU6050_RX_BUFFER_SIZE];
@@ -560,6 +563,7 @@ static uint8_t MPU6050_ConsumeReadDMA(void)
     return 1U;
 }
 
+// Lanza una lectura I2C por DMA del bloque completo del MPU6050 para el ciclo de control.
 static void MPU6050_StartReadDMA(void)
 {
     HAL_StatusTypeDef status;
@@ -1382,6 +1386,7 @@ void OLED_Service(void)
 
     SSD1306_UpdatePage_DMA(oled_current_page);
 }
+// Aplica comandos recibidos por UNER y actualiza modos, parametros y tareas auxiliares.
 void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload, uint8_t payload_len)
 {
     switch (cmd) {
@@ -2097,6 +2102,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     }
 }
+// Traduce comandos firmados de motor a direccion GPIO y duty PWM para cada puente H.
 void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    if (speed_L > 0) speed_L += deadband_L;			// Aplicar Deadband (Zona muerta)
 	    else if (speed_L < 0) speed_L -= deadband_L;
@@ -2166,6 +2172,7 @@ void Robot_ShortBrake(void) {
 	    HAL_GPIO_WritePin(GPIOB, MOT2_IN1_Pin, GPIO_PIN_SET);
 	    HAL_GPIO_WritePin(GPIOA, MOT2_IN2_Pin, GPIO_PIN_SET);
 }
+// Mantiene tareas periodicas asociadas al enlace ESP01 y al envio de telemetria.
 void ESP01_Generic_Functions(uint32_t now){
 	if (uner_telemetry_enabled && !uner_ack_pending && ESP.udp_connected && !uner_tx_busy && ESP.uner_tx_count == 0 &&
 		(int32_t)(now - uner_next_telemetry_tick) >= 0) {
@@ -2176,6 +2183,7 @@ void ESP01_Generic_Functions(uint32_t now){
 		}
 	}
 }
+// TIM4 marca la base temporal de 10 ms que sincroniza control y tareas periodicas.
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
     if (htim->Instance == TIM4) {
         ESP01_Timeout10ms();
@@ -2205,6 +2213,7 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
     }
 }
 
+// Callback de fin de lectura DMA del MPU6050: deja la muestra lista para el lazo principal.
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
     if (hi2c->Instance == I2C1 && mpu_dma_state == MPU_DMA_BUSY) {
@@ -2215,6 +2224,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
     }
 }
 
+// Recupera banderas de estado cuando una transferencia I2C termina con error.
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
 {
     if (hi2c->Instance == I2C1) {
@@ -2231,6 +2241,7 @@ void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
         }
     }
 }
+// Recibe bytes del ESP01 por USART1 y los deriva al parser AT/UNER.
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
     if (huart->Instance == USART1) {
         uint8_t value = ESP.AT_Rx_data;
@@ -2255,6 +2266,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
         HAL_UART_Receive_IT(&huart1, &ESP.AT_Rx_data, 1);
     }
 }
+// Rearma la recepcion UART despues de una condicion de error en USART1.
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
     if (huart->Instance == USART1) {
         __HAL_UART_CLEAR_OREFLAG(huart);
@@ -2300,6 +2312,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
+      // Arranque de perifericos de aplicacion: OLED, IMU, ADC, PWM y enlace ESP01.
       /* ================= [ ESP01 AT OFICIAL ] ================= */
       memset(ip_address, 0, sizeof(ip_address));
       strncpy(ip_address, "0.0.0.0", sizeof(ip_address) - 1);
@@ -2344,6 +2357,7 @@ int main(void)
 		uint32_t now = HAL_GetTick();
 		uint8_t run_control = 0;
 
+		// El flag de TIM4 habilita una ranura de control y dispara una nueva lectura del IMU.
 		if (flag10ms) {
 			flag10ms = 0;
 			run_control = 1U;
@@ -2356,6 +2370,7 @@ int main(void)
 			last_motors_are_on = flagMotorsAreOn;
 		}
 
+		// Los sensores IR se actualizan rapido para linea, obstaculos y calibracion.
 		if (((now - last_ir_update) >= 1U) || run_control) {
 			last_ir_update = now;
 			Filtrar_Sensores_IR();
@@ -2363,6 +2378,7 @@ int main(void)
 			Leer_Linea_Digital();
 			if (flag_calibrando_linea){	Procesar_Calibracion_Linea();}
 		}
+		// La ranura de 10 ms concentra control de movimiento, estimacion IMU y registros.
 		if(run_control){
 			if (!flag_calibrando_linea) {
 				ObstacleFollow_Task();
@@ -2381,6 +2397,7 @@ int main(void)
 			control_slots_serviced++;
 		}
 
+	  	// Tareas cooperativas de comunicacion, comandos, logs y refresco de pantalla.
 	  	ESP01_App_Task();
 	    KEY_CalibrationTask();
 		UNER_Rx_Task();

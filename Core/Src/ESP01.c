@@ -130,6 +130,7 @@ static uint8_t indexResponseChar = 0;
 //const char CIFSRSTAMAC[] = "+CIFSR:STAMAC\r";
 
 
+// Carga credenciales WiFi y reinicia la maquina AT para reconectar el ESP01.
 void ESP01_SetWIFI(const char *ssid, const char *password){
 	esp01ATSate = ESP01ATIDLE;
 	esp01Flags.byte = 0;
@@ -147,6 +148,7 @@ void ESP01_SetWIFI(const char *ssid, const char *password){
 }
 
 
+// Prepara el transporte UDP usado para intercambiar comandos y telemetria.
 _eESP01STATUS ESP01_StartUDP(const char *RemoteIP, uint16_t RemotePORT, uint16_t LocalPORT){
 	if(esp01Handle.WriteUSARTByte == NULL)
 		return ESP01_NOT_INIT;
@@ -209,6 +211,7 @@ _eESP01STATUS ESP01_StateUDPTCP(){
 }
 
 
+// Guarda cada byte recibido por UART en el anillo del parser AT.
 void ESP01_WriteRX(uint8_t value){
 //	if(esp01Handle.bufRX == NULL)
 //		return;
@@ -217,6 +220,7 @@ void ESP01_WriteRX(uint8_t value){
 		esp01iwRXAT = 0;
 }
 
+// Encola un envio AT+CIPSEND seguido del payload hacia el enlace UDP/TCP activo.
 _eESP01STATUS ESP01_Send(uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint16_t sizeRingBuf){
 	if(esp01Handle.WriteUSARTByte == NULL)
 		return ESP01_NOT_INIT;
@@ -292,6 +296,7 @@ void ESP01_Timeout10ms(){
 		esp01TimeoutTxSymbol--;
 }
 
+// Ejecuta el parser AT, la maquina de conexion y el vaciado del buffer TX.
 void ESP01_Task(){
 
 	if(esp01irRXAT != esp01iwRXAT)
@@ -355,6 +360,7 @@ int ESP01_UART_Transmit(uint8_t val)
 	return 0;
 }
 
+// Entrega el payload +IPD al anillo UNER que procesa el lazo principal.
 void ESP01_Data_Received(uint8_t value)
 {
 	esp01_payload_count++;
@@ -370,6 +376,7 @@ void ESP01_Data_Received(uint8_t value)
 	}
 }
 
+// Sincroniza las banderas de aplicacion con los cambios de estado del ESP01.
 void onESP01ChangeState(_eESP01STATUS esp01State)
 {
 	switch (esp01State) {
@@ -460,6 +467,7 @@ _eESP01STATUS ESP01_StartTransport(void)
 	return ESP01_StartUDP(ESP01_QT_REMOTE_IP, ESP01_QT_REMOTE_PORT, ESP01_UDP_LOCAL_PORT);
 }
 
+// Envia ACK pendientes cuando el transporte esta conectado y libre.
 void ESP01_App_Task(void)
 {
 	if (uner_ack_pending && ESP.udp_connected && !uner_tx_busy) {
@@ -475,6 +483,7 @@ void ESP01_App_Task(void)
 
 
 /* Private Functions */
+// Decodifica respuestas AT y extrae payloads +IPD byte a byte.
 static void ESP01ATDecode(){
 	uint16_t i;
 	uint8_t value;
@@ -723,6 +732,7 @@ static void ESP01ATDecode(){
 
 }
 
+// Maquina de estados de conexion WiFi y apertura del socket UDP/TCP.
 static void ESP01DOConnection(){
 
 	esp01TimeoutTask = 100;
@@ -890,6 +900,7 @@ static void ESP01DOConnection(){
 	}
 }
 
+// Transmite bytes pendientes por UART y espera el prompt '>' antes del payload.
 static void ESP01SENDData(){
 	uint8_t value;
 

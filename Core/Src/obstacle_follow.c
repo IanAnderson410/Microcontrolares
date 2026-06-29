@@ -103,6 +103,7 @@ static float ObstacleFollow_ClampFloat(float value, float limit)
     return value;
 }
 
+// Interpola la tabla ADC-distancia para obtener una distancia aproximada en milimetros.
 static uint16_t ObstacleFollow_EstimateDistanceMm(uint16_t adc, const uint16_t *adc_table)
 {
     if (adc <= adc_table[0]) {
@@ -193,6 +194,7 @@ static void ObstacleFollow_StartFixedCorner(void)
     obstacle_follow_corner_exit_count = 0U;
 }
 
+// Actualiza y filtra los IR derechos usados para seguir la cara del obstaculo.
 static void ObstacleFollow_UpdateRightSensor(void)
 {
     obstacle_rear_ir_raw = adc_buffer[OBSTACLE_REAR_ADC_INDEX];
@@ -266,6 +268,7 @@ static void ObstacleFollow_ClearOutput(void)
     ObstacleFollow_ResetValidSteeringHistory();
 }
 
+// Activa el modo de seguimiento de obstaculo y toma la referencia inicial de yaw.
 uint8_t ObstacleFollow_Start(uint8_t side)
 {
     if (side != OBSTACLE_FOLLOW_SIDE_RIGHT) {
@@ -294,6 +297,7 @@ uint8_t ObstacleFollow_Start(uint8_t side)
     return OBSTACLE_FOLLOW_STATUS_OK;
 }
 
+// Detiene el modo de obstaculo y limpia sus salidas de control.
 void ObstacleFollow_Stop(void)
 {
     obstacle_follow_active = 0U;
@@ -306,6 +310,7 @@ uint8_t ObstacleFollow_IsActive(void)
     return obstacle_follow_active;
 }
 
+// Maquina de estados para alinearse, seguir la pared y retornar a la linea.
 void ObstacleFollow_Task(void){
     float target_steering = 0.0f;
     float side_steering = 0.0f;
@@ -420,6 +425,7 @@ void ObstacleFollow_Task(void){
         }
         obstacle_follow_lost_count = 0;
 
+        // La correccion combina paralelismo de sensores y distancia media al obstaculo.
         proportional_correction = (obstacle_follow_wall_kp * (float)obstacle_follow_parallel_error_mm) -
                                   (obstacle_follow_distance_kp * (float)obstacle_follow_distance_error_mm);
         side_steering = -OBSTACLE_FOLLOW_RIGHT_STEER_SIGN *

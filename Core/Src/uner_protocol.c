@@ -28,6 +28,7 @@ extern float angle_roll;
 extern float angle_yaw;
 extern float error_linea;
 
+// Calcula el CRC de las tramas UNER v1 antes de transmitir o aceptar paquetes.
 uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len)
 {
     uint16_t crc = 0xFFFF;
@@ -47,6 +48,7 @@ uint16_t UNER_Crc16Ccitt(const uint8_t *data, uint16_t len)
     return crc;
 }
 
+// Arma una trama UNER v1 y la encola para salida por el transporte ESP01.
 uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t payload_len)
 {
     static uint8_t seq = 0;
@@ -107,6 +109,7 @@ uint8_t UNER_QueueTx(const uint8_t *data, uint16_t len)
     return 1;
 }
 
+// Despacha la cola de tramas UNER cuando el enlace UDP esta disponible.
 void UNER_Tx_Task(void)
 {
     uint8_t len;
@@ -162,6 +165,7 @@ uint8_t UNER_SendAckV1(uint8_t acked_cmd, uint8_t acked_seq, uint8_t status)
     return UNER_SendV1(UNER_CMD_ACK, UNER_V1_FLAG_ACK, payload, sizeof(payload));
 }
 
+// Empaqueta telemetria de IMU, modo, sensores IR y steering actual.
 uint8_t UNER_SendTelemetryV1(void)
 {
     PayloadDataV1_t payload;
@@ -251,6 +255,7 @@ uint8_t UNER_SendInt16(uint8_t cmd, int16_t value)
     return UNER_SendV1(cmd, 0, payload, 2);
 }
 
+// Consume el anillo de recepcion cargado desde el ESP01 y alimenta el parser.
 void UNER_Rx_Task(void)
 {
     while (ESP.uner_rx_read != ESP.uner_rx_write) {
@@ -266,6 +271,7 @@ void UNER_Rx_Task(void)
     }
 }
 
+// Parser byte a byte de UNER v1 con cabecera, longitud, payload y CRC.
 void UNER_ProcessByteV1(uint8_t b)
 {
     typedef enum {
