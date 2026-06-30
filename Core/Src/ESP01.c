@@ -14,6 +14,8 @@
 
 
 static enum {
+	// Secuencia cooperativa de comandos AT: se avanza por estados para no
+	// bloquear el lazo principal esperando respuestas del ESP01.
 	ESP01ATIDLE,
 	ESP01ATAT,
 	ESP01ATRESPONSE,
@@ -33,6 +35,7 @@ static enum {
 } esp01ATSate = ESP01ATIDLE;
 
 static union{
+	// Flags compactos compartidos por parser, reconexion y transmision.
 	struct{
 		uint8_t WAITINGSYMBOL: 1;
 		uint8_t WIFICONNECTED: 1;
@@ -91,6 +94,8 @@ const char ATCIPSTART[] = "AT+CIPSTART=";
 const char ATCIPCLOSE[] = "AT+CIPCLOSE\r\n";
 const char ATCIPSEND[] = "AT+CIPSEND=";
 
+// Cada respuesta codifica longitud/tipo al inicio para simplificar el parser
+// byte a byte sin depender de strstr sobre buffers variables.
 const char respAT[] = "0302AT\r";
 const char respATp[] = "0302AT+";
 const char respOK[] = "0402OK\r\n";
@@ -153,6 +158,7 @@ _eESP01STATUS ESP01_StartUDP(const char *RemoteIP, uint16_t RemotePORT, uint16_t
 	if(esp01Handle.WriteUSARTByte == NULL)
 		return ESP01_NOT_INIT;
 
+	// El puerto local por defecto mantiene una salida UDP estable hacia Qt.
 	if(LocalPORT == 0)
 		LocalPORT = 30000;
 
@@ -164,6 +170,8 @@ _eESP01STATUS ESP01_StartUDP(const char *RemoteIP, uint16_t RemotePORT, uint16_t
 	itoa(RemotePORT, esp01RemotePORT, 10);
 	itoa(LocalPORT, esp01LocalPORT, 10);
 
+	// La apertura UDP solo se intenta despues de configurar credenciales y
+	// confirmar que el ESP01 obtuvo WiFi.
 	if(esp01SSID[0] == '\0')
 		return ESP01_WIFI_NOT_SETED;
 
@@ -216,6 +224,7 @@ void ESP01_WriteRX(uint8_t value){
 //	if(esp01Handle.bufRX == NULL)
 //		return;
 	esp01RXATBuf[esp01iwRXAT++] = value;
+	// Buffer circular: el parser AT consume por otro indice.
 	if(esp01iwRXAT == ESP01RXBUFAT)
 		esp01iwRXAT = 0;
 }
@@ -232,6 +241,7 @@ _eESP01STATUS ESP01_Send(uint8_t *buf, uint16_t irRingBuf, uint16_t length, uint
 		char strInt[10];
 		uint8_t l = 0;
 
+		// AT+CIPSEND necesita conocer primero la longitud exacta del payload.
 		itoa(length, strInt, 10);
 		l = strlen(strInt);
 		if(l>4 || l==0)
@@ -299,6 +309,8 @@ void ESP01_Timeout10ms(){
 // Ejecuta el parser AT, la maquina de conexion y el vaciado del buffer TX.
 void ESP01_Task(){
 
+	// RX, conexion y TX avanzan por pasos cortos para convivir con el control
+	// de 10 ms sin esperas bloqueantes.
 	if(esp01irRXAT != esp01iwRXAT)
 		ESP01ATDecode();
 
@@ -317,6 +329,8 @@ void ESP01_AttachDebugStr(void (*aESP01DbgStr)(const char *dbgStr)){
 }
 
 int ESP01_IsHDRRST(){
+	// Permite a la aplicacion saber si el modulo esta en una ventana de reset
+	// por CHPD y evitar interpretar estados intermedios como fallas definitivas.
 	if(esp01ATSate==ESP01ATHARDRST0 || esp01ATSate==ESP01ATHARDRST1 || esp01ATSate==ESP01ATHARDRSTSTOP)
 		return 1;
 	return 0;
@@ -501,6 +515,7 @@ static void ESP01ATDecode(){
 		value = esp01RXATBuf[esp01irRXAT];
 		switch(esp01HState){
 		case 0:
+            // Busca el primer caracter de alguna respuesta conocida.
             indexResponse = 0;
             indexResponseChar = 4;
             while(responses[indexResponse] != NULL){
@@ -594,6 +609,7 @@ static void ESP01ATDecode(){
 					break;
 				case 6://WIFI DISCONNECT
 				case 7://WIFI DISCONNECTED
+					// Una caida WiFi invalida tambien el transporte UDP.
 					esp01Flags.bit.UDPTCPCONNECTED = 0;
 					esp01Flags.bit.WIFICONNECTED = 0;
 					if(ESP01ChangeState != NULL)
@@ -686,6 +702,7 @@ static void ESP01ATDecode(){
 			}
 			break;
 		case 10://IPD
+			// +IPD anuncia cuantos bytes de payload UDP llegan desde Qt.
 			if(value == ','){
 				esp01HState = 11;
 				esp01nBytes = 0;
@@ -711,6 +728,8 @@ static void ESP01ATDecode(){
 			}
 			break;
 		case 12:
+			// Los bytes de payload se entregan al protocolo UNER sin copiar
+			// todo el paquete en este parser AT.
 			if(esp01Handle.WriteByteToBufRX != NULL)
 				esp01Handle.WriteByteToBufRX(value);
 			esp01nBytes--;
@@ -758,6 +777,7 @@ static void ESP01DOConnection(){
 		esp01TriesAT = 0;
 		break;
 	case ESP01ATAT:
+		// Si el modulo no responde a AT tras varios intentos, se reinicia por CHPD.
 		if(esp01TriesAT){
 			esp01TriesAT--;
 			if(!esp01TriesAT){
@@ -793,6 +813,7 @@ static void ESP01DOConnection(){
 		esp01ATSate = ESP01ATCWJAP;
 		break;
 	case ESP01ATCWJAP:
+		// Join AP: usa las credenciales compiladas o cargadas por ESP01_SetWIFI.
 		if(esp01Flags.bit.WIFICONNECTED){
 			esp01ATSate = ESP01ATCIFSR;
 			break;
@@ -827,6 +848,7 @@ static void ESP01DOConnection(){
 		}
 		break;
 	case ESP01ATCIFSR:
+		// Consulta la IP local para mostrarla en OLED y diagnostico.
 		esp01LocalIP[0] = '\0';
 		ESP01StrToBufTX(ATCIFSR);
 		if(ESP01DbgStr != NULL)
@@ -855,6 +877,7 @@ static void ESP01DOConnection(){
 		esp01ATSate = ESP01ATCIPSTART;
 		break;
 	case ESP01ATCIPSTART:
+		// Apertura UDP contra la IP/puerto de la PC que corre la interfaz Qt.
 		ESP01StrToBufTX(ATCIPSTART);
 		ESP01ByteToBufTX('\"');
 		ESP01StrToBufTX(esp01PROTO);
@@ -905,6 +928,8 @@ static void ESP01SENDData(){
 	uint8_t value;
 
 	if(esp01Flags.bit.WAITINGSYMBOL){
+		// Si nunca llega el prompt '>', se descarta el envio y se reinicia la
+		// secuencia AT para recuperar el enlace.
 		if(!esp01TimeoutTxSymbol){
 			esp01irTX = esp01iwTX;
 			esp01Flags.bit.WAITINGSYMBOL = 0;

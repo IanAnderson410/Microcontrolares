@@ -7,6 +7,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c)
 
     HAL_I2C_Mem_Read(hi2c, MPU6050_ADDR, 0x75, 1, &check, 1, 100);
     if (check == 0x68) {
+        // Sale de sleep y deja acelerometro/giroscopio en escala por defecto.
         data = 0x00;
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x6B, 1, &data, 1, 100);
 
@@ -16,6 +17,7 @@ void MPU6050_Init(I2C_HandleTypeDef *hi2c)
         data = 0x00;
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1B, 1, &data, 1, 100);
 
+        // Filtro digital interno para reducir ruido antes del filtro complementario.
         data = 0x02;
         HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, 0x1A, 1, &data, 1, 100);
 
@@ -34,6 +36,7 @@ void MPU6050_Calibrate(void)
 
         uint8_t buffer[14];
 
+        // La calibracion asume robot quieto; estos promedios se restan luego a cada muestra.
         for (int i = 0; i < num_samples; i++) {
             if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, 0x3B, 1, buffer, 14, 100) != HAL_OK) {
                 Error_Handler();

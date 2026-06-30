@@ -2,6 +2,8 @@
 
 void buzzerSecuence(Buzzer_Seq_t *seq)
 {
+    // Ejecuta una secuencia no bloqueante: el loop principal sigue corriendo
+    // mientras se alterna el pin del buzzer por tiempo.
     if (seq->repeat == 0) {
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
         return;
@@ -23,6 +25,7 @@ void buzzerSecuence(Buzzer_Seq_t *seq)
 
 void BS_tcpConnectSecuence(void)
 {
+    // Dos pulsos cortos: enlace de comunicacion disponible.
     hBuzzer.duration = 100;
     hBuzzer.interval = 50;
     hBuzzer.repeat = 2;
@@ -32,6 +35,7 @@ void BS_tcpConnectSecuence(void)
 
 void BS_Error(void)
 {
+    // Pulso largo: condicion de error general.
     hBuzzer.duration = 500;
     hBuzzer.interval = 100;
     hBuzzer.repeat = 1;
@@ -41,6 +45,7 @@ void BS_Error(void)
 
 void BS_ACK_NOT_FOUND(void)
 {
+    // Tres pulsos: no se recibio/confirmo un ACK esperado.
     hBuzzer.duration = 200;
     hBuzzer.interval = 50;
     hBuzzer.repeat = 3;
@@ -50,6 +55,7 @@ void BS_ACK_NOT_FOUND(void)
 
 void BS_NEWPARAM_OK(void)
 {
+    // Pulso breve: parametro aceptado.
     hBuzzer.duration = 80;
     hBuzzer.interval = 50;
     hBuzzer.repeat = 1;
@@ -59,6 +65,7 @@ void BS_NEWPARAM_OK(void)
 
 void BS_NEWPARAM_ISNOTOK(void)
 {
+    // Pulso sostenido: parametro rechazado o fuera de rango.
     hBuzzer.duration = 800;
     hBuzzer.interval = 1;
     hBuzzer.repeat = 1;

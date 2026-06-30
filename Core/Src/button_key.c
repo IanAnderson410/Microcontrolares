@@ -43,6 +43,8 @@ void KEY_CalibrationTask(void)
     static uint8_t long_press_handled = 0;
 
     uint32_t now = HAL_GetTick();
+    // Inicializacion diferida para poder llamar esta tarea desde el loop sin
+    // depender del orden de arranque del resto de modulos.
     if (!gpio_initialized) {
         KEY_Init();
         last_change_tick = now;
@@ -56,6 +58,7 @@ void KEY_CalibrationTask(void)
     key_long_press_done = long_press_handled;
     key_press_duration_ms = key_stable_pressed ? (uint32_t)(now - press_start_tick) : 0U;
 
+    // Si no aparece un segundo click dentro de la ventana, se confirma click simple.
     if (click_pending && stable_state != KEY_ACTIVE_STATE &&
         (uint32_t)(now - first_click_tick) >= KEY_DOUBLE_CLICK_MS) {
         click_pending = 0;
@@ -69,6 +72,7 @@ void KEY_CalibrationTask(void)
         return;
     }
 
+    // Antirrebote: no se acepta un cambio hasta que el nivel quede estable.
     if ((now - last_change_tick) < KEY_DEBOUNCE_MS) {
         return;
     }
@@ -129,6 +133,7 @@ static void KEY_HandleSingleClick(void)
     key_last_event = KEY_EVENT_SHORT_PRESS;
     key_last_event_tick = HAL_GetTick();
 
+    // Click simple alterna inicio/fin de calibracion de linea cuando el modo lo permite.
     if (flag_calibrando_linea) {
         Finalizar_Calibracion_Linea();
         currentMode = CONTROL_MODE_FL_BUSQUEDA_INICIAL;
@@ -154,6 +159,7 @@ static void KEY_HandleDoubleClick(void)
     key_last_event = KEY_EVENT_DOUBLE_CLICK;
     key_last_event_tick = HAL_GetTick();
 
+    // Durante calibracion se ignora el cambio de modo para no cortar la toma de min/max.
     if (flag_calibrando_linea) {
         key_last_action = KEY_ACTION_NONE;
         screenScheduler();
@@ -178,6 +184,7 @@ static void KEY_HandleLongPress(void)
     key_last_event = KEY_EVENT_LONG_PRESS;
     key_last_event_tick = HAL_GetTick();
 
+    // Pulsacion larga funciona como llave de seguridad de motores.
     Control_SetMotorsEnabled(flagMotorsAreOn ? 0U : 1U);
     key_last_action = flagMotorsAreOn ? KEY_ACTION_MOTORS_ON : KEY_ACTION_MOTORS_OFF;
 

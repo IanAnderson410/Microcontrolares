@@ -38,6 +38,8 @@ static const uint16_t obstacle_right_table_mm[OBSTACLE_RIGHT_TABLE_POINTS] = {
     10U, 20U, 30U, 40U, 50U, 60U, 70U
 };
 
+// Variables publicadas para telemetria y diagnostico. El control escribe estas
+// salidas y PID_PITCH las mezcla finalmente con el balanceo.
 volatile uint8_t obstacle_follow_active = 0;
 volatile uint8_t obstacle_follow_state = OBSTACLE_FOLLOW_STATE_IDLE;
 volatile uint8_t obstacle_follow_side = OBSTACLE_FOLLOW_SIDE_RIGHT;
@@ -131,6 +133,8 @@ static uint16_t ObstacleFollow_EstimateDistanceMm(uint16_t adc, const uint16_t *
 
 static uint16_t ObstacleFollow_ApplyRearAdcOffset(uint16_t filtered_adc)
 {
+    // Offset configurable desde Qt para compensar diferencias mecanicas entre
+    // el sensor trasero y delantero sin recalibrar tablas.
     int32_t adjusted_adc = (int32_t)filtered_adc + obstacle_rear_ir_adc_offset;
 
     if (adjusted_adc < 0L) {
@@ -156,6 +160,8 @@ static void ObstacleFollow_ResetValidSteeringHistory(void)
 
 static void ObstacleFollow_UpdateValidSteeringHistory(float side_steering)
 {
+    // Mantiene un promedio de correcciones validas para sostener el giro cuando
+    // se pierde temporalmente una cara del obstaculo.
     if (obstacle_follow_valid_side_steering_count < OBSTACLE_FOLLOW_CORRECTION_HISTORY_SIZE) {
         obstacle_follow_valid_side_steering_history[obstacle_follow_valid_side_steering_index] = side_steering;
         obstacle_follow_valid_side_steering_sum += side_steering;
@@ -180,6 +186,8 @@ static void ObstacleFollow_UpdateValidSteeringHistory(float side_steering)
 
 static void ObstacleFollow_StartFixedCorner(void)
 {
+    // En una esquina se conserva el ultimo sentido de correccion para doblar
+    // mientras el sensor frontal vuelve a encontrar pared.
     float sign = 0.0f;
     float magnitude = fabsf(obstacle_follow_last_valid_side_steering);
 
@@ -225,6 +233,8 @@ static void ObstacleFollow_UpdateRightSensor(void)
                                                                    obstacle_front_table_adc);
     obstacle_right_distance_mm = obstacle_front_distance_mm;
 
+    // Clasifica la cara derecha usando ambos sensores: perdida, muy lejos,
+    // muy cerca u OK para seguimiento normal.
     if (obstacle_front_ir_filtered >= OBSTACLE_RIGHT_LOST_THRESHOLD) {
         obstacle_right_face_state = OBSTACLE_RIGHT_FACE_LOST;
     } else if (obstacle_front_distance_mm > OBSTACLE_RIGHT_TOO_FAR_MM &&
@@ -271,6 +281,7 @@ static void ObstacleFollow_ClearOutput(void)
 // Activa el modo de seguimiento de obstaculo y toma la referencia inicial de yaw.
 uint8_t ObstacleFollow_Start(uint8_t side)
 {
+    // Este firmware solo implementa seguimiento por la derecha.
     if (side != OBSTACLE_FOLLOW_SIDE_RIGHT) {
         return OBSTACLE_FOLLOW_STATUS_RANGE;
     }
@@ -330,6 +341,7 @@ void ObstacleFollow_Task(void){
     obstacle_follow_parallel_error_mm = (int16_t)obstacle_front_distance_mm - (int16_t)obstacle_rear_distance_mm;
     if (!obstacle_follow_active)   return;
 
+    // Si otro modo toma el control, se abandona la maniobra para no mezclar salidas.
     if (currentMode != CONTROL_MODE_OBSTACLE_FOLLOW ||
         (turn_maneuver_active && obstacle_follow_state != OBSTACLE_FOLLOW_STATE_CORNER_TURN)) {
         ObstacleFollow_Stop();
@@ -344,6 +356,7 @@ void ObstacleFollow_Task(void){
 
     switch (obstacle_follow_state) {
     case OBSTACLE_FOLLOW_STATE_FACE_ALIGN:
+        // Pequena espera para estabilizar filtros antes de seguir la pared.
         if (obstacle_follow_align_count < OBSTACLE_FOLLOW_ALIGN_CONFIRM_TICKS) {
             obstacle_follow_align_count++;
         }
@@ -355,6 +368,7 @@ void ObstacleFollow_Task(void){
         break;
 
     case OBSTACLE_FOLLOW_STATE_FACE_FOLLOW:
+        // Cuando se vuelve a encontrar la linea, sale del rodeo con un giro corto.
         if (!obstacle_follow_line_reacquire_armed) {
             obstacle_follow_line_reacquire_armed = AIRAB ? 0U : 1U;
             obstacle_follow_line_reacquire_count = 0U;
@@ -384,6 +398,7 @@ void ObstacleFollow_Task(void){
         }
 
         if (front_lost && rear_lost) {
+            // Sin lecturas utiles se conserva la salida previa y se espera otra muestra.
             break;
         }
 
@@ -412,6 +427,8 @@ void ObstacleFollow_Task(void){
         }
 
         if (rear_lost) {
+            // Perder el sensor trasero se interpreta como esquina: intenta girar
+            // con la configuracion almacenada.
             obstacle_follow_lost_count = 0;
             ObstacleFollow_ClearOutput();
             if (obstacle_follow_lost_turn_enabled &&
@@ -436,6 +453,7 @@ void ObstacleFollow_Task(void){
         break;
 
     case OBSTACLE_FOLLOW_STATE_CORNER_TURN:
+        // Mientras TurnManeuver controla el giro, obstacle_follow deja steering en cero.
         if (turn_maneuver_active) {
             obstacle_follow_steering = 0;
             obstacle_follow_side_steering = 0;
@@ -465,6 +483,7 @@ void ObstacleFollow_Task(void){
         (target_steering > OBSTACLE_FOLLOW_YAW_LIMIT || target_steering < -OBSTACLE_FOLLOW_YAW_LIMIT) ? 1U : 0U;
     target_steering = ObstacleFollow_ClampFloat(target_steering, OBSTACLE_FOLLOW_YAW_LIMIT);
 
+    // Rampa de steering para no inyectar escalones bruscos al lazo de balanceo.
     float delta_steering = target_steering - obstacle_follow_steering_slow;
     delta_steering = ObstacleFollow_ClampFloat(delta_steering, yaw_steering_step_max);
     obstacle_follow_steering_slow += delta_steering;

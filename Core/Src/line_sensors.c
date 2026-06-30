@@ -18,6 +18,8 @@ void ObstacleSensor_Task(void)
 
     obstacle_ir_raw = adc_buffer[OBSTACLE_SENSOR_ADC_INDEX];
 
+    // La primera muestra fija una linea base; luego se adapta lentamente solo
+    // cuando no hay obstaculo para compensar cambios de luz ambiente.
     if (!baseline_ready) {
         obstacle_ir_filtered = obstacle_ir_raw;
         obstacle_ir_baseline = obstacle_ir_raw;
@@ -30,6 +32,8 @@ void ObstacleSensor_Task(void)
     obstacle_ir_enter_threshold = obstacle_ir_baseline + OBSTACLE_ENTER_DELTA;
     obstacle_ir_exit_threshold = obstacle_ir_baseline + OBSTACLE_EXIT_DELTA;
 
+    // Usa umbrales separados de entrada/salida y contadores para evitar falsos
+    // disparos por ruido de ADC o reflejos breves.
     if (!obstacle_detected) {
         if (obstacle_ir_filtered < obstacle_ir_exit_threshold) {
             obstacle_ir_baseline = (uint16_t)(((uint32_t)obstacle_ir_baseline * 63U +
@@ -67,6 +71,7 @@ void ObstacleSensor_Task(void)
 
 uint8_t ObstacleSensor_ConsumeEvent(void)
 {
+    // Evento de flanco: una vez consumido no vuelve a disparar hasta una nueva deteccion.
     if (!obstacle_event_pending) {
         return 0U;
     }
@@ -147,6 +152,8 @@ void Finalizar_Calibracion_Linea(void)
 
 float calcularErrorYawDiscreto(void)
 {
+    // Promedio ponderado de sensores digitales: signo y magnitud indican hacia
+    // donde queda desplazada la linea respecto del centro del robot.
     float numerador = (estado_sensores[3] * -2.5f) +
                       (estado_sensores[2] * -1.2f) +
                       (estado_sensores[1] * 1.2f) +
@@ -174,6 +181,8 @@ float calcularErrorYawContinuo(void)
     float numerador = 0.0f;
     float denominador = 0.0f;
 
+    // Normaliza cada sensor con su rango calibrado para aprovechar informacion
+    // analogica, no solo blanco/negro.
     for (int i = 0; i < FL_LINE_SENSOR_COUNT; i++) {
         if (sensor_max[i] == sensor_min[i]) {
             val_norm[i] = 0.0f;

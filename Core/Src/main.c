@@ -283,21 +283,16 @@ static uint16_t ir_right_log_tx_index = 0U;
 static uint8_t ir_right_log_done_repeats = 0U;
 static uint8_t ir_right_log_session_id = 0U;
 // Nuevas variables para compensar la diferencia entre motores
-			int16_t 		deadband_L = 130;			/*!< Zona Muerta del PWM para el motor 1*/
-			int16_t 		deadband_R = 75; 			/*!< Zona Muerta del PWM para el motor 2*/
+			int16_t 		deadband_L = 130;				/*!< Zona Muerta del PWM para el motor 1*/
+			int16_t 		deadband_R = 75; 				/*!< Zona Muerta del PWM para el motor 2*/
 // =================[ Variables de Control PID PITCH] ================= //
 			float 			Kp = 120.0f;					/*!< Término Proporcional: [30] Si hay inclinación aplica una fuerza proporcional. Si se usara solo P, el robot oscilaría de un lado a otro sin quedarse quieto.*/
 			float 			Ki = 800.0f;					/*!< Término Integrativo: Elimina el error de estado estacionario*/
 			float 			Kd = 3.5f;						/*!< Término Derivativo: [1.5] mide la velocidad a la que está cambiando el error. Actúa como un amortiguador*/
 			float			integral_limit = 1600.0f;
 			float 			setpoint = 4.0f;				/*!< Este SetPoint,se usa para desbalancer o caminar */
-
-			float 			setpointDeEquilibrio = 0.1f;	// Esta variable sirve?
 			float 			integral = 0;
 			float 			last_error = 0;
-			float           ALPHA_PID = 0.96f;	// Esta variable sirve?
-			float			pitch_recovery_brake_ms = 80.0f;		// Esta variable sirve?
-			float 			pitch_recovery_error_threshold_deg = 3.0f;	// Esta variable sirve?
 // =================[ Variables de Control PID YAW] ================= //
 			float 		Kp_yaw = 1500.0f;
 			float 		Kd_yaw = 0.0f;
@@ -415,30 +410,13 @@ float showoutput=0;
 float multiplicadorYaw 	 = 0.01;
 float error=0;
 
-float ForwardMotion_Generate(float motion_setpoint,
-                             int16_t steering,
-                             uint32_t now,
-                             uint32_t *phase_tick,
-                             uint8_t *motion_phase)
-{
-    if (*phase_tick == 0U) {
-        *phase_tick = now;
-        *motion_phase = 1U;
-    }
+//BORRAR
+float 			setpointDeEquilibrio = 0.1f;	// Esta variable sirve?
+float           ALPHA_PID = 0.96f;	// Esta variable sirve?
+float			pitch_recovery_brake_ms = 80.0f;		// Esta variable sirve?
+float 			pitch_recovery_error_threshold_deg = 3.0f;	// Esta variable sirve?
 
-    uint16_t phase_ms = *motion_phase ? FL_motion_phase_ms : FL_balance_phase_ms;
-    if ((uint32_t)(now - *phase_tick) >= phase_ms) {
-        *phase_tick = now;
-        *motion_phase = !(*motion_phase);
-    }
 
-    int16_t steering_limit = (int16_t)forward_motion_balance_only_steering;
-    if (steering > steering_limit || steering < -steering_limit) {
-        return 0.0f;
-    }
-
-    return *motion_phase ? motion_setpoint : 0.0f;
-}
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -505,15 +483,28 @@ static void AccelLog_ServiceTx(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-// Actualiza la estimacion IMU consumiendo la ultima muestra recibida por DMA.
-void Telemetry_UpdateMPU(void)
-{
-    (void)MPU6050_ConsumeReadDMA();
+//función que genera el setpoint por pulsos
+float ForwardMotion_Generate(float motion_setpoint, int16_t steering, uint32_t now, uint32_t *phase_tick, uint8_t *motion_phase){
+    if (*phase_tick == 0) {
+        *phase_tick = now;
+        *motion_phase = 1;
+    }
+    uint16_t phase_ms = *motion_phase ? FL_motion_phase_ms : FL_balance_phase_ms;	// esto es un condicional de motion_phase, si el mismo es 1 lo igualamos a FL_motion_phase_ms, caso contrario lo igualamos a FL_balance_phase_ms
+    if ((uint32_t)(now - *phase_tick) >= phase_ms) {
+        *phase_tick = now;
+        *motion_phase = !(*motion_phase);
+    }
+    int16_t steering_limit = (int16_t)forward_motion_balance_only_steering;
+    if (steering > steering_limit || steering < -steering_limit) {
+        return 0.0f;
+    }
+    return *motion_phase ? motion_setpoint : 0.0f;
 }
-
+void Telemetry_UpdateMPU(void){// Actualiza la estimacion IMU consumiendo la ultima muestra recibida por DMA.
+    MPU6050_ConsumeReadDMA();
+}
 // Interpreta los 14 bytes del MPU6050 y actualiza angulos, giros y aceleracion frontal.
-static void MPU6050_ParseSample(const uint8_t *buffer)
-{
+static void MPU6050_ParseSample(const uint8_t *buffer){
     axRaw = (int16_t)((buffer[0] << 8) | buffer[1]);
     ayRaw = (int16_t)((buffer[2] << 8) | buffer[3]);
     azRaw = (int16_t)((buffer[4] << 8) | buffer[5]);
@@ -539,64 +530,45 @@ static void MPU6050_ParseSample(const uint8_t *buffer)
     accelz = azRaw;
     imu_last_update_tick = HAL_GetTick();
 }
-
 // Copia de forma atomica la muestra lista para procesarla fuera del callback I2C.
-static uint8_t MPU6050_ConsumeReadDMA(void)
-{
+static uint8_t MPU6050_ConsumeReadDMA(void){
     uint8_t snapshot[MPU6050_RX_BUFFER_SIZE];
-    uint8_t has_sample = 0U;
-
+    uint8_t has_sample = 0;
     __disable_irq();
     if (mpu_sample_ready) {
         memcpy(snapshot, mpu_ready_data, MPU6050_RX_BUFFER_SIZE);
-        mpu_sample_ready = 0U;
-        has_sample = 1U;
+        mpu_sample_ready = 0;
+        has_sample = 1;
     }
     __enable_irq();
-
     if (!has_sample) {
         mpu_dma_stale_cycles++;
-        return 0U;
+        return 0;
     }
-
     MPU6050_ParseSample(snapshot);
-    return 1U;
+    return 1;
 }
 
 // Lanza una lectura I2C por DMA del bloque completo del MPU6050 para el ciclo de control.
-static void MPU6050_StartReadDMA(void)
-{
+static void MPU6050_StartReadDMA(void){
     HAL_StatusTypeDef status;
-
-    if (mpu_dma_state == MPU_DMA_ERROR) {
-        mpu_dma_state = MPU_DMA_IDLE;
-    }
-
+    if (mpu_dma_state == MPU_DMA_ERROR)  mpu_dma_state = MPU_DMA_IDLE;
     if (mpu_dma_state != MPU_DMA_IDLE) {
         mpu_dma_busy_count++;
         return;
     }
-
     if (oled_is_busy ||
         HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY ||
         __HAL_I2C_GET_FLAG(&hi2c1, I2C_FLAG_BUSY) != RESET) {
         mpu_dma_busy_count++;
         return;
     }
-
     mpu_dma_state = MPU_DMA_BUSY;
-    status = HAL_I2C_Mem_Read_DMA(&hi2c1,
-                                  MPU6050_ADDR,
-                                  MPU6050_DATA_START_REG,
-                                  I2C_MEMADD_SIZE_8BIT,
-                                  mpu_data,
-                                  MPU6050_RX_BUFFER_SIZE);
-
+    status = HAL_I2C_Mem_Read_DMA(&hi2c1, MPU6050_ADDR, MPU6050_DATA_START_REG, I2C_MEMADD_SIZE_8BIT, mpu_data, MPU6050_RX_BUFFER_SIZE);
     if (status == HAL_OK) {
         mpu_dma_start_count++;
         return;
     }
-
     if (status == HAL_BUSY) {
         mpu_dma_busy_count++;
         mpu_dma_state = MPU_DMA_IDLE;
@@ -605,30 +577,27 @@ static void MPU6050_StartReadDMA(void)
         mpu_dma_state = MPU_DMA_ERROR;
     }
 }
-
-static uint8_t AccelLog_Start(void)
-{
+static uint8_t AccelLog_Start(void){
+    // Inicia una captura corta de aceleracion/pitch para analizar respuesta del balanceo.
     if (accel_log_state != ACCEL_LOG_IDLE) {
         return 1U;
     }
-
     accel_log_capture_id++;
-    if (accel_log_capture_id == 0U) {
-        accel_log_capture_id = 1U;
+    if (accel_log_capture_id == 0) {
+        accel_log_capture_id = 1;
     }
-
-    accel_log_write_index = 0U;
-    accel_log_tx_index = 0U;
-    accel_log_done_repeats = 0U;
-    accel_log_record_calls = 0U;
-    accel_log_tx_service_calls = 0U;
-    accel_log_chunks_queued = 0U;
-    accel_log_done_queued = 0U;
-    accel_log_tx_block_udp = 0U;
-    accel_log_tx_block_queue = 0U;
-    accel_log_tx_send_fail = 0U;
+    accel_log_write_index = 0;
+    accel_log_tx_index = 0;
+    accel_log_done_repeats = 0;
+    accel_log_record_calls = 0;
+    accel_log_tx_service_calls = 0;
+    accel_log_chunks_queued = 0;
+    accel_log_done_queued = 0;
+    accel_log_tx_block_udp = 0;
+    accel_log_tx_block_queue = 0;
+    accel_log_tx_send_fail = 0;
     accel_log_state = ACCEL_LOG_RECORDING;
-    return 0U;
+    return 0;
 }
 
 static void AccelLog_RecordSample(void)
@@ -639,6 +608,7 @@ static void AccelLog_RecordSample(void)
         return;
     }
 
+    // Al completar el buffer pasa a transmision por chunks UNER.
     if (accel_log_write_index >= ACCEL_LOG_SAMPLE_COUNT) {
         accel_log_tx_index = 0U;
         accel_log_done_repeats = 0U;
@@ -672,6 +642,7 @@ static void AccelLog_ServiceTx(void)
 
     accel_log_tx_service_calls++;
 
+    // No descarta muestras si la radio esta ocupada; simplemente reintenta luego.
     if (!ESP.udp_connected) {
         accel_log_tx_block_udp++;
         return;
@@ -685,6 +656,7 @@ static void AccelLog_ServiceTx(void)
     accel_log_state = ACCEL_LOG_TRANSMITTING;
 
     if (accel_log_tx_index >= ACCEL_LOG_SAMPLE_COUNT) {
+        // El mensaje DONE se repite para aumentar la probabilidad de llegada por UDP.
         uint8_t done_payload[3];
         if (accel_log_done_repeats >= ACCEL_LOG_DONE_REPEATS) {
             accel_log_state = ACCEL_LOG_IDLE;
@@ -745,6 +717,7 @@ static void IrRightLog_Clear(void)
 
 static uint8_t IrRightLog_StartCapture(uint16_t distance_mm)
 {
+    // Captura una serie etiquetada por distancia real para calibrar sensores IR derechos.
     if (ir_right_log_state != IR_RIGHT_LOG_IDLE) {
         return 1U;
     }
@@ -814,6 +787,7 @@ static void IrRightLog_ServiceTx(void)
         return;
     }
 
+    // La transmision espera a que haya enlace y espacio en cola para no perder datos.
     if (!ESP.udp_connected || ESP.uner_tx_count >= UNER_TX_QUEUE_DEPTH) {
         return;
     }
@@ -1361,6 +1335,7 @@ void screenScheduler(void){
 
 void OLED_RequestUpdate(void)
 {
+    // Solicita redibujar; si la pantalla no esta ocupada reinicia desde la primera pagina.
     if (!oled_is_busy) {
         oled_current_page = 0;
     }
@@ -1371,6 +1346,7 @@ void OLED_Service(void)
 {
     uint32_t now = HAL_GetTick();
 
+    // El OLED comparte I2C con el MPU6050: se actualiza solo fuera de la ranura critica.
     if (!esp01_oled_ready || !oled_updates_enabled || !oled_update_requested || oled_is_busy || flag10ms) {
         return;
     }
@@ -1391,6 +1367,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 {
     switch (cmd) {
     case CMD_ALIVE:
+        // Ping desde Qt; sirve para comprobar que la ruta UDP completa sigue viva.
         esp01_alive_count++;
         uner_ack_cmd = CMD_ALIVE;
         uner_ack_seq = seq;
@@ -1453,6 +1430,8 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_SET_WALL_FOLLOW_CONFIG:
         if (payload_len >= 6) {
+            // Configuracion de seguimiento de pared: admite campos opcionales
+            // para mantener compatibilidad con versiones anteriores de Qt.
             float wall_kp = UNER_ReadFloatLE(payload);
             uint16_t target_mm = (uint16_t)payload[4] | ((uint16_t)payload[5] << 8);
             float distance_kp = obstacle_follow_distance_kp;
@@ -1474,6 +1453,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
                 lost_turn_enabled = payload[6] ? 1U : 0U;
             }
 
+            // Rango defensivo: evita que una trama corrupta deje parametros peligrosos.
             if (wall_kp >= 0.0f && wall_kp <= 100.0f &&
                 target_mm >= 30U && target_mm <= 60U &&
                 distance_kp >= 0.0f && distance_kp <= 100.0f &&
@@ -1498,6 +1478,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_ACCEL_RUNAWAY_CONFIG:
         if (payload_len >= 16) {
+            // Ajusta el detector de aceleracion persistente y su correccion adaptativa.
             accel_runaway_delta_threshold = UNER_ReadFloatLE(payload);
             accel_runaway_abs_threshold = UNER_ReadFloatLE(payload + 4);
             accel_runaway_trend_limit = UNER_ReadFloatLE(payload + 8);
@@ -1572,6 +1553,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_SET_YAW_CONFIG:
         if (payload_len >= 20) {
+            // Parametros compartidos por seguimiento de linea y maniobras de giro.
             float kp = UNER_ReadFloatLE(payload);
             float kd = UNER_ReadFloatLE(payload + 4);
             float curve_mul = UNER_ReadFloatLE(payload + 8);
@@ -1622,6 +1604,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_SET_FL_CONFIG:
         if (payload_len >= 6) {
+            // Setpoint y tiempos de avance pulsado para seguir linea sin encoders.
             float fl_sp = UNER_ReadFloatLE(payload);
             uint16_t motion_ms = (uint16_t)payload[4] | ((uint16_t)payload[5] << 8);
             uint16_t balance_ms = motion_ms;
@@ -1674,6 +1657,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_TURN_MANEUVER:
         if (payload_len >= 4) {
+            // Comando de giro: target en centigrados, modo de ruedas y parametros opcionales.
             int16_t target_cdeg = UNER_ReadInt16LE(payload);
             float target_angle_deg = ((float)target_cdeg) / 100.0f;
             uint8_t wheel_mode = payload[2];
@@ -1747,6 +1731,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
 
     case CMD_OBSTACLE_FOLLOW:
         if (payload_len >= 1) {
+            // action=0 detiene; action=1 intenta iniciar seguimiento del obstaculo.
             uint8_t action = payload[0];
             uint8_t side = (payload_len >= 2) ? payload[1] : OBSTACLE_FOLLOW_SIDE_RIGHT;
 
@@ -1823,6 +1808,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_CHANGE_MODE:
         if (payload_len >= 2) {
+            // Evita cambios de modo durante calibracion de linea para no invalidar min/max.
             int16_t requested_mode = UNER_ReadInt16LE(payload);
             if (flag_calibrando_linea) {
                 uner_ack_status = 1;
@@ -1961,6 +1947,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         break;
     case CMD_RC:
         if (payload_len >= 4) {
+            // RC solo se acepta en modo remoto y sin maniobra autonoma activa.
             if (currentMode != MODO_RC || turn_maneuver_active) {
                 break;
             }
@@ -2063,6 +2050,7 @@ void UNER_HandlePacket(uint8_t cmd, uint8_t flags, uint8_t seq, uint8_t *payload
         }
         break;
     case CMD_IR_INICIAR_CALIBRACION:
+        // La calibracion de linea arranca solo desde idle para tomar una pista consistente.
         if (currentMode == MODO_IDDLE && !flag_calibrando_linea) {
             TurnManeuver_Cancel();
             ObstacleFollow_Stop();
@@ -2160,6 +2148,7 @@ void Robot_Drive(int16_t speed_L, int16_t speed_R) {
 	    }
 }
 void Robot_ShortBrake(void) {
+	    // Freno electrico breve: ambos lados del puente H se llevan al mismo nivel.
 	    turn_debug_motor_left_cmd = 0;
 	    turn_debug_motor_right_cmd = 0;
 	    turn_debug_active_motor_cmd = 0;
@@ -2174,6 +2163,7 @@ void Robot_ShortBrake(void) {
 }
 // Mantiene tareas periodicas asociadas al enlace ESP01 y al envio de telemetria.
 void ESP01_Generic_Functions(uint32_t now){
+	// Telemetria se envia solo cuando no hay ACK pendiente ni otra trama en curso.
 	if (uner_telemetry_enabled && !uner_ack_pending && ESP.udp_connected && !uner_tx_busy && ESP.uner_tx_count == 0 &&
 		(int32_t)(now - uner_next_telemetry_tick) >= 0) {
 		if (UNER_SendTelemetryV1()) {
@@ -2201,6 +2191,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 }
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
+    // El OLED se envia por paginas; cada transferencia completada habilita la siguiente.
     if (hi2c->Instance == I2C1 && oled_is_busy) {
         oled_is_busy = 0;
         oled_pages_sent++;
@@ -2334,6 +2325,8 @@ int main(void)
       ESP.Config.DoCHPD = setESP01_CHPD;
       ESP.Config.WriteUSARTByte = ESP01_UART_Transmit;
       ESP.Config.WriteByteToBufRX = ESP01_Data_Received;
+      // El driver ESP01 queda enlazado a callbacks de hardware y luego abre
+      // automaticamente el UDP hacia la PC configurada.
       ESP01_Init(&ESP.Config);
       ESP01_AttachChangeState(&onESP01ChangeState);
       ESP01_AttachDebugStr(&onESP01Debug);
@@ -2366,6 +2359,7 @@ int main(void)
 		}
 
 		if (flagMotorsAreOn != last_motors_are_on) {
+			// Cambiar el estado de motores invalida integrales y rampas anteriores.
 			PID_PITCH_ResetState();
 			last_motors_are_on = flagMotorsAreOn;
 		}
@@ -2381,9 +2375,11 @@ int main(void)
 		// La ranura de 10 ms concentra control de movimiento, estimacion IMU y registros.
 		if(run_control){
 			if (!flag_calibrando_linea) {
+				// El control autonomo se pausa durante calibracion de linea.
 				ObstacleFollow_Task();
 				IrRightLog_RecordSample();
 				FollowLine_Task();
+				// Failsafe RC: si Qt deja de enviar comandos, se anula avance y steering.
 				if (currentMode == MODO_RC && flag_RC_active && (int32_t)(now - rc_last_packet_tick) > RC_TIMEOUT_MS) {
 					flag_RC_active = 0;
 					RC_setpoint = 0.0f;

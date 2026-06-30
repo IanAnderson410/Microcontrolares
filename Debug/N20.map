@@ -6913,69 +6913,69 @@ LOAD C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.exte
  .data.setpoint
                 0x20000058        0x4 ./Core/Src/main.o
                 0x20000058                setpoint
- .data.setpointDeEquilibrio
-                0x2000005c        0x4 ./Core/Src/main.o
-                0x2000005c                setpointDeEquilibrio
- .data.ALPHA_PID
-                0x20000060        0x4 ./Core/Src/main.o
-                0x20000060                ALPHA_PID
- .data.pitch_recovery_brake_ms
-                0x20000064        0x4 ./Core/Src/main.o
-                0x20000064                pitch_recovery_brake_ms
- .data.pitch_recovery_error_threshold_deg
-                0x20000068        0x4 ./Core/Src/main.o
-                0x20000068                pitch_recovery_error_threshold_deg
- .data.Kp_yaw   0x2000006c        0x4 ./Core/Src/main.o
-                0x2000006c                Kp_yaw
+ .data.Kp_yaw   0x2000005c        0x4 ./Core/Src/main.o
+                0x2000005c                Kp_yaw
  .data.yaw_steering_limit
-                0x20000070        0x4 ./Core/Src/main.o
-                0x20000070                yaw_steering_limit
+                0x20000060        0x4 ./Core/Src/main.o
+                0x20000060                yaw_steering_limit
  .data.FL_setpoint
-                0x20000074        0x4 ./Core/Src/main.o
-                0x20000074                FL_setpoint
+                0x20000064        0x4 ./Core/Src/main.o
+                0x20000064                FL_setpoint
  .data.yaw_error_filter_alpha
-                0x20000078        0x4 ./Core/Src/main.o
-                0x20000078                yaw_error_filter_alpha
+                0x20000068        0x4 ./Core/Src/main.o
+                0x20000068                yaw_error_filter_alpha
  .data.yaw_steering_step_max
-                0x2000007c        0x4 ./Core/Src/main.o
-                0x2000007c                yaw_steering_step_max
+                0x2000006c        0x4 ./Core/Src/main.o
+                0x2000006c                yaw_steering_step_max
  .data.turn_maneuver_forward_bias_deg
-                0x20000080        0x4 ./Core/Src/main.o
-                0x20000080                turn_maneuver_forward_bias_deg
+                0x20000070        0x4 ./Core/Src/main.o
+                0x20000070                turn_maneuver_forward_bias_deg
  .data.turn_maneuver_pre_bias_delay_ms
-                0x20000084        0x2 ./Core/Src/main.o
-                0x20000084                turn_maneuver_pre_bias_delay_ms
- *fill*         0x20000086        0x2 
+                0x20000074        0x2 ./Core/Src/main.o
+                0x20000074                turn_maneuver_pre_bias_delay_ms
+ *fill*         0x20000076        0x2 
  .data.adc_filtrado
-                0x20000088       0x10 ./Core/Src/main.o
-                0x20000088                adc_filtrado
+                0x20000078       0x10 ./Core/Src/main.o
+                0x20000078                adc_filtrado
  .data.FL_motion_phase_ms
-                0x20000098        0x2 ./Core/Src/main.o
-                0x20000098                FL_motion_phase_ms
+                0x20000088        0x2 ./Core/Src/main.o
+                0x20000088                FL_motion_phase_ms
  .data.FL_balance_phase_ms
-                0x2000009a        0x2 ./Core/Src/main.o
-                0x2000009a                FL_balance_phase_ms
+                0x2000008a        0x2 ./Core/Src/main.o
+                0x2000008a                FL_balance_phase_ms
  .data.forward_motion_balance_only_steering
-                0x2000009c        0x2 ./Core/Src/main.o
-                0x2000009c                forward_motion_balance_only_steering
+                0x2000008c        0x2 ./Core/Src/main.o
+                0x2000008c                forward_motion_balance_only_steering
  .data.oled_updates_enabled
-                0x2000009e        0x1 ./Core/Src/main.o
-                0x2000009e                oled_updates_enabled
- *fill*         0x2000009f        0x1 
+                0x2000008e        0x1 ./Core/Src/main.o
+                0x2000008e                oled_updates_enabled
+ *fill*         0x2000008f        0x1 
  .data.ip_address
-                0x200000a0       0x10 ./Core/Src/main.o
-                0x200000a0                ip_address
+                0x20000090       0x10 ./Core/Src/main.o
+                0x20000090                ip_address
  .data.esp01_last_debug
-                0x200000b0       0x12 ./Core/Src/main.o
-                0x200000b0                esp01_last_debug
- *fill*         0x200000c2        0x2 
+                0x200000a0       0x12 ./Core/Src/main.o
+                0x200000a0                esp01_last_debug
+ *fill*         0x200000b2        0x2 
  .data.esp01_last_rx
-                0x200000c4       0x12 ./Core/Src/main.o
-                0x200000c4                esp01_last_rx
- *fill*         0x200000d6        0x2 
+                0x200000b4       0x12 ./Core/Src/main.o
+                0x200000b4                esp01_last_rx
+ *fill*         0x200000c6        0x2 
  .data.multiplicadorYaw
+                0x200000c8        0x4 ./Core/Src/main.o
+                0x200000c8                multiplicadorYaw
+ .data.setpointDeEquilibrio
+                0x200000cc        0x4 ./Core/Src/main.o
+                0x200000cc                setpointDeEquilibrio
+ .data.ALPHA_PID
+                0x200000d0        0x4 ./Core/Src/main.o
+                0x200000d0                ALPHA_PID
+ .data.pitch_recovery_brake_ms
+                0x200000d4        0x4 ./Core/Src/main.o
+                0x200000d4                pitch_recovery_brake_ms
+ .data.pitch_recovery_error_threshold_deg
                 0x200000d8        0x4 ./Core/Src/main.o
-                0x200000d8                multiplicadorYaw
+                0x200000d8                pitch_recovery_error_threshold_deg
  .data.obstacle_follow_side
                 0x200000dc        0x1 ./Core/Src/obstacle_follow.o
                 0x200000dc                obstacle_follow_side
@@ -8067,63 +8067,63 @@ LOAD C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.exte
 LOAD C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard\libm.a
 LOAD C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+fp/hard\libgcc.a
 
-.debug_info     0x00000000    0x1b064
+.debug_info     0x00000000    0x1b06b
  .debug_info    0x00000000     0x1478 ./Core/Src/ESP01.o
  .debug_info    0x00001478      0x680 ./Core/Src/button_key.o
- .debug_info    0x00001af8     0x10ae ./Core/Src/control_systems.o
- .debug_info    0x00002ba6      0x255 ./Core/Src/fonts.o
- .debug_info    0x00002dfb      0x43d ./Core/Src/line_sensors.o
- .debug_info    0x00003238     0x424b ./Core/Src/main.o
- .debug_info    0x00007483      0x7f1 ./Core/Src/mpu6050_app.o
- .debug_info    0x00007c74      0x9d6 ./Core/Src/obstacle_follow.o
- .debug_info    0x0000864a     0x1121 ./Core/Src/ssd1306.o
- .debug_info    0x0000976b     0x1684 ./Core/Src/stm32f4xx_hal_msp.o
- .debug_info    0x0000adef      0xfbe ./Core/Src/stm32f4xx_it.o
- .debug_info    0x0000bdad      0x6a3 ./Core/Src/syscalls.o
- .debug_info    0x0000c450      0x168 ./Core/Src/sysmem.o
- .debug_info    0x0000c5b8      0x53e ./Core/Src/system_stm32f4xx.o
- .debug_info    0x0000caf6      0xc70 ./Core/Src/uner_protocol.o
- .debug_info    0x0000d766       0x30 ./Core/Startup/startup_stm32f411ceux.o
- .debug_info    0x0000d796      0x8c4 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
- .debug_info    0x0000e05a      0xce0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.o
- .debug_info    0x0000ed3a      0xb65 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.o
- .debug_info    0x0000f89f      0xcfc ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
- .debug_info    0x0001059b      0x8e6 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
- .debug_info    0x00010e81      0x6f9 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
- .debug_info    0x0001157a     0x2426 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.o
- .debug_info    0x000139a0      0x904 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
- .debug_info    0x000142a4     0x2996 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
- .debug_info    0x00016c3a     0x14d4 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
- .debug_info    0x0001810e     0x2f56 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
+ .debug_info    0x00001af8     0x10b5 ./Core/Src/control_systems.o
+ .debug_info    0x00002bad      0x255 ./Core/Src/fonts.o
+ .debug_info    0x00002e02      0x43d ./Core/Src/line_sensors.o
+ .debug_info    0x0000323f     0x424b ./Core/Src/main.o
+ .debug_info    0x0000748a      0x7f1 ./Core/Src/mpu6050_app.o
+ .debug_info    0x00007c7b      0x9d6 ./Core/Src/obstacle_follow.o
+ .debug_info    0x00008651     0x1121 ./Core/Src/ssd1306.o
+ .debug_info    0x00009772     0x1684 ./Core/Src/stm32f4xx_hal_msp.o
+ .debug_info    0x0000adf6      0xfbe ./Core/Src/stm32f4xx_it.o
+ .debug_info    0x0000bdb4      0x6a3 ./Core/Src/syscalls.o
+ .debug_info    0x0000c457      0x168 ./Core/Src/sysmem.o
+ .debug_info    0x0000c5bf      0x53e ./Core/Src/system_stm32f4xx.o
+ .debug_info    0x0000cafd      0xc70 ./Core/Src/uner_protocol.o
+ .debug_info    0x0000d76d       0x30 ./Core/Startup/startup_stm32f411ceux.o
+ .debug_info    0x0000d79d      0x8c4 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
+ .debug_info    0x0000e061      0xce0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.o
+ .debug_info    0x0000ed41      0xb65 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.o
+ .debug_info    0x0000f8a6      0xcfc ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
+ .debug_info    0x000105a2      0x8e6 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
+ .debug_info    0x00010e88      0x6f9 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
+ .debug_info    0x00011581     0x2426 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.o
+ .debug_info    0x000139a7      0x904 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
+ .debug_info    0x000142ab     0x2996 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
+ .debug_info    0x00016c41     0x14d4 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
+ .debug_info    0x00018115     0x2f56 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
 
-.debug_abbrev   0x00000000     0x3d50
+.debug_abbrev   0x00000000     0x3d4e
  .debug_abbrev  0x00000000      0x471 ./Core/Src/ESP01.o
  .debug_abbrev  0x00000471      0x1ed ./Core/Src/button_key.o
- .debug_abbrev  0x0000065e      0x2d2 ./Core/Src/control_systems.o
- .debug_abbrev  0x00000930      0x11c ./Core/Src/fonts.o
- .debug_abbrev  0x00000a4c      0x127 ./Core/Src/line_sensors.o
- .debug_abbrev  0x00000b73      0x4ca ./Core/Src/main.o
- .debug_abbrev  0x0000103d      0x1e4 ./Core/Src/mpu6050_app.o
- .debug_abbrev  0x00001221      0x237 ./Core/Src/obstacle_follow.o
- .debug_abbrev  0x00001458      0x2e1 ./Core/Src/ssd1306.o
- .debug_abbrev  0x00001739      0x27d ./Core/Src/stm32f4xx_hal_msp.o
- .debug_abbrev  0x000019b6      0x1c9 ./Core/Src/stm32f4xx_it.o
- .debug_abbrev  0x00001b7f      0x1b6 ./Core/Src/syscalls.o
- .debug_abbrev  0x00001d35       0xbc ./Core/Src/sysmem.o
- .debug_abbrev  0x00001df1      0x11a ./Core/Src/system_stm32f4xx.o
- .debug_abbrev  0x00001f0b      0x2dd ./Core/Src/uner_protocol.o
- .debug_abbrev  0x000021e8       0x24 ./Core/Startup/startup_stm32f411ceux.o
- .debug_abbrev  0x0000220c      0x24b ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
- .debug_abbrev  0x00002457      0x20e ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.o
- .debug_abbrev  0x00002665      0x22c ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.o
- .debug_abbrev  0x00002891      0x31d ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
- .debug_abbrev  0x00002bae      0x221 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
- .debug_abbrev  0x00002dcf      0x1d3 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
- .debug_abbrev  0x00002fa2      0x2bc ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.o
- .debug_abbrev  0x0000325e      0x2b6 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
- .debug_abbrev  0x00003514      0x28b ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
- .debug_abbrev  0x0000379f      0x296 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
- .debug_abbrev  0x00003a35      0x31b ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
+ .debug_abbrev  0x0000065e      0x2d0 ./Core/Src/control_systems.o
+ .debug_abbrev  0x0000092e      0x11c ./Core/Src/fonts.o
+ .debug_abbrev  0x00000a4a      0x127 ./Core/Src/line_sensors.o
+ .debug_abbrev  0x00000b71      0x4ca ./Core/Src/main.o
+ .debug_abbrev  0x0000103b      0x1e4 ./Core/Src/mpu6050_app.o
+ .debug_abbrev  0x0000121f      0x237 ./Core/Src/obstacle_follow.o
+ .debug_abbrev  0x00001456      0x2e1 ./Core/Src/ssd1306.o
+ .debug_abbrev  0x00001737      0x27d ./Core/Src/stm32f4xx_hal_msp.o
+ .debug_abbrev  0x000019b4      0x1c9 ./Core/Src/stm32f4xx_it.o
+ .debug_abbrev  0x00001b7d      0x1b6 ./Core/Src/syscalls.o
+ .debug_abbrev  0x00001d33       0xbc ./Core/Src/sysmem.o
+ .debug_abbrev  0x00001def      0x11a ./Core/Src/system_stm32f4xx.o
+ .debug_abbrev  0x00001f09      0x2dd ./Core/Src/uner_protocol.o
+ .debug_abbrev  0x000021e6       0x24 ./Core/Startup/startup_stm32f411ceux.o
+ .debug_abbrev  0x0000220a      0x24b ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
+ .debug_abbrev  0x00002455      0x20e ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.o
+ .debug_abbrev  0x00002663      0x22c ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.o
+ .debug_abbrev  0x0000288f      0x31d ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
+ .debug_abbrev  0x00002bac      0x221 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
+ .debug_abbrev  0x00002dcd      0x1d3 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
+ .debug_abbrev  0x00002fa0      0x2bc ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.o
+ .debug_abbrev  0x0000325c      0x2b6 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
+ .debug_abbrev  0x00003512      0x28b ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
+ .debug_abbrev  0x0000379d      0x296 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
+ .debug_abbrev  0x00003a33      0x31b ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
 
 .debug_aranges  0x00000000     0x1710
  .debug_aranges
@@ -8375,34 +8375,34 @@ LOAD C:/ST/STM32CubeIDE_2.0.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.exte
  .debug_macro   0x0001ad1f      0x20f ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
  .debug_macro   0x0001af2e      0x210 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
 
-.debug_line     0x00000000    0x1e895
+.debug_line     0x00000000    0x1e89c
  .debug_line    0x00000000     0x1418 ./Core/Src/ESP01.o
  .debug_line    0x00001418      0xa9d ./Core/Src/button_key.o
  .debug_line    0x00001eb5     0x1603 ./Core/Src/control_systems.o
  .debug_line    0x000034b8      0x939 ./Core/Src/fonts.o
  .debug_line    0x00003df1      0xb1e ./Core/Src/line_sensors.o
- .debug_line    0x0000490f     0x2660 ./Core/Src/main.o
- .debug_line    0x00006f6f      0x8c9 ./Core/Src/mpu6050_app.o
- .debug_line    0x00007838      0xf27 ./Core/Src/obstacle_follow.o
- .debug_line    0x0000875f     0x1127 ./Core/Src/ssd1306.o
- .debug_line    0x00009886      0xa83 ./Core/Src/stm32f4xx_hal_msp.o
- .debug_line    0x0000a309      0x979 ./Core/Src/stm32f4xx_it.o
- .debug_line    0x0000ac82      0x8b1 ./Core/Src/syscalls.o
- .debug_line    0x0000b533      0x58d ./Core/Src/sysmem.o
- .debug_line    0x0000bac0      0x838 ./Core/Src/system_stm32f4xx.o
- .debug_line    0x0000c2f8     0x1031 ./Core/Src/uner_protocol.o
- .debug_line    0x0000d329       0x7a ./Core/Startup/startup_stm32f411ceux.o
- .debug_line    0x0000d3a3      0xab4 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
- .debug_line    0x0000de57     0x120b ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.o
- .debug_line    0x0000f062      0xeff ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.o
- .debug_line    0x0000ff61      0xd84 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
- .debug_line    0x00010ce5     0x1020 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
- .debug_line    0x00011d05      0xbd0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
- .debug_line    0x000128d5     0x3b61 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.o
- .debug_line    0x00016436      0xec1 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
- .debug_line    0x000172f7     0x35f3 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
- .debug_line    0x0001a8ea     0x19af ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
- .debug_line    0x0001c299     0x25fc ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
+ .debug_line    0x0000490f     0x2667 ./Core/Src/main.o
+ .debug_line    0x00006f76      0x8c9 ./Core/Src/mpu6050_app.o
+ .debug_line    0x0000783f      0xf27 ./Core/Src/obstacle_follow.o
+ .debug_line    0x00008766     0x1127 ./Core/Src/ssd1306.o
+ .debug_line    0x0000988d      0xa83 ./Core/Src/stm32f4xx_hal_msp.o
+ .debug_line    0x0000a310      0x979 ./Core/Src/stm32f4xx_it.o
+ .debug_line    0x0000ac89      0x8b1 ./Core/Src/syscalls.o
+ .debug_line    0x0000b53a      0x58d ./Core/Src/sysmem.o
+ .debug_line    0x0000bac7      0x838 ./Core/Src/system_stm32f4xx.o
+ .debug_line    0x0000c2ff     0x1031 ./Core/Src/uner_protocol.o
+ .debug_line    0x0000d330       0x7a ./Core/Startup/startup_stm32f411ceux.o
+ .debug_line    0x0000d3aa      0xab4 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
+ .debug_line    0x0000de5e     0x120b ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.o
+ .debug_line    0x0000f069      0xeff ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.o
+ .debug_line    0x0000ff68      0xd84 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
+ .debug_line    0x00010cec     0x1020 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
+ .debug_line    0x00011d0c      0xbd0 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
+ .debug_line    0x000128dc     0x3b61 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.o
+ .debug_line    0x0001643d      0xec1 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
+ .debug_line    0x000172fe     0x35f3 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
+ .debug_line    0x0001a8f1     0x19af ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
+ .debug_line    0x0001c2a0     0x25fc ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
 
 .debug_str      0x00000000    0xa449b
  .debug_str     0x00000000    0xa449b ./Core/Src/ESP01.o

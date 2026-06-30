@@ -30,6 +30,8 @@
 #define TURN_MANEUVER_SETTLE_MS      300U
 #define ARC_MANEUVER_FORWARD_RATIO   0.50f
 
+// Estados internos para detectar una entrada especial: primero se estabiliza,
+// luego se gira 90 grados y finalmente se busca volver a centrar la linea.
 typedef enum {
     LINE_FOLLOW_NORMAL = 0,
     LINE_ENTRY_STABILIZE,
@@ -135,6 +137,8 @@ static void FollowLine_ResetEntryState(void)
 
 static uint8_t FollowLine_IsAlignedOnLine(void)
 {
+    // Se considera alineado cuando algun sensor central ve linea sin estar en
+    // una lectura totalmente negra que indique zona especial.
     uint8_t center_on_line = (estado_sensores[1] || estado_sensores[2]) ? 1U : 0U;
     uint8_t all_black = IRCSAAB ? 1U : 0U;
 
@@ -163,6 +167,8 @@ static float clamp_float(float value, float limit)
 
 static float TurnManeuver_GetActiveSetpoint(void)
 {
+    // Durante giros se puede agregar un pequeno sesgo de avance para mantener
+    // el robot cargado hacia adelante sin cambiar el setpoint base global.
     float maneuver_setpoint = turn_maneuver_forward_bias_deg;
 
     if (turn_maneuver_mode == TURN_MANEUVER_MODE_ARC) {
@@ -270,6 +276,8 @@ void PID_PITCH(void)
         return;
     }
 
+    // Failsafe de inclinacion: ante una caida probable se apagan motores y se
+    // cancela cualquier giro activo.
     if (angle_y > 65.0f || angle_y < -65.0f) {
         if (turn_maneuver_active) {
             TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_PITCH_SAFETY);
@@ -432,6 +440,8 @@ void PID_PITCH(void)
         accel_runaway_has_prev_mean = 1U;
     }
 
+    // Cuando la aceleracion frontal muestra una tendencia persistente, corrige
+    // levemente el equilibrio para no seguir acelerando sin control.
     if (accel_runaway_trigger && accel_adaptive_direction != 0) {
         float limit = fabsf(accel_adaptive_offset_limit_deg);
         if (limit > ACCEL_ADAPTIVE_OFFSET_MAX_DEG) {
@@ -464,6 +474,7 @@ void PID_PITCH(void)
     showoutput = output;
     last_error = error;
 
+    // La mezcla final depende del modo: giro con una rueda, arco o diferencial normal.
     if (turn_maneuver_active && turn_maneuver_mode == TURN_MANEUVER_MODE_ONE_WHEEL) {
         int16_t pitch_output = (int16_t)output;
         TurnManeuver_ApplyOneWheelMix(pitch_output, steering);
@@ -487,6 +498,7 @@ void FollowLine_Task(void)
     float target_steering = 0.0f;
     uint32_t now = HAL_GetTick();
 
+    // Modo intermedio antes de esquivar: alinea el robot con el borde del obstaculo.
     if (currentMode == CONTROL_MODE_FL_CIRCLE_ALIGN) {
         FollowLine_ResetEntryState();
         fl_circle_front_confirm_count = 0U;
@@ -621,6 +633,7 @@ void FollowLine_Task(void)
         }
     }
 
+    // Patron blanco-negro confirmado: dispara la secuencia de ingreso a 90 grados.
     if (fl_entry_confirm_count >= FL_ENTRY_CONFIRM_TICKS) {
         FollowLine_ResetStateInternal();
         fl_entry_state = LINE_ENTRY_STABILIZE;
@@ -639,6 +652,7 @@ void FollowLine_Task(void)
         fl_circle_front_confirm_count = 0U;
     }
 
+    // Obstaculo frontal confirmado: cambia a una etapa de alineacion antes del rodeo.
     if (fl_obstacle_avoidance_enabled &&
         fl_circle_front_confirm_count >= FL_CIRCLE_CONFIRM_TICKS) {
         FollowLine_ResetStateInternal();
@@ -715,6 +729,8 @@ static uint8_t TurnManeuver_StartInternal(float target_angle_deg,
         return TURN_MANEUVER_STATUS_RANGE;
     }
 
+    // Validaciones de seguridad: no se inicia si no hay motores, si el modo no
+    // permite girar o si la IMU esta vieja para una referencia de yaw confiable.
     if (!flagMotorsAreOn ||
         (wheel_mode != TURN_MANEUVER_MODE_ARC &&
          currentMode != CONTROL_MODE_RC &&
@@ -787,6 +803,7 @@ void TurnManeuver_StoreCornerConfig(float target_angle_deg,
                                     float turn_bias_deg,
                                     uint16_t pre_bias_delay_ms)
 {
+    // Guarda la ultima configuracion valida para reutilizarla al doblar esquinas.
     corner_turn_mode = wheel_mode;
     corner_turn_wheel = wheel_select;
     corner_turn_inner_wheel_percent = inner_wheel_percent;
@@ -809,6 +826,7 @@ uint8_t TurnManeuver_StartStoredCorner(float corner_angle_deg)
 
 void TurnManeuver_CancelWithReason(uint8_t reason)
 {
+    // La razon queda disponible para telemetria/diagnostico despues de cancelar.
     turn_debug_exit_reason = reason;
     turn_maneuver_active = 0;
     turn_maneuver_state = TURN_MANEUVER_STATE_IDLE;
@@ -859,6 +877,8 @@ void TurnManeuver_Task(void)
     }
 
     if (turn_maneuver_state == TURN_MANEUVER_STATE_PREPARING) {
+        // Ventana previa: aplica sesgo de avance sin girar para cargar el robot
+        // antes de tomar la referencia inicial de yaw.
         uint32_t prepare_elapsed = now - turn_maneuver_prepare_start_tick;
         turn_maneuver_setpoint = TurnManeuver_GetActiveSetpoint();
         turn_maneuver_steering = 0;
@@ -885,6 +905,7 @@ void TurnManeuver_Task(void)
     }
 
     if (turn_maneuver_state == TURN_MANEUVER_STATE_SETTLING) {
+        // Al llegar al angulo objetivo se baja steering/setpoint gradualmente.
         uint32_t settle_elapsed = now - turn_maneuver_settle_start_tick;
         if (settle_elapsed >= TURN_MANEUVER_SETTLE_MS) {
             TurnManeuver_CancelWithReason(TURN_MANEUVER_EXIT_TARGET_REACHED);

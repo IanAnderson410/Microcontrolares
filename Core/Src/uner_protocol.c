@@ -7,6 +7,8 @@
 #define UNER_CMD_ACK 1
 #define UNER_CMD_DATA 17
 
+// Payload compacto enviado periodicamente a Qt. Se marca packed para que el
+// layout de bytes coincida exactamente con el parser de la PC.
 typedef struct __attribute__((packed)) {
     int16_t     acc_x, acc_y, acc_z;
     int16_t     gyro_pitch, gyro_yaw;
@@ -55,6 +57,7 @@ uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t 
     uint8_t frame[4 + 1 + 1 + 1 + 1 + 1 + UNER_V1_MAX_PAYLOAD + 2];
     uint16_t idx = 0;
 
+    // Rechaza tramas imposibles antes de tocar la cola de transmision.
     if (payload_len > UNER_V1_MAX_PAYLOAD) {
         return 0;
     }
@@ -90,6 +93,8 @@ uint8_t UNER_SendV1(uint8_t cmd, uint8_t flags, const uint8_t *payload, uint8_t 
 
 uint8_t UNER_QueueTx(const uint8_t *data, uint16_t len)
 {
+    // La cola desacopla al protocolo del ESP01: el comando queda armado aunque
+    // el modulo WiFi todavia este ocupado enviando una trama anterior.
     if (data == NULL || len == 0 || len > UNER_TX_FRAME_MAX) {
         return 0;
     }
@@ -124,6 +129,7 @@ void UNER_Tx_Task(void)
         return;
     }
 
+    // Si la cola queda trabada demasiado tiempo se fuerza una reconexion WiFi.
     if (uner_tx_last_try_tick != 0 && (now - uner_tx_last_try_tick) > UNER_TX_RECOVERY_MS) {
         ESP.uner_tx_head = 0;
         ESP.uner_tx_tail = 0;
@@ -215,6 +221,7 @@ uint8_t UNER_SendTelemetryV1(void)
 
 uint8_t UNER_Send(const uint8_t cmd, const uint8_t *payload, uint8_t payload_len)
 {
+    // Formato legacy conservado por compatibilidad; el firmware actual usa v1.
     uint8_t frame[4 + 1 + 1 + 1 + 64 + 1];
     uint16_t idx = 0;
 
@@ -296,6 +303,8 @@ void UNER_ProcessByteV1(uint8_t b)
     static uint8_t payload_idx = 0;
     static uint8_t crc0 = 0;
 
+    // La maquina de estados se reinicia ante cualquier byte inesperado para
+    // resincronizarse rapido con la proxima cabecera "UNER".
     switch (st) {
     case UNER_V1_ST_U:
         if (b == 'U') {
@@ -375,6 +384,7 @@ void UNER_ProcessByteV1(uint8_t b)
         uint16_t crc_rx = (uint16_t)crc0 | ((uint16_t)b << 8);
         uint16_t crc_calc = UNER_Crc16Ccitt(frame, idx);
 
+        // Solo se entrega el paquete a la aplicacion si el CRC coincide.
         if (crc_rx == crc_calc) {
             uint8_t cmd = frame[5];
             uint8_t flags = frame[6];
@@ -395,6 +405,8 @@ void UNER_ProcessByteV1(uint8_t b)
 
 void UNER_ProcessByte(uint8_t b)
 {
+    // Parser anterior basado en checksum XOR. Queda disponible para pruebas o
+    // herramientas viejas, pero UNER_Rx_Task alimenta el parser v1 con CRC.
     typedef enum {
         UNER_ST_U,
         UNER_ST_N,
